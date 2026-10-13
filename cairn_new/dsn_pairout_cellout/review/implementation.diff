@@ -1,0 +1,949 @@
+### accelerated_four/dsn -> dsn_pairout_cellout/dsn (byte-identical: cmp, empty diffs)
+dsn/model.py: byte-identical to accelerated_four/dsn/model.py
+dsn/data.py: byte-identical to accelerated_four/dsn/data.py
+### rareddie_pairout_cellout -> dsn_pairout_cellout (adapted)
+--- rareddie_pairout_cellout/__init__.py	2026-10-12 21:03:22.196928423 +0800
++++ dsn_pairout_cellout/__init__.py	2026-10-12 21:26:27.435513615 +0800
+@@ -1 +1 @@
+-"""RareDDIE-only control (rareddie_control model/data, unchanged) on PairOut/CellOut: same-DDI-split seed42 replicates."""
++"""DSN-DDI+RareDDIE NO PATH control (accelerated_four model/data, byte-identical) on PairOut/CellOut: same-DDI-split seed42 replicates."""
+--- rareddie_pairout_cellout/train.py	2026-10-12 21:04:17.564232362 +0800
++++ dsn_pairout_cellout/train.py	2026-10-12 21:27:13.806930648 +0800
+@@ -1,10 +1,12 @@
+ """Full DDI training, fixed85 validation selection, selected-checkpoint test export.
+ 
+-rareddie_pairout_cellout copy of the rareddie_control trainer: the unchanged
+-RareDDIE-only model.py/data.py (no DSN inter-graph attention, no cross edges, no
+-path), protocols pairout (GPU6) and cellout (GPU7) on the identical frozen
+-PairOut DDI split of pairout_cellout/prepared (read-only), outputs only under
+-rareddie_pairout_cellout/outputs. Both arms are independent fresh seed42
++dsn_pairout_cellout copy of the rareddie_pairout_cellout trainer: the
++byte-identical accelerated_four dsn/model.py/data.py (DSNRareDDI with the packed
++DSN InterGraphAttention + inter_projection and per-pair local self loops) with
++with_path=False (no path module, the collator loads no path arrays), protocols
++pairout (GPU6) and cellout (GPU7) on the identical frozen PairOut DDI split of
++pairout_cellout/prepared (read-only), outputs only under
++dsn_pairout_cellout/outputs. Both arms are independent fresh seed42
+ same-DDI-split replicates, NOT true cell-cold DDI generalization. --fresh is the
+ initial launch only; --resume and --test-only continue this run's own
+ checkpoints with the exact config.
+@@ -23,18 +25,20 @@
+ from torch.utils.data import DataLoader
+ import yaml
+ from accelerated_four.dsn.metrics import classification_metrics, validation_selection_metric
+-from .data import DDIDataset, Collator, to_device
+-from .model import GROUPS, RareDDIEControl, parameter_inventory
++from .dsn.data import DDIDataset, Collator, to_device
++from .dsn.model import DSNRareDDI
++from .inventory import GROUPS, group_of, parameter_inventory
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-OUTPUTS = ROOT / 'rareddie_pairout_cellout/outputs'
++OUTPUTS = ROOT / 'dsn_pairout_cellout/outputs'
+ PREPARED = ROOT / 'pairout_cellout/prepared'
+ GPU = {'pairout': 6, 'cellout': 7}
+-GENERATOR = 'gpt-6.1-sol medium plan/review; rareddie_pairout_cellout implementation by claude-opus-5-5'
+-NAMESPACE = 'rareddie_pairout_cellout'
+-ABLATION = ('rareddie_control model/data unchanged: accelerated_four no-path model with DSN InterGraphAttention, '
+-            'inter_projection and cross edges removed: original RareDDIE CSE order; same NAI/FIN, PVR, mu classifier, '
+-            'loss; PairOut/CellOut DDI protocol')
++GENERATOR = 'gpt-6.1-sol medium plan/review; dsn_pairout_cellout implementation by claude-opus-5-5'
++NAMESPACE = 'dsn_pairout_cellout'
++ABLATION = ('accelerated_four dsn/model.py+data.py byte-identical: DSNRareDDI with_path=False, DSN InterGraphAttention '
++            '+ inter_projection with packed per-pair local self loops KEPT; path module absent, no path arrays; '
++            'same NAI/FIN, PVR, mu classifier, loss; middle ablation between pure RareDDIE and full path; '
++            'PairOut/CellOut DDI protocol')
+ DDI_SPLIT_NOTE = ('same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 '
+                   'same-DDI-split replicate, NOT true cell-cold DDI generalization')
+ # Authorized schedule: 151508 rows / 128 -> 1184 batches, 150 * 1184 = 177600
+@@ -163,6 +167,8 @@
+     # This is checked before the first CUDA operation. Only the assigned one
+     # physical device is visible, including RNG and allocator operations.
+     assigned = GPU[config['protocol']]
++    if config['with_path'] is not False:
++        raise ValueError('dsn_pairout_cellout is the NO PATH DSN control (with_path: false)')
+     if config['gpu'] != assigned or os.environ.get('CUDA_VISIBLE_DEVICES') != str(assigned):
+         raise ValueError(f'This arm requires CUDA_VISIBLE_DEVICES={assigned} and config gpu={assigned}')
+     torch.set_num_threads(config['cpu_threads'])
+@@ -181,7 +187,7 @@
+     if not args.fresh:
+         own = torch.load(output_dir / ('best.pt' if args.test_only else 'last.pt'), map_location='cpu', weights_only=False)
+         if own['config'].get('namespace') != NAMESPACE or Path(own['config']['output']) != output_dir:
+-            raise ValueError('Checkpoint is not this rareddie_pairout_cellout run')
++            raise ValueError('Checkpoint is not this dsn_pairout_cellout run')
+     saved = own if args.resume else None
+     if args.test_only:
+         assert own['config']['gpu'] == assigned and own['config']['protocol'] == config['protocol']
+@@ -196,14 +202,14 @@
+         raise ValueError(f'ddi_split_note must state: {DDI_SPLIT_NOTE}')
+     if not args.test_only:
+         config.update({'prepared': str(prepared), 'output': str(output_dir), 'generator': GENERATOR,
+-                       'namespace': NAMESPACE, 'ablation': ABLATION, 'with_path': False,
++                       'namespace': NAMESPACE, 'ablation': ABLATION,
+                        'selection_metric': 'fixed85 validation macroF1', 'test_selection': False,
+                        'cohort_source_identity': preparation['source_identity'],
+                        'source_provenance': json.loads((ROOT / 'docs/source_provenance.json').read_text())})
+     assets = torch.load(prepared / 'assets.pt', map_location='cpu', weights_only=False)
+-    model = RareDDIEControl(assets).to(device)
++    model = DSNRareDDI(assets, config).to(device)
+     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+-    collate = Collator(assets)
++    collate = Collator(assets, prepared, config['with_path'])
+     datasets = {split: DDIDataset(prepared, config['protocol'], split) for split in ['train', 'val']}
+     loaders = {split: DataLoader(dataset, batch_size=config['batch_size'], shuffle=split == 'train',
+                                  num_workers=config['num_workers'], collate_fn=collate, pin_memory=True,
+@@ -218,7 +224,7 @@
+         raise ValueError(f'Schedule must be {SCHEDULE}')
+     if args.fresh:
+         (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
+-        save_json(output_dir / 'model_inventory.json', parameter_inventory(model))
++        save_json(output_dir / 'model_inventory.json', parameter_inventory(model, collate))
+     if saved is not None and saved['config'] != config:
+         raise ValueError('Resume configuration differs from last.pt; preserve batch size and schedule')
+     warmup_updates = config['kl_warmup_updates']
+@@ -270,12 +276,15 @@
+                         'loss_terms': {'ce': float(ce), 'rec': float(result['rec']), 'kl': float(result['kl']),
+                                        'beta': beta, 'loss': float(loss)},
+                         'logits_finite': bool(torch.isfinite(result['logits']).all()),
+-                        # Actual molecule-only batch: no DSN cross edges, no path graph.
++                        # Actual DSN batch: packed within-pair cross edges, no path graph.
+                         'batch_keys': sorted(batch), 'output_keys': sorted(result),
+                         'cross_edges_present': 'cross_edges' in batch, 'path_graph_present': 'path_graph' in batch,
++                        'cross_edges': int(batch['cross_edges'].shape[1]),
++                        'path_mask_shape': list(result['path_mask'].shape),
++                        # Disjoint groups: DSN GAT and inter_projection separately from the CSE rest.
+                         'gradient_norms': {group: float(torch.stack([g.detach().square().sum() for n, g in grads.items()
+-                                                                     if g is not None and n.startswith(prefixes)]).sum().sqrt())
+-                                           for group, prefixes in GROUPS.items()},
++                                                                     if g is not None and group_of(n) == group]).sum().sqrt())
++                                           for group in GROUPS},
+                         'all_gradients_finite': all(bool(torch.isfinite(g).all()) for g in grads.values() if g is not None),
+                         # Original forward never consumes the last block's norm2 output.
+                         'trainable_without_gradient': [n for n, g in grads.items() if g is None]})
+--- rareddie_pairout_cellout/configs/pairout.yaml	2026-10-12 21:03:26.396875622 +0800
++++ dsn_pairout_cellout/configs/pairout.yaml	2026-10-12 21:26:27.439513565 +0800
+@@ -1,7 +1,8 @@
+ protocol: pairout
++with_path: false
+ gpu: 6
+ prepared: pairout_cellout/prepared
+-output: rareddie_pairout_cellout/outputs/pairout
++output: dsn_pairout_cellout/outputs/pairout
+ seed: 42
+ epochs: 150
+ patience: 15
+--- rareddie_pairout_cellout/configs/cellout.yaml	2026-10-12 21:03:26.396875622 +0800
++++ dsn_pairout_cellout/configs/cellout.yaml	2026-10-12 21:26:27.439513565 +0800
+@@ -1,7 +1,8 @@
+ protocol: cellout
++with_path: false
+ gpu: 7
+ prepared: pairout_cellout/prepared
+-output: rareddie_pairout_cellout/outputs/cellout
++output: dsn_pairout_cellout/outputs/cellout
+ seed: 42
+ epochs: 150
+ patience: 15
+--- rareddie_pairout_cellout/env.sh	2026-10-12 21:03:36.320750862 +0800
++++ dsn_pairout_cellout/env.sh	2026-10-12 21:27:43.314559687 +0800
+@@ -1,15 +1,15 @@
+ #!/usr/bin/env bash
+-# Source only. Runtime for the isolated rareddie_pairout_cellout arms. The cairn
+-# environment, cairn_dev, rareddie_control, pairout_cellout (prepared data),
+-# accelerated_four, cairn_dsn and scripts/ are read-only; caches/temporary
+-# files stay under rareddie_pairout_cellout and its logs.
++# Source only. Runtime for the isolated dsn_pairout_cellout arms. The cairn
++# environment, cairn_dev, rareddie_control, rareddie_pairout_cellout,
++# pairout_cellout (prepared data), accelerated_four, cairn_dsn and scripts/ are
++# read-only; caches/temporary files stay under dsn_pairout_cellout and its logs.
+ set -euo pipefail
+ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+-CONTROL_DIR="$ROOT_DIR/rareddie_pairout_cellout"
+-LOG_DIR="$ROOT_DIR/logs/rareddie_pairout_cellout"
++CONTROL_DIR="$ROOT_DIR/dsn_pairout_cellout"
++LOG_DIR="$ROOT_DIR/logs/dsn_pairout_cellout"
+ cd "$ROOT_DIR"
+ export PYTHONDONTWRITEBYTECODE=1
+-# rareddie_pairout_cellout (new) and accelerated_four (reused, read-only) resolve from ROOT.
++# dsn_pairout_cellout (new) and accelerated_four (metrics only, read-only) resolve from ROOT.
+ export PYTHONPATH="$ROOT_DIR"
+ export CUDA_DEVICE_ORDER=PCI_BUS_ID
+ export TMPDIR="$LOG_DIR/tmp"
+--- rareddie_pairout_cellout/status.py	2026-10-12 21:03:31.956805725 +0800
++++ dsn_pairout_cellout/status.py	2026-10-12 21:26:45.335288585 +0800
+@@ -1,9 +1,9 @@
+-"""Merge implementation/launch/monitor progress into logs/rareddie_pairout_cellout/status.json (shared with Codex)."""
++"""Merge implementation/launch/monitor progress into logs/dsn_pairout_cellout/status.json (shared with Codex)."""
+ import json
+ from pathlib import Path
+ import time
+ 
+-STATUS = Path(__file__).resolve().parents[1] / 'logs/rareddie_pairout_cellout/status.json'
++STATUS = Path(__file__).resolve().parents[1] / 'logs/dsn_pairout_cellout/status.json'
+ 
+ 
+ def update_status(stage, section='implementation', **fields):
+--- rareddie_pairout_cellout/jobs.py	2026-10-12 21:04:52.223796632 +0800
++++ dsn_pairout_cellout/jobs.py	2026-10-12 21:28:14.618166147 +0800
+@@ -1,14 +1,17 @@
+ """Durable two-arm job records, real export verification, bounded recovery.
+ 
+-rareddie_pairout_cellout copy of rareddie_control/jobs.py: isolated state
+-(logs/rareddie_pairout_cellout/jobs), outputs (rareddie_pairout_cellout/outputs)
+-and trainer (rareddie_pairout_cellout.train, unchanged RareDDIE-only model).
++dsn_pairout_cellout copy of rareddie_pairout_cellout/jobs.py: isolated state
++(logs/dsn_pairout_cellout/jobs), outputs (dsn_pairout_cellout/outputs)
++and trainer (dsn_pairout_cellout.train: byte-identical accelerated_four
++DSNRareDDI model/data with with_path=False). GPU6/GPU7 are SHARED with the live
++pure RareDDIE controls (rareddie_pairout_cellout), which are never touched.
+ Arms pairout (GPU6) and cellout (GPU7) are independent fresh seed42
+ same-DDI-split replicates, NOT true cell-cold DDI generalization. The reviewed
+ initial launch is the ONLY --fresh run. A recovery continues this run's own
+ checkpoint with its exact recorded config (--resume, or --test-only once its
+ schedule is finished); it never restarts from scratch, never reads
+-DSN/accelerated/GPU3/rareddie_control/pairout_cellout state, never changes batch size.
++DSN/accelerated/GPU3/rareddie_control/rareddie_pairout_cellout/pairout_cellout
++state, never changes batch size.
+ 
+ CPU controller only. Training children receive exactly their assigned GPU.
+ No model forward, preparation, smoke run, or credential access here.
+@@ -26,21 +29,24 @@
+ import time
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-CONTROL = ROOT / 'rareddie_pairout_cellout'
+-STATE = ROOT / 'logs/rareddie_pairout_cellout/jobs'
++CONTROL = ROOT / 'dsn_pairout_cellout'
++STATE = ROOT / 'logs/dsn_pairout_cellout/jobs'
+ OUTPUTS = CONTROL / 'outputs'
+ CONFIGS = CONTROL / 'configs'
+-APPROVAL = ROOT / 'logs/rareddie_pairout_cellout/review_approval.json'
+-# Exact frame/source/cohort checks and byte-identical model/data copy record
+-# (tools/cohort_evidence.py). The bond-aware CSE itself was verified for the
+-# unchanged rareddie_control model; that evidence and approval are reused.
++APPROVAL = ROOT / 'logs/dsn_pairout_cellout/review_approval.json'
++# Exact frame/source/cohort checks, byte-identical model/data copy record and
++# CPU parameter inventory (tools/cohort_evidence.py). The packed DSN cross-pair
++# GAT was numerically verified on GPU3 for these unchanged files and approved
++# for accelerated_four; that evidence and those approvals are reused.
+ EVIDENCE = CONTROL / 'evidence/cohort_copy_evidence.json'
+-ORIGINAL = ROOT / 'rareddie_control'
+-PRIOR_CSE_EVIDENCE = ORIGINAL / 'evidence/cse_equivalence.json'
+-PRIOR_APPROVAL = ROOT / 'logs/rareddie_control/review_approval.json'
++ORIGINAL = ROOT / 'accelerated_four/dsn'
++PRIOR_GPU3_EVIDENCE = ROOT / 'benchmarks/gpu3_speed/evidence/gpu3_evidence.json'
++PRIOR_APPROVALS = [ROOT / 'logs/gpu3_speed/review_approval.json', ROOT / 'logs/accelerated_four/review_approval.json']
++# GPUs are shared with the live pure controls: require headroom, not idleness.
++MIN_FREE_MIB = 8192
+ REVIEW_DIFF = CONTROL / 'review/implementation.diff'
+ ARMS = {'pairout': 6, 'cellout': 7}
+-NAMESPACE = 'rareddie_pairout_cellout'
++NAMESPACE = 'dsn_pairout_cellout'
+ MAX_RECOVERIES = 3
+ # The ONLY schedule these jobs may verify or recover with. Literal here,
+ # independent of the trainer constant.
+@@ -110,7 +116,7 @@
+     import pandas as pd
+     import yaml
+     from accelerated_four.dsn.metrics import classification_metrics
+-    from rareddie_pairout_cellout.train import DDI_SPLIT_NOTE, SCHEDULE, TRAIN_BATCHES, top_k_accuracy
++    from dsn_pairout_cellout.train import DDI_SPLIT_NOTE, SCHEDULE, TRAIN_BATCHES, top_k_accuracy
+ 
+     output = OUTPUTS / arm
+     required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+@@ -261,7 +267,7 @@
+     if not config_path.is_relative_to(ROOT):
+         raise ValueError('Config must remain in workspace')
+     exit_file = directory / f'attempt_{attempt}_exit.json'
+-    command = [sys.executable, '-m', 'rareddie_pairout_cellout.train', '--config', str(config_path), mode]
++    command = [sys.executable, '-m', 'dsn_pairout_cellout.train', '--config', str(config_path), mode]
+     launch_file = directory / f'attempt_{attempt}.json'
+     record = {'arm': arm, 'gpu': ARMS[arm], 'attempt': attempt, 'recoveries': recoveries,
+               'started_at': time.time(), 'config': str(config_path), 'mode': mode,
+@@ -303,9 +309,9 @@
+     source = 'best.pt' if best is not None and (last is None or best['epoch'] > last['epoch']) else 'last.pt'
+     state = best if source == 'best.pt' else last
+     cfg = state['config']
+-    # Own state only: never a DSN/accelerated/GPU3 checkpoint.
++    # Own state only: never an accelerated/GPU3/pure/full-path checkpoint.
+     if cfg.get('namespace') != NAMESPACE or Path(cfg['output']) != output:
+-        raise RuntimeError(f'{source} is not this rareddie_pairout_cellout run')
++        raise RuntimeError(f'{source} is not this dsn_pairout_cellout run')
+     if any(cfg[k] != v for k, v in AUTHORIZED_SCHEDULE.items()):
+         raise RuntimeError(f'{source} schedule differs from the authorized {AUTHORIZED_SCHEDULE}')
+     done = state['epoch'] >= cfg['epochs'] or state['bad_epochs'] >= cfg['patience']
+@@ -374,11 +380,18 @@
+     return [line for line in query('--query-compute-apps=gpu_uuid,pid,used_memory') if line.startswith(uuid)]
+ 
+ 
++def gpu_free_mib(index):
++    out = subprocess.run(['nvidia-smi', '-i', str(index), '--query-gpu=memory.free', '--format=csv,noheader,nounits'],
++                         capture_output=True, text=True, check=True).stdout
++    return int(out.strip())
++
++
+ def launch_refusals():
+     """Initial launch gate: Codex approval newer than code/diff/evidence, passing
+-    cohort/copy evidence, model.py/data.py still byte-identical to the verified
+-    rareddie_control copies (prior CSE evidence and approval), idle GPU6/7, and
+-    both arms without any record or output state."""
++    cohort/copy evidence, dsn/model.py+data.py still byte-identical to the
++    verified accelerated_four copies (prior GPU3 evidence and approvals), at
++    least MIN_FREE_MIB free on the shared GPU6/7, and both arms without any
++    record or output state."""
+     code = [p for p in CONTROL.rglob('*') if p.is_file() and p.suffix in ('.py', '.sh', '.yaml', '.md')
+             and 'outputs' not in p.parts and 'evidence' not in p.parts and '.cache' not in p.parts]
+     if not APPROVAL.exists():
+@@ -395,14 +408,15 @@
+     if not EVIDENCE.exists() or read_json(EVIDENCE).get('passed') is not True:
+         yield f'evidence {EVIDENCE} missing or not passed'
+     for name in ['model.py', 'data.py']:
+-        if not filecmp.cmp(CONTROL / name, ORIGINAL / name, shallow=False):
+-            yield f'{name} is not byte-identical to the verified {ORIGINAL / name}'
+-    if read_json(PRIOR_CSE_EVIDENCE).get('passed') is not True:
+-        yield f'prior CSE evidence {PRIOR_CSE_EVIDENCE} not passed'
+-    if read_json(PRIOR_APPROVAL).get('approved') is not True:
+-        yield f'prior rareddie_control approval {PRIOR_APPROVAL} not approved'
++        if not filecmp.cmp(CONTROL / 'dsn' / name, ORIGINAL / name, shallow=False):
++            yield f'dsn/{name} is not byte-identical to the verified {ORIGINAL / name}'
++    if read_json(PRIOR_GPU3_EVIDENCE).get('all_numerical_checks_passed') is not True:
++        yield f'prior GPU3 evidence {PRIOR_GPU3_EVIDENCE} not passed'
++    for prior in PRIOR_APPROVALS:
++        if read_json(prior).get('approved') is not True:
++            yield f'prior approval {prior} not approved'
+     if not REVIEW_DIFF.exists():
+-        yield f'missing {REVIEW_DIFF} (run rareddie_pairout_cellout/tools/make_review.sh)'
++        yield f'missing {REVIEW_DIFF} (run dsn_pairout_cellout/tools/make_review.sh)'
+     for arm, gpu in ARMS.items():
+         if (STATE / arm / 'record.json').exists():
+             yield f'{arm}: existing job record; use --status and bounded --recover'
+@@ -410,9 +424,9 @@
+                     if (OUTPUTS / arm / n).exists()]
+         if existing:
+             yield f'{arm}: output already has {existing}; --fresh needs an empty output'
+-        busy_apps = gpu_busy(gpu)
+-        if busy_apps:
+-            yield f'{arm}: physical GPU{gpu} is not idle: {busy_apps}'
++        free = gpu_free_mib(gpu)
++        if free < MIN_FREE_MIB:
++            yield f'{arm}: physical GPU{gpu} has only {free} MiB free (< {MIN_FREE_MIB}): {gpu_busy(gpu)}'
+ 
+ 
+ def main():
+@@ -460,11 +474,14 @@
+             refusals = list(launch_refusals())
+             if refusals:
+                 raise RuntimeError('LAUNCH REFUSED:\n  ' + '\n  '.join(refusals))
++            # The live pure controls sharing GPU6/7 (recorded, never touched).
++            coexisting = {arm: gpu_busy(gpu) for arm, gpu in ARMS.items()}
+             result = {arm: start(arm, CONFIGS / f'{arm}.yaml', '--fresh') for arm in ARMS}
+-            from rareddie_pairout_cellout.status import update_status
++            from dsn_pairout_cellout.status import update_status
+             update_status('launched_awaiting_progress_confirmation',
+                           launch={arm: {k: r[k] for k in ['pid', 'process_start', 'mode', 'log', 'gpu', 'started_at']}
+-                                  for arm, r in result.items()})
++                                  for arm, r in result.items()},
++                          coexisting_gpu_apps_before_launch=coexisting)
+         print(json.dumps(result, indent=2, allow_nan=False), flush=True)
+     return 0
+ 
+--- rareddie_pairout_cellout/launch.sh	2026-10-12 21:03:31.964805624 +0800
++++ dsn_pairout_cellout/launch.sh	2026-10-12 21:27:43.314559687 +0800
+@@ -1,15 +1,16 @@
+ #!/usr/bin/env bash
+-# Host launch of both rareddie_pairout_cellout arms (GPU6 pairout, GPU7
+-# cellout). Codex runs this ONLY after writing
+-# logs/rareddie_pairout_cellout/review_approval.json; the controller refuses otherwise.
++# Host launch of both dsn_pairout_cellout arms (GPU6 pairout, GPU7
++# cellout), in parallel with the LIVE pure RareDDIE controls already on those
++# cards (shared, contention expected; they are never signalled). Codex runs this ONLY after writing
++# logs/dsn_pairout_cellout/review_approval.json; the controller refuses otherwise.
+ # Each arm: detached session (wrapper orphaned -> PPID 1) holding its job.lock,
+ # inherited by the training child, --fresh. Then waits (bounded) for the actual
+ # first update and a 100-update line of both arms; writes launch.json.
+-# Usage: bash rareddie_pairout_cellout/launch.sh --launch-reviewed
++# Usage: bash dsn_pairout_cellout/launch.sh --launch-reviewed
+ source "$(dirname -- "${BASH_SOURCE[0]}")/env.sh"
+ if [[ "${1:-}" != --launch-reviewed || $# != 1 ]]; then
+-  echo 'Usage: bash rareddie_pairout_cellout/launch.sh --launch-reviewed (only after Codex review approval)' >&2
++  echo 'Usage: bash dsn_pairout_cellout/launch.sh --launch-reviewed (only after Codex review approval)' >&2
+   exit 2
+ fi
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_pairout_cellout/jobs.py --launch-reviewed
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_pairout_cellout/confirm_launch.py --wait 1800
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" dsn_pairout_cellout/jobs.py --launch-reviewed
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" dsn_pairout_cellout/confirm_launch.py --wait 1800
+--- rareddie_pairout_cellout/confirm_launch.py	2026-10-12 21:05:11.611552895 +0800
++++ dsn_pairout_cellout/confirm_launch.py	2026-10-12 21:28:36.109895959 +0800
+@@ -3,11 +3,14 @@
+ Per arm: wrapper/trainer PID, PPID, session, process identity; the fresh seed42
+ start line with the authorized schedule (150 epochs, patience 15, 1184 batches,
+ 177600 planned updates, 35520 KL warmup updates); the actual first update
+-(finite CE/rec/KL/loss, logits and every group's gradients; molecule-only batch
+-without cross edges or path graph, first_update.json); the parameter inventory
+-(no DSN/path modules, same counts as the verified rareddie_control model) and
+-initial RNG record; and a 100-update progress line.
+-Writes logs/rareddie_pairout_cellout/launch.json and updates status.json.
++(finite CE/rec/KL/loss, logits and finite nonzero gradients of every group:
++CSE, DSN InterGraphAttention, inter_projection, NAI, PVR, classifier, FIN; DSN
++batch with packed cross edges and no path graph, first_update.json; no path
++gradient exists or is required); the parameter inventory (DSN GAT/projection
++present, path module NONE, no path arrays, mu -> classifier, counts equal to the
++CPU inventory in the cohort/copy evidence) and initial RNG record; and a
++100-update progress line. GPU6/7 are shared with the live pure controls.
++Writes logs/dsn_pairout_cellout/launch.json and updates status.json.
+ """
+ import argparse
+ import json
+@@ -20,13 +23,10 @@
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(ROOT))
+-from rareddie_pairout_cellout.jobs import (ARMS, AUTHORIZED_SCHEDULE, AUTHORIZED_TRAIN_BATCHES, OUTPUTS,  # noqa: E402
+-                                           STATE, live, process_start, read_json, write_json)
+-from rareddie_pairout_cellout.model import GROUPS  # noqa: E402
+-from rareddie_pairout_cellout.status import update_status  # noqa: E402
+-
+-# Inventory of the verified rareddie_control model (same global FIN tables), read-only.
+-REFERENCE_INVENTORY = ROOT / 'rareddie_control/outputs/single_drugout/model_inventory.json'
++from dsn_pairout_cellout.jobs import (ARMS, AUTHORIZED_SCHEDULE, AUTHORIZED_TRAIN_BATCHES, EVIDENCE,  # noqa: E402
++                                       OUTPUTS, STATE, live, process_start, read_json, write_json)
++from dsn_pairout_cellout.inventory import GROUPS, UNUSED_TRAINABLE  # noqa: E402
++from dsn_pairout_cellout.status import update_status  # noqa: E402
+ 
+ 
+ def events(log):
+@@ -64,12 +64,18 @@
+     first_ok = bool(first) and first['all_gradients_finite'] and first['logits_finite'] and all(
+         math.isfinite(v) for v in [*first['loss_terms'].values(), *first['gradient_norms'].values()]) and sorted(
+         first['gradient_norms']) == sorted(GROUPS) and all(v > 0 for v in first['gradient_norms'].values()) and sorted(
+-        first['trainable_without_gradient']) == ['cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight'] and (
+-        not first['cross_edges_present'] and not first['path_graph_present'])
+-    reference = read_json(REFERENCE_INVENTORY)
+-    inventory_ok = bool(inventory) and not inventory['forbidden_name_matches'] and not (
+-        inventory['dsn_inter_attention_present'] or inventory['inter_projection_present']
+-        or inventory['path_modules_present']) and len(inventory['molecular_transformer_convs']) == 4 and all(
++        first['trainable_without_gradient']) == UNUSED_TRAINABLE and first['cross_edges_present'] and (
++        first['cross_edges'] > 0 and not first['path_graph_present'] and first['path_mask_shape'] == [128, 0])
++    # The CPU-constructed inventory of the evidence (same assets, same files).
++    reference = read_json(EVIDENCE)['inventory']
++    inventory_ok = bool(inventory) and inventory['dsn_inter_attention_present'] and len(
++        inventory['dsn_inter_attention_gatconvs']) == 2 and all(
++        not g['add_self_loops'] for g in inventory['dsn_inter_attention_gatconvs'].values()) and (
++        inventory['inter_projection_present'] and inventory['with_path'] is False
++        and inventory['path_module'] == 'NONE' and inventory['path_parameters'] == 0
++        and not inventory['collator_path_arrays_loaded'] and inventory['fin_trainable']
++        and inventory['pair_input'] == 256 and inventory['pvr_presence_dim'] == 0 and inventory['latent'] == 128
++        and len(inventory['molecular_transformer_convs']) == 4) and all(
+         inventory[k] == reference[k] for k in ['parameters', 'trainable_parameters', 'groups', 'frozen'])
+     start = found.get('start') or {}
+     fresh = (start.get('mode') == 'fresh' and start.get('seed') == 42 and start.get('with_path') is False and
+@@ -95,6 +101,8 @@
+             'start': found.get('start'), 'first_step': found.get('first_step'), 'progress_100': found.get('progress_100'),
+             'first_update': first, 'first_update_ok': first_ok, 'inventory_ok': inventory_ok,
+             'schedule_ok': schedule_ok, 'parameters': (inventory or {}).get('parameters'),
++            'inventory_groups': (inventory or {}).get('groups'),
++            'path_module': (inventory or {}).get('path_module'),
+             'initial_rng_recorded': (output / 'initial_rng.pt').is_file(),
+             'test_export': found.get('best_checkpoint_test', {}).get('macro_f1_85'),
+             'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None,
+@@ -116,10 +124,13 @@
+                           capture_output=True, text=True).stdout.splitlines()
+     launch = {'checked_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'arms': arms,
+               'gpu_compute_apps': gpus, 'loadavg': list(__import__('os').getloadavg()),
++              'note': ('GPU6/GPU7 shared with the live pure RareDDIE controls (never signalled); CPU/GPU '
++                       'contention expected, epoch times are not a promise. Same frozen DDI split, independent '
++                       'fresh seed42 replicates, NOT true cell-cold DDI generalization.'),
+               'all_progress_confirmed': all(a['progress_confirmed'] for a in arms.values())}
+-    write_json(ROOT / 'logs/rareddie_pairout_cellout/launch.json', launch)
++    write_json(ROOT / 'logs/dsn_pairout_cellout/launch.json', launch)
+     update_status('launched_progress_confirmed' if launch['all_progress_confirmed'] else 'launched_progress_unconfirmed',
+-                  launch_check={'json': str(ROOT / 'logs/rareddie_pairout_cellout/launch.json'),
++                  launch_check={'json': str(ROOT / 'logs/dsn_pairout_cellout/launch.json'),
+                                 'all_progress_confirmed': launch['all_progress_confirmed'],
+                                 'pids': {a: v['pid'] for a, v in arms.items()},
+                                 'trainer_pids': {a: (v['trainer'] or {}).get('pid') for a, v in arms.items()}})
+--- rareddie_pairout_cellout/monitor/monitor_loop.sh	2026-10-12 21:05:23.171407568 +0800
++++ dsn_pairout_cellout/monitor/monitor_loop.sh	2026-10-12 21:28:51.977696474 +0800
+@@ -1,9 +1,10 @@
+ #!/usr/bin/env bash
+-# Detached rareddie_pairout_cellout monitor daemon (started only by start_monitor.sh).
+-# Pattern of rareddie_control/monitor/monitor_loop.sh (left untouched):
++# Detached dsn_pairout_cellout monitor daemon (started only by start_monitor.sh).
++# Copy of rareddie_pairout_cellout/monitor/monitor_loop.sh (left untouched, as is its
++# live daemon):
+ # deterministic status, one gpt-6.1-sol LOW Codex check, host drain of recovery
+ # requests, after status; first check immediately, then one every 2400 seconds.
+-# Local state only (logs/rareddie_pairout_cellout/monitor, status.json); no notifications.
++# Local state only (logs/dsn_pairout_cellout/monitor, status.json); no notifications.
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ MONITOR_DIR="$LOG_DIR/monitor"
+@@ -27,15 +28,15 @@
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ status_to() {
+   # A status/verifier error is recorded and never stops monitoring.
+-  "$PYTHON_BIN" rareddie_pairout_cellout/jobs.py --status > "$1" 2> "$1.err" \
++  "$PYTHON_BIN" dsn_pairout_cellout/jobs.py --status > "$1" 2> "$1.err" \
+     || printf '{"all_complete": false, "status_error": true, "runs": {}}\n' > "$1"
+ }
+ record_status() {
+-  # monitor section of logs/rareddie_pairout_cellout/status.json; failures never stop monitoring.
++  # monitor section of logs/dsn_pairout_cellout/status.json; failures never stop monitoring.
+   "$PYTHON_BIN" - "$MONITOR_DIR" "$CHECK_ID" "$1" "${CODEX_EXIT:-}" <<'PY' || true
+ import json, sys
+ from pathlib import Path
+-from rareddie_pairout_cellout.status import update_status
++from dsn_pairout_cellout.status import update_status
+ monitor, check, outcome, codex_exit = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+ after = monitor / 'checks' / check / 'after.json'
+ runs = json.loads(after.read_text()).get('runs', {}) if after.exists() else {}
+@@ -82,7 +83,7 @@
+       /data/interns/zhangpc/.local/bin/codex exec \
+       --dangerously-bypass-approvals-and-sandbox --ignore-user-config --ephemeral --skip-git-repo-check \
+       -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+-      -o "$CHECK_DIR/codex_final.txt" - < rareddie_pairout_cellout/monitor/prompt.md \
++      -o "$CHECK_DIR/codex_final.txt" - < dsn_pairout_cellout/monitor/prompt.md \
+       > "$CHECK_DIR/codex.log" 2>&1; then
+     CODEX_EXIT=0
+     CLI_FAILURES=0
+@@ -93,7 +94,7 @@
+   fi
+   echo "$CODEX_EXIT" > "$CHECK_DIR/codex_exit.txt"
+   # Launch recovery only here, outside the CLI timeout and its PID namespace.
+-  if "$PYTHON_BIN" rareddie_pairout_cellout/monitor/drain_recovery_requests.py \
++  if "$PYTHON_BIN" dsn_pairout_cellout/monitor/drain_recovery_requests.py \
+       > "$CHECK_DIR/recovery_drain.log" 2>&1; then
+     :
+   else
+--- rareddie_pairout_cellout/monitor/start_monitor.sh	2026-10-12 21:05:23.143407920 +0800
++++ dsn_pairout_cellout/monitor/start_monitor.sh	2026-10-12 21:28:42.193819474 +0800
+@@ -1,9 +1,9 @@
+ #!/usr/bin/env bash
+-# Start the detached rareddie_pairout_cellout monitor daemon ONLY after both jobs have
++# Start the detached dsn_pairout_cellout monitor daemon ONLY after both jobs have
+ # records and confirmed real progress. The daemon is double-forked (setsid -f,
+ # PPID 1, own session). Waits for its FIRST SUCCESSFUL check: Codex exit 0,
+ # after.json and next_check.txt persisted. Safe to repeat while it is live.
+-# Usage: bash rareddie_pairout_cellout/monitor/start_monitor.sh
++# Usage: bash dsn_pairout_cellout/monitor/start_monitor.sh
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ export CUDA_VISIBLE_DEVICES=''
+@@ -21,9 +21,9 @@
+ import sys
+ import time
+ from pathlib import Path
+-from rareddie_pairout_cellout.jobs import ARMS, STATE, process_start
+-from rareddie_pairout_cellout.confirm_launch import arm_state, ps
+-from rareddie_pairout_cellout.status import update_status
++from dsn_pairout_cellout.jobs import ARMS, STATE, process_start
++from dsn_pairout_cellout.confirm_launch import arm_state, ps
++from dsn_pairout_cellout.status import update_status
+ monitor = Path(sys.argv[1])
+ for arm in ARMS:
+     if not (STATE / arm / 'record.json').is_file():
+@@ -37,7 +37,7 @@
+ (monitor / 'monitor.pid').unlink(missing_ok=True)
+ started = time.time()
+ with (monitor / 'daemon.log').open('a') as log:
+-    subprocess.run(['setsid', '-f', 'bash', str(root / 'rareddie_pairout_cellout/monitor/monitor_loop.sh')], cwd=root,
++    subprocess.run(['setsid', '-f', 'bash', str(root / 'dsn_pairout_cellout/monitor/monitor_loop.sh')], cwd=root,
+                    stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, close_fds=True, check=True)
+ for _ in range(300):
+     if (monitor / 'monitor.pid').is_file() and (monitor / 'monitor.pid').read_text().strip():
+@@ -71,5 +71,5 @@
+ print(fields)
+ if not success:
+     raise SystemExit(f'First monitor check NOT successful (codex exit {codex_exit}); daemon keeps its 2400 s schedule')
+-print(f'Detached rareddie_pairout_cellout monitor PID {pid}; first check succeeded; next check {next_check}')
++print(f'Detached dsn_pairout_cellout monitor PID {pid}; first check succeeded; next check {next_check}')
+ PY
+--- rareddie_pairout_cellout/monitor/drain_recovery_requests.py	2026-10-12 21:05:23.147407869 +0800
++++ dsn_pairout_cellout/monitor/drain_recovery_requests.py	2026-10-12 21:28:51.977696474 +0800
+@@ -1,7 +1,7 @@
+ """Consume monitor recovery requests in the host daemon, once per request.
+ 
+-Copy of rareddie_control/monitor/drain_recovery_requests.py for rareddie_pairout_cellout:
+-requests carry only arm and reason; rareddie_pairout_cellout/jobs.py alone decides.
++Copy of rareddie_pairout_cellout/monitor/drain_recovery_requests.py for dsn_pairout_cellout:
++requests carry only arm and reason; dsn_pairout_cellout/jobs.py alone decides.
+ """
+ import json
+ from pathlib import Path
+@@ -11,7 +11,7 @@
+ 
+ 
+ ROOT = Path(__file__).resolve().parents[2]
+-REQUESTS = ROOT / 'logs/rareddie_pairout_cellout/monitor/recovery_requests'
++REQUESTS = ROOT / 'logs/dsn_pairout_cellout/monitor/recovery_requests'
+ 
+ 
+ def write_record(path, record):
+@@ -44,7 +44,7 @@
+                     or set(request) - {'arm', 'reason'}):
+                 raise ValueError('Request requires exactly arm and a nonempty reason')
+             record['request'] = {key: request[key] for key in ('arm', 'reason')}
+-            command = [sys.executable, str(ROOT / 'rareddie_pairout_cellout/jobs.py'),
++            command = [sys.executable, str(ROOT / 'dsn_pairout_cellout/jobs.py'),
+                        '--recover', request['arm'], '--reason', request['reason']]
+             record['command'] = command
+             write_record(claimed, record)
+--- rareddie_pairout_cellout/monitor/prompt.md	2026-10-12 21:05:35.539252083 +0800
++++ dsn_pairout_cellout/monitor/prompt.md	2026-10-12 21:28:51.977696474 +0800
+@@ -1,5 +1,6 @@
+-You are the detached SERVER monitor for the two rareddie_pairout_cellout DDI jobs in
+-/data/interns/zhangpc/cairn_new (namespace rareddie_pairout_cellout). Use gpt-6.1-sol
++You are the detached SERVER monitor for the two dsn_pairout_cellout DDI jobs in
++/data/interns/zhangpc/cairn_new (namespace dsn_pairout_cellout: DSN-DDI+RareDDIE
++NO PATH control, DSN inter-graph attention kept, path module absent). Use gpt-6.1-sol
+ with reasoning LOW. The main chat has ended; do not require it, app automation,
+ or user confirmation. Scheduled networked CLI execution and the existing private
+ .codex_runtime authentication are authorized. Never inspect, print, copy, or
+@@ -7,27 +8,30 @@
+ variables for the existing service. Do not source .bashrc, call clashon, or
+ start interactive shells/history writes. Do not notify or message anyone.
+ 
+-SCOPE: ONLY the two NEW rareddie_pairout_cellout arms: state
+-logs/rareddie_pairout_cellout/jobs/, outputs rareddie_pairout_cellout/outputs/<arm>/,
++SCOPE: ONLY the two NEW dsn_pairout_cellout arms: state
++logs/dsn_pairout_cellout/jobs/, outputs dsn_pairout_cellout/outputs/<arm>/,
+ their recorded wrapper/trainer PIDs. Exact GPU mapping: pairout=GPU6,
+ cellout=GPU7. Both are independent fresh seed42 replicates on the SAME frozen
+ PairOut DDI split (the CellOut DDI frame is identical), NOT true cell-cold DDI
+ generalization. Everything else is someone else's and stays untouched, live or
+ not: the original jobs (logs/server_jobs/, outputs/, scripts/, cairn_dsn/,
+-configs/), accelerated_four/, rareddie_control/, pairout_cellout/ (its prepared
+-data is read-only input) and their logs/, GPU0-5 and all their monitors. Never
+-read their checkpoints for decisions, never signal them, never write there.
++configs/), accelerated_four/, rareddie_control/, rareddie_pairout_cellout/,
++pairout_cellout/ (its prepared data is read-only input) and their logs/, GPU0-5
++and all their monitors. GPU6/GPU7 are SHARED with the LIVE pure RareDDIE
++rareddie_pairout_cellout trainers: their processes on those cards are not ours,
++contention/slowdown is expected, and they must never be signalled. Never read
++their checkpoints for decisions, never signal them, never write there.
+ 
+-First read logs/rareddie_pairout_cellout/jobs/status.json (written immediately before
+-this check by `rareddie_pairout_cellout/jobs.py --status`), then as needed the per-run
++First read logs/dsn_pairout_cellout/jobs/status.json (written immediately before
++this check by `dsn_pairout_cellout/jobs.py --status`), then as needed the per-run
+ record.json, current attempt log tail, attempt_<N>_process.json and exit records,
+ history.jsonl tail and output state. Use the read-only Python environment via
+-`source rareddie_pairout_cellout/env.sh` ($PYTHON_BIN). Keep every write, temporary file
+-and cache inside cairn_new, under logs/rareddie_pairout_cellout/monitor/ only.
++`source dsn_pairout_cellout/env.sh` ($PYTHON_BIN). Keep every write, temporary file
++and cache inside cairn_new, under logs/dsn_pairout_cellout/monitor/ only.
+ cairn_dev is READ ONLY. No permission changes, broad audits, hashes, smoke runs,
+ preparation, new experiments, or changes to data/model/selection formulas.
+ 
+-`rareddie_pairout_cellout/jobs.py --status` performs the real export verification:
++`dsn_pairout_cellout/jobs.py --status` performs the real export verification:
+ stopped schedule (150 epochs or patience 15; 1184 updates per epoch, 177600
+ planned updates, KL warmup 35520), selected best.pt consistent with
+ last.pt and the strict fixed85 validation MacroF1 history maximum, frozen test
+@@ -45,29 +49,29 @@
+ prints a train_progress line every 100 updates; one epoch is 1184 updates
+ (at most 150 epochs).
+ If all states are live/complete with no actionable change, stay quiet.
+-Optionally append one short line to logs/rareddie_pairout_cellout/monitor/codex_notes.jsonl;
++Optionally append one short line to logs/dsn_pairout_cellout/monitor/codex_notes.jsonl;
+ no chat output, no questions.
+ 
+-You may ONLY: read logs/artifacts, run `rareddie_pairout_cellout/jobs.py --status`, and
++You may ONLY: read logs/artifacts, run `dsn_pairout_cellout/jobs.py --status`, and
+ file recovery requests. Do not edit any code, config, data, model, checkpoint,
+ history or output file. Never launch, resume or test-run training yourself.
+-NEVER execute rareddie_pairout_cellout/jobs.py --recover, --launch-reviewed, --block or
+---worker, rareddie_pairout_cellout/launch.sh, or
+-rareddie_pairout_cellout/monitor/drain_recovery_requests.py, and never call the
++NEVER execute dsn_pairout_cellout/jobs.py --recover, --launch-reviewed, --block or
++--worker, dsn_pairout_cellout/launch.sh, or
++dsn_pairout_cellout/monitor/drain_recovery_requests.py, and never call the
+ controller's functions through Python or another wrapper: a Codex tool's PID
+ namespace and lifetime are scoped to this check.
+ 
+ For an actually FAILED job (state failed: dead process AND unlocked job.lock AND
+ unverified exports, i.e. a genuine exited failure), inspect its recorded errors
+ first. Then write ONE JSON recovery request under
+-logs/rareddie_pairout_cellout/monitor/recovery_requests/:
++logs/dsn_pairout_cellout/monitor/recovery_requests/:
+ 
+   {"arm": "<exact arm name>", "reason": "<actual observed failure>"}
+ 
+ Use a unique filename (timestamp plus UUID), write a .tmp file in that same
+ directory, then atomically rename it to .json. Do not create a duplicate request
+ for an arm with a pending request. Record the request path and observed failure
+-in logs/rareddie_pairout_cellout/monitor/actions.jsonl. Never request recovery for live
++in logs/dsn_pairout_cellout/monitor/actions.jsonl. Never request recovery for live
+ or complete runs. The host daemon drains requests AFTER this Codex invocation
+ ends and BEFORE its after-status snapshot, invoking the bounded controller (at
+ most three recoveries per arm, preparation errors included). It archives
+@@ -75,8 +79,8 @@
+ exact recorded config, optimizer, update, RNG and schedule (--resume), or runs
+ --test-only once training has stopped. It never restarts from scratch (--fresh
+ is the initial launch only; a run that died before its first epoch checkpoint
+-is not recoverable and stays failed), never restores DSN/accelerated/GPU3/
+-rareddie_control/pairout_cellout weights, and never changes the batch size. Processed requests and their results
++is not recoverable and stays failed), never restores accelerated/GPU3/
++rareddie_control/rareddie_pairout_cellout/pairout_cellout weights, and never changes the batch size. Processed requests and their results
+ are in recovery_requests/processed/; interrupted requests are not replayed. A
+ queued request is not a completed recovery.
+ 
+--- rareddie_pairout_cellout/tools/cohort_evidence.py	2026-10-12 21:06:02.870908477 +0800
++++ dsn_pairout_cellout/tools/cohort_evidence.py	2026-10-12 21:29:25.869270399 +0800
+@@ -1,9 +1,14 @@
+-"""Small exact frame/source/cohort checks and model/data copy record (CPU, read-only inputs).
++"""Small exact frame/source/cohort checks, model/data copy record and CPU inventory (read-only inputs).
+ 
+ No preparation, audit rerun, model forward or benchmark: the full pairout_cellout
+-preparation audit and the rareddie_control CSE equivalence evidence/approval are
+-reused. Writes rareddie_pairout_cellout/evidence/cohort_copy_evidence.json.
+-Usage: source rareddie_pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES='' $PYTHON_BIN -m rareddie_pairout_cellout.tools.cohort_evidence
++preparation audit, the GPU3 numerical evidence for the unchanged packed DSN
++model/data and the accelerated_four approval are reused. The model is only
++constructed on CPU (no forward) to record its parameter inventory: DSN
++GAT/projection present, path module NONE, the collator loads no path arrays,
++every non-DSN group equal to the live pure RareDDIE control inventory and the
++total equal to the accelerated_four no-path inventory.
++Writes dsn_pairout_cellout/evidence/cohort_copy_evidence.json.
++Usage: source dsn_pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES='' $PYTHON_BIN -m dsn_pairout_cellout.tools.cohort_evidence
+ """
+ import filecmp
+ import json
+@@ -14,14 +19,20 @@
+ import torch
+ 
+ ROOT = Path(__file__).resolve().parents[2]
+-CONTROL = ROOT / 'rareddie_pairout_cellout'
++CONTROL = ROOT / 'dsn_pairout_cellout'
+ PREPARED = ROOT / 'pairout_cellout/prepared'
+ SOURCES = {'pairout': ROOT.parent / 'cairn_dev/data/processed/ddi.parquet',
+            'cellout': ROOT.parent / 'cairn_dev/data/experiments/reference85/cellout/ddi.parquet'}
+ COUNTS = {'train': 151508, 'val': 18939, 'test': 18938}
+ CLASSES = {'train': 85, 'val': 82, 'test': 83}
+-PRIOR_CSE = ROOT / 'rareddie_control/evidence/cse_equivalence.json'
+-PRIOR_APPROVAL = ROOT / 'logs/rareddie_control/review_approval.json'
++ORIGINAL = ROOT / 'accelerated_four/dsn'
++PRIOR_GPU3 = ROOT / 'benchmarks/gpu3_speed/evidence/gpu3_evidence.json'
++GPU3_COPY = ROOT / 'benchmarks/gpu3_speed/dsn_gpu3'
++PRIOR_APPROVALS = [ROOT / 'logs/gpu3_speed/review_approval.json', ROOT / 'logs/accelerated_four/review_approval.json']
++# Read-only reference inventories: live pure control (same FIN assets) and the
++# accelerated_four no-path model (same files, same FIN table shapes).
++PURE_INVENTORY = ROOT / 'rareddie_pairout_cellout/outputs/pairout/model_inventory.json'
++ACCELERATED_NO_PATH_INVENTORY = ROOT / 'accelerated_four/outputs/no_path_single_drugout/model_inventory.json'
+ 
+ 
+ def same_frame(a, b):
+@@ -64,15 +75,44 @@
+     report['schedule'] = {'train_batches': batches, 'planned_updates': 150 * batches,
+                           'kl_warmup_updates': math.ceil(.2 * 150 * batches),
+                           'kl_warmup_epochs': math.ceil(.2 * 150 * batches) / batches}
+-    cse, approval = json.loads(PRIOR_CSE.read_text()), json.loads(PRIOR_APPROVAL.read_text())
+     report['copy'] = {
+-        'model_py_byte_identical_to_rareddie_control': filecmp.cmp(CONTROL / 'model.py', ROOT / 'rareddie_control/model.py', shallow=False),
+-        'data_py_byte_identical_to_rareddie_control': filecmp.cmp(CONTROL / 'data.py', ROOT / 'rareddie_control/data.py', shallow=False),
+-        'prior_cse_evidence': str(PRIOR_CSE.relative_to(ROOT)),
+-        'prior_cse_passed': cse['passed'] is True and cse['forward_bitwise_equal'] is True
+-        and cse['gradients_bitwise_equal'] is True,
+-        'prior_approval': str(PRIOR_APPROVAL.relative_to(ROOT)), 'prior_approved': approval['approved'] is True,
+-        'note': 'model.py/data.py are the verified rareddie_control files; no new CSE benchmark was run'}
++        'model_py_byte_identical_to_accelerated_four': filecmp.cmp(CONTROL / 'dsn/model.py', ORIGINAL / 'model.py', shallow=False),
++        'data_py_byte_identical_to_accelerated_four': filecmp.cmp(CONTROL / 'dsn/data.py', ORIGINAL / 'data.py', shallow=False),
++        'accelerated_four_byte_identical_to_gpu3_verified': all(
++            filecmp.cmp(ORIGINAL / name, GPU3_COPY / name, shallow=False) for name in ['model.py', 'data.py']),
++        'prior_gpu3_evidence': str(PRIOR_GPU3.relative_to(ROOT)),
++        'prior_gpu3_passed': json.loads(PRIOR_GPU3.read_text())['all_numerical_checks_passed'] is True,
++        'prior_approvals': [str(p.relative_to(ROOT)) for p in PRIOR_APPROVALS],
++        'prior_approved': all(json.loads(p.read_text())['approved'] is True for p in PRIOR_APPROVALS),
++        'note': 'dsn/model.py+data.py are the GPU3-verified accelerated_four files; no new benchmark was run'}
++    # CPU construction only (no forward), exactly as the trainer builds them.
++    from dsn_pairout_cellout.dsn.data import Collator
++    from dsn_pairout_cellout.dsn.model import DSNRareDDI
++    from dsn_pairout_cellout.inventory import parameter_inventory
++    collator = Collator(assets, PREPARED, False)
++    inventory = parameter_inventory(DSNRareDDI(assets, {'with_path': False}), collator)
++    pure, accelerated = json.loads(PURE_INVENTORY.read_text()), json.loads(ACCELERATED_NO_PATH_INVENTORY.read_text())
++    report['inventory'] = {k: v for k, v in inventory.items() if k != 'tensors'}
++    report['inventory_checks'] = {
++        'non_dsn_groups_equal_pure_control': all(inventory['groups'][g] == n for g, n in pure['groups'].items()),
++        'dsn_groups_nonzero': inventory['groups']['dsn_inter_attention'] > 0 and inventory['groups']['inter_projection'] > 0,
++        'total_equals_pure_plus_dsn': inventory['parameters'] == pure['parameters'] + inventory['groups']['dsn_inter_attention']
++        + inventory['groups']['inter_projection'],
++        'total_equals_accelerated_four_no_path': inventory['parameters'] == accelerated['parameters']
++        and inventory['trainable_parameters'] == accelerated['trainable_parameters'],
++        'frozen_only_readout_select': inventory['frozen'] == pure['frozen'],
++        'two_dsn_gatconvs_without_auto_self_loops': len(inventory['dsn_inter_attention_gatconvs']) == 2 and all(
++            not g['add_self_loops'] for g in inventory['dsn_inter_attention_gatconvs'].values()),
++        'inter_projection_present': inventory['inter_projection_present'],
++        'path_module_none': inventory['path_module'] == 'NONE' and inventory['path_parameters'] == 0
++        and inventory['with_path'] is False,
++        'collator_loads_no_path_arrays': not inventory['collator_path_arrays_loaded'],
++        'pvr_no_path_input': inventory['pair_input'] == 256 and inventory['pvr_presence_dim'] == 0
++        and inventory['latent'] == 128,
++        'classifier_same_as_pure': inventory['classifier'] == pure['classifier'],
++        'fin_trainable_same_tables': inventory['fin_trainable'] is True
++        and inventory['fin_entity_table'] == accelerated['fin_entity_table']
++        and inventory['fin_relation_table'] == accelerated['fin_relation_table']}
+     report['ddi_split_note'] = ('same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh '
+                                 'seed42 same-DDI-split replicates, NOT true cell-cold DDI generalization')
+     report['passed'] = bool(
+@@ -83,12 +123,16 @@
+                 and a['event_ids_in_0_84'] for a in report['arms'].values())
+         and report['schedule'] == {'train_batches': 1184, 'planned_updates': 177600, 'kl_warmup_updates': 35520,
+                                    'kl_warmup_epochs': 30.}
+-        and report['copy']['model_py_byte_identical_to_rareddie_control']
+-        and report['copy']['data_py_byte_identical_to_rareddie_control']
+-        and report['copy']['prior_cse_passed'] and report['copy']['prior_approved'])
++        and all(report['copy'][k] for k in ['model_py_byte_identical_to_accelerated_four',
++                                            'data_py_byte_identical_to_accelerated_four',
++                                            'accelerated_four_byte_identical_to_gpu3_verified',
++                                            'prior_gpu3_passed', 'prior_approved'])
++        and all(report['inventory_checks'].values()))
+     output = CONTROL / 'evidence/cohort_copy_evidence.json'
+     output.write_text(json.dumps(report, indent=1, allow_nan=False) + '\n')
+-    print(json.dumps({'passed': report['passed'], 'arms': report['arms'], 'schedule': report['schedule']}, indent=1))
++    print(json.dumps({'passed': report['passed'], 'arms': report['arms'], 'schedule': report['schedule'],
++                      'copy': report['copy'], 'inventory_groups': inventory['groups'],
++                      'inventory_checks': report['inventory_checks']}, indent=1))
+     return 0 if report['passed'] else 1
+ 
+ 
+--- rareddie_pairout_cellout/tools/make_review.sh	2026-10-12 21:06:33.934517955 +0800
++++ dsn_pairout_cellout/tools/make_review.sh	2026-10-12 21:30:05.480772415 +0800
+@@ -1,32 +1,42 @@
+ #!/usr/bin/env bash
+-# Actual unified diffs for review: rareddie_pairout_cellout against the
+-# rareddie_control files it copies/adapts (review/implementation.diff; model.py
+-# and data.py must show NO diff), plus the new files (review/new_files.diff).
++# Actual unified diffs for review: dsn_pairout_cellout against the
++# rareddie_pairout_cellout files it adapts (review/implementation.diff), cmp
++# byte-equality of dsn/model.py and dsn/data.py with accelerated_four/dsn (must
++# show NO diff), plus the new files (review/new_files.diff).
+ set -uo pipefail
+ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+ cd "$ROOT_DIR"
+-C=rareddie_control
+-N=rareddie_pairout_cellout
++R=rareddie_pairout_cellout
++A=accelerated_four/dsn
++N=dsn_pairout_cellout
+ {
+-  echo "### rareddie_control -> rareddie_pairout_cellout (model.py/data.py byte-identical: empty diffs)"
+-  cmp "$C/model.py" "$N/model.py" && echo "model.py: byte-identical"
+-  cmp "$C/data.py" "$N/data.py" && echo "data.py: byte-identical"
+-  diff -u "$C/__init__.py" "$N/__init__.py"
+-  diff -u "$C/train.py" "$N/train.py"
+-  diff -u "$C/configs/single_drugout.yaml" "$N/configs/pairout.yaml"
+-  diff -u "$C/configs/double_drugout.yaml" "$N/configs/cellout.yaml"
+-  diff -u "$C/env.sh" "$N/env.sh"
+-  diff -u "$C/status.py" "$N/status.py"
+-  diff -u "$C/jobs.py" "$N/jobs.py"
+-  diff -u "$C/launch.sh" "$N/launch.sh"
+-  diff -u "$C/confirm_launch.py" "$N/confirm_launch.py"
+-  diff -u "$C/monitor/monitor_loop.sh" "$N/monitor/monitor_loop.sh"
+-  diff -u "$C/monitor/start_monitor.sh" "$N/monitor/start_monitor.sh"
+-  diff -u "$C/monitor/drain_recovery_requests.py" "$N/monitor/drain_recovery_requests.py"
+-  diff -u "$C/monitor/prompt.md" "$N/monitor/prompt.md"
+-  diff -u "$C/tools/make_review.sh" "$N/tools/make_review.sh"
++  echo "### accelerated_four/dsn -> dsn_pairout_cellout/dsn (byte-identical: cmp, empty diffs)"
++  cmp "$A/model.py" "$N/dsn/model.py" && echo "dsn/model.py: byte-identical to $A/model.py"
++  cmp "$A/data.py" "$N/dsn/data.py" && echo "dsn/data.py: byte-identical to $A/data.py"
++  diff -u "$A/model.py" "$N/dsn/model.py"
++  diff -u "$A/data.py" "$N/dsn/data.py"
++  echo "### rareddie_pairout_cellout -> dsn_pairout_cellout (adapted)"
++  diff -u "$R/__init__.py" "$N/__init__.py"
++  diff -u "$R/train.py" "$N/train.py"
++  diff -u "$R/configs/pairout.yaml" "$N/configs/pairout.yaml"
++  diff -u "$R/configs/cellout.yaml" "$N/configs/cellout.yaml"
++  diff -u "$R/env.sh" "$N/env.sh"
++  diff -u "$R/status.py" "$N/status.py"
++  diff -u "$R/jobs.py" "$N/jobs.py"
++  diff -u "$R/launch.sh" "$N/launch.sh"
++  diff -u "$R/confirm_launch.py" "$N/confirm_launch.py"
++  diff -u "$R/monitor/monitor_loop.sh" "$N/monitor/monitor_loop.sh"
++  diff -u "$R/monitor/start_monitor.sh" "$N/monitor/start_monitor.sh"
++  diff -u "$R/monitor/drain_recovery_requests.py" "$N/monitor/drain_recovery_requests.py"
++  diff -u "$R/monitor/prompt.md" "$N/monitor/prompt.md"
++  diff -u "$R/tools/cohort_evidence.py" "$N/tools/cohort_evidence.py"
++  diff -u "$R/tools/make_review.sh" "$N/tools/make_review.sh"
++  echo "### $R/data.py (molecule-only Collator) is replaced by the unchanged $A/data.py Collator(with_path=False)"
++  echo "### replaced by dsn/model.py (unchanged DSNRareDDI) + inventory.py: $R/model.py GROUPS/parameter_inventory"
++  diff -u <(sed -n '/^GROUPS = /,$p' "$R/model.py") "$N/inventory.py"
+ } > "$N/review/implementation.diff"
+ {
+-  diff -uN /dev/null "$N/tools/cohort_evidence.py"
++  diff -uN /dev/null "$N/dsn/__init__.py"
++  diff -uN /dev/null "$N/inventory.py"
+ } > "$N/review/new_files.diff"
+ wc -l "$N/review/implementation.diff" "$N/review/new_files.diff"
+### rareddie_pairout_cellout/data.py (molecule-only Collator) is replaced by the unchanged accelerated_four/dsn/data.py Collator(with_path=False)
+### replaced by dsn/model.py (unchanged DSNRareDDI) + inventory.py: rareddie_pairout_cellout/model.py GROUPS/parameter_inventory
+--- /dev/fd/63	2026-10-12 21:30:37.824365801 +0800
++++ dsn_pairout_cellout/inventory.py	2026-10-12 21:26:40.743346313 +0800
+@@ -1,26 +1,52 @@
+-GROUPS = {'fin_entities': ('fin_entities.',), 'fin_relations': ('fin_relations.',), 'cse': ('cse.',),
++"""Parameter groups and inventory for the unchanged DSNRareDDI(with_path=False).
++
++Kept outside the byte-identical dsn/model.py. Groups are disjoint: the DSN
++InterGraphAttention (cse.blocks.N.interAtt) and its 192->128 inter_projection
++are separated from the remaining (molecular RareDDIE) CSE parameters, so the
++first update proves each of them receives a gradient. There is no path group:
++the path module is absent.
++"""
++from torch_geometric.nn import TransformerConv, GATConv
++
++# Ordered: the DSN prefixes are matched before the generic cse prefix.
++GROUPS = {'dsn_inter_attention': ('cse.blocks.0.interAtt.', 'cse.blocks.1.interAtt.'),
++          'inter_projection': ('cse.blocks.0.inter_projection.', 'cse.blocks.1.inter_projection.'),
++          'cse': ('cse.',), 'fin_entities': ('fin_entities.',), 'fin_relations': ('fin_relations.',),
+           'nai': ('nai.',), 'pvr': ('pvr.',), 'classifier': ('classifier.',)}
+-FORBIDDEN = ('inter', 'path', 'gat', 'cross')
++# Trainable parameters whose output the original forward never consumes.
++UNUSED_TRAINABLE = ['cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight']
++
++
++def group_of(name):
++    return next(g for g, prefixes in GROUPS.items() if name.startswith(prefixes))
+ 
+ 
+-def parameter_inventory(model):
+-    """Every named parameter with its group; proves no DSN/path parameters exist."""
++def parameter_inventory(model, collator):
++    """Every named parameter with its group; DSN GAT/projection present, path module NONE."""
+     rows = [{'name': name, 'shape': list(p.shape), 'numel': p.numel(), 'requires_grad': p.requires_grad,
+-             'group': next(g for g, prefixes in GROUPS.items() if name.startswith(prefixes))}
+-            for name, p in model.named_parameters()]
+-    lowered = [r['name'].lower() for r in rows]
+-    convs = {name: type(m).__name__ for name, m in model.cse.named_modules() if isinstance(m, TransformerConv)}
++             'group': group_of(name)} for name, p in model.named_parameters()]
++    gats = {name: {'type': type(m).__name__, 'heads': m.heads, 'out_channels': m.out_channels,
++                   'add_self_loops': m.add_self_loops}
++            for name, m in model.cse.named_modules() if isinstance(m, GATConv)}
+     return {
+         'parameters': sum(r['numel'] for r in rows),
+         'trainable_parameters': sum(r['numel'] for r in rows if r['requires_grad']),
+         'groups': {g: sum(r['numel'] for r in rows if r['group'] == g) for g in GROUPS},
+         'frozen': [r['name'] for r in rows if not r['requires_grad']],
+-        'forbidden_name_matches': [n for n in lowered if any(word in n for word in FORBIDDEN)],
+-        'dsn_inter_attention_present': any('interatt' in n for n in lowered),
+-        'inter_projection_present': any('inter_projection' in n for n in lowered),
+-        'path_modules_present': any(n.startswith('path.') for n in lowered),
+-        'molecular_transformer_convs': convs,
++        'dsn_inter_attention_present': bool(gats) and all('interAtt' in n for n in gats),
++        'dsn_inter_attention_gatconvs': gats,
++        'inter_projection_present': any('inter_projection' in r['name'] for r in rows),
++        'molecular_transformer_convs': {name: type(m).__name__ for name, m in model.cse.named_modules()
++                                        if isinstance(m, TransformerConv)},
++        'with_path': model.with_path,
++        'path_module': 'NONE' if not hasattr(model, 'path') else type(model.path).__name__,
++        'path_parameters': sum(r['numel'] for r in rows if r['name'].startswith('path.')),
++        'collator_path_arrays_loaded': hasattr(collator, 'paths'),
+         'fin_trainable': model.fin_entities.weight.requires_grad and model.fin_relations.weight.requires_grad,
+-        'pair_input': model.pvr.feature_dim, 'latent': model.pvr.mu.out_features,
++        'fin_entity_table': list(model.fin_entities.weight.shape),
++        'fin_relation_table': list(model.fin_relations.weight.shape),
++        'pair_input': model.pvr.feature_dim, 'pvr_presence_dim': model.pvr.presence_dim,
++        'latent': model.pvr.mu.out_features,
++        'classifier_route': 'deterministic PVR mu (128) -> classifier; same classifier as pure/full-path',
+         'classifier': [str(m) for m in model.classifier],
+         'tensors': rows}

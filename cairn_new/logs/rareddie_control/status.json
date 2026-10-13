@@ -1,0 +1,150 @@
+{
+ "implementation": {
+  "author": "claude-opus-5-5 default effort",
+  "launched": false,
+  "package": "rareddie_control",
+  "arms": {
+   "single_drugout": 6,
+   "double_drugout": 7
+  },
+  "evidence": {
+   "path": "rareddie_control/evidence/cse_equivalence.json",
+   "passed": true,
+   "forward_bitwise_equal": true,
+   "gradients_bitwise_equal": true,
+   "negative_control_dsn_cse_max_abs_diff": 0.40563300251960754,
+   "removed_parameter_names": [
+    "cse.blocks.0.interAtt.inter.att_dst",
+    "cse.blocks.0.interAtt.inter.att_src",
+    "cse.blocks.0.interAtt.inter.bias",
+    "cse.blocks.0.interAtt.inter.lin_dst.weight",
+    "cse.blocks.0.interAtt.inter.lin_src.weight",
+    "cse.blocks.0.inter_projection.bias",
+    "cse.blocks.0.inter_projection.weight",
+    "cse.blocks.1.interAtt.inter.att_dst",
+    "cse.blocks.1.interAtt.inter.att_src",
+    "cse.blocks.1.interAtt.inter.bias",
+    "cse.blocks.1.interAtt.inter.lin_dst.weight",
+    "cse.blocks.1.interAtt.inter.lin_src.weight",
+    "cse.blocks.1.inter_projection.bias",
+    "cse.blocks.1.inter_projection.weight"
+   ]
+  },
+  "review_diff": "rareddie_control/review/implementation.diff",
+  "handoff": "logs/rareddie_control/implementation_handoff.md",
+  "launch_gate_refusals": [
+   "missing logs/rareddie_control/review_approval.json"
+  ],
+  "commands": {
+   "launch": "bash rareddie_control/launch.sh --launch-reviewed",
+   "confirm": "bash -c 'source rareddie_control/env.sh; CUDA_VISIBLE_DEVICES= \"$PYTHON_BIN\" rareddie_control/confirm_launch.py'",
+   "monitor": "bash rareddie_control/monitor/start_monitor.sh",
+   "status": "bash -c 'source rareddie_control/env.sh; CUDA_VISIBLE_DEVICES= \"$PYTHON_BIN\" rareddie_control/jobs.py --status'"
+  },
+  "stage": "launched_progress_confirmed",
+  "updated_at": "2026-10-12T15:30:30+0800",
+  "launch": {
+   "single_drugout": {
+    "pid": 3096026,
+    "process_start": "1269993466",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/single_drugout/attempt_1.log",
+    "gpu": 6,
+    "started_at": 1791790199.7304444
+   },
+   "double_drugout": {
+    "pid": 3096027,
+    "process_start": "1269993467",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/double_drugout/attempt_1.log",
+    "gpu": 7,
+    "started_at": 1791790199.7391496
+   }
+  },
+  "launch_check": {
+   "json": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/launch.json",
+   "all_progress_confirmed": true,
+   "pids": {
+    "single_drugout": 3096026,
+    "double_drugout": 3096027
+   },
+   "trainer_pids": {
+    "single_drugout": 3096029,
+    "double_drugout": 3096030
+   }
+  }
+ },
+ "stage": "monitor_complete",
+ "review": {
+  "approved": true,
+  "reviewer": "Codex gpt-6.1-sol medium",
+  "report": "logs/rareddie_control/review.md",
+  "approval": "logs/rareddie_control/review_approval.json",
+  "stage": "review_approved",
+  "updated_at": "2026-10-12T15:29:59+0800"
+ },
+ "monitor": {
+  "pid": 3097388,
+  "last_check": "20261012T093142Z_3097388",
+  "last_codex_exit": null,
+  "last_successful_check": "20261012T085142Z_3097388",
+  "next_check": null,
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "outcome": "complete",
+  "runs": {
+   "single_drugout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 59,
+    "history_best_validation_macro_f1_85": 0.6097096387532088,
+    "history_bad_epochs": 15
+   },
+   "double_drugout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 32,
+    "history_best_validation_macro_f1_85": 0.1355267162339031,
+    "history_bad_epochs": 15
+   }
+  },
+  "stage": "monitor_complete",
+  "updated_at": "2026-10-12T17:31:50+0800"
+ },
+ "monitor_start": {
+  "pid": 3097388,
+  "ps": "3097388       1 3097388 3097388       00:25 bash /data/interns/zhangpc/cairn_new/rareddie_control/monitor/monitor_loop.sh",
+  "ppid_is_1": true,
+  "state_dir": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/monitor",
+  "first_check": "20261012T073142Z_3097388",
+  "first_check_codex_exit": 0,
+  "first_check_after_json": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/monitor/checks/20261012T073142Z_3097388/after.json",
+  "next_check": "2026-10-12T08:11:42Z",
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "stage": "monitor_first_check_succeeded",
+  "updated_at": "2026-10-12T15:32:07+0800"
+ },
+ "handoff": {
+  "state": "active_training_monitor_verified",
+  "report": "logs/rareddie_control/handoff.md",
+  "trainer_pids": {
+   "single_drugout": 3096029,
+   "double_drugout": 3096030
+  },
+  "wrapper_pids": {
+   "single_drugout": 3096026,
+   "double_drugout": 3096027
+  },
+  "monitor_pid": 3097388,
+  "first_check_success": true,
+  "next_check": "2026-10-12T08:11:42Z",
+  "interval_seconds": 2400,
+  "selected_best_test_completion": "pending",
+  "medium_turn_complete": true,
+  "stage": "handed_off_to_durable_low_monitor",
+  "updated_at": "2026-10-12T15:33:32+0800"
+ }
+}

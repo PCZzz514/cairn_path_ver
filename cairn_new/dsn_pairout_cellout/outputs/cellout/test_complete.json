@@ -1,0 +1,9 @@
+{
+  "checkpoint": "best.pt",
+  "selected_epoch": 79,
+  "selected_update": 93536,
+  "rows": 18938,
+  "protocol": "cellout",
+  "ddi_split_note": "same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicate, NOT true cell-cold DDI generalization",
+  "completed_at": 1791820798.0513911
+}

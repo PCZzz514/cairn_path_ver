@@ -1,0 +1,1570 @@
+### accelerated_four no-path comparator -> rareddie_control
+--- accelerated_four/dsn/model.py	2026-10-12 11:57:03.149016862 +0800
++++ rareddie_control/model.py	2026-10-12 15:21:11.411035355 +0800
+@@ -1,41 +1,26 @@
+-"""Original bond-aware RareDDIE order with the exact DSN inter-graph layer.
++"""RareDDIE-only control of the accelerated_four no-path model.
+ 
+-All pair-conditioned states are freshly computed with gradients. The optional
+-path branch ports EmerGNN's multiplicative sum propagation and shared ordered
+-pair gates; only real cached topology, never learned states, is reused.
+-
+-GPU3 speed copy: the inter-graph GAT runs once per direction on the packed
+-disconnected bipartite batch. The collator already applied each pair's local
+-default-GATConv self-loop rule, so automatic loops are disabled only here.
++Identical to accelerated_four.dsn.model.DSNRareDDI(with_path=False) except the
++CSE: the transplanted DSN InterGraphAttention and its 192->128
++inter_projection are removed entirely (no modules, no parameters, no cross
++edges). Each block is therefore the original RareDDIE MVN_DDI_Block order
++(references/RareDDIE/models_t_struc.py): ne_update, feature_conv2, lin_up2,
++GlobalPool, normalize/ELU, norm2/ELU. The 128-d atom states from feature_conv2
++enter SAGPooling untouched. The molecular TransformerConv attention is kept.
++NAI, PVR and the classifier are the validated accelerated_four modules.
+ """
+-from types import SimpleNamespace
+ import torch
+ from torch import nn
+ import torch.nn.functional as F
+-from torch_geometric.nn import TransformerConv, SAGPooling, LayerNorm, Linear, global_add_pool, GATConv
+-
+-
+-class InterGraphAttention(nn.Module):
+-    # Original class, references/DSN-DDI/drugbank_test/layers.py. Same
+-    # parameters; per-pair self loops arrive explicitly in the packed edges.
+-    def __init__(self, input_dim):
+-        super().__init__()
+-        self.input_dim = input_dim
+-        self.inter = GATConv((input_dim, input_dim), 32, 2, add_self_loops=False)
+-
+-    def forward(self, h_data, t_data, b_graph):
+-        edge_index = b_graph.edge_index
+-        h_input = F.elu(h_data.x)
+-        t_input = F.elu(t_data.x)
+-        t_rep = self.inter((h_input, t_input), edge_index)
+-        h_rep = self.inter((t_input, h_input), edge_index[[1, 0]])
+-        return h_rep, t_rep
++from torch_geometric.nn import TransformerConv, SAGPooling, LayerNorm, Linear, global_add_pool
++from accelerated_four.dsn.model import NAI, PairVAE
+ 
+ 
+ class CSEBlock(nn.Module):
+     def __init__(self):
+         super().__init__()
+-        # RareDDIE MVN_DDI_Block: two 2x64 TransformerConvs, bond64.
++        # RareDDIE MVN_DDI_Block: two 2x64 TransformerConvs, bond64. re_shape is
++        # never reached by the original forward and is not built.
+         self.feature_conv = TransformerConv(128, 64, 2, edge_dim=64, dropout=0.)
+         self.lin_up = Linear(64, 64, bias=True, weight_initializer='glorot')
+         self.feature_conv2 = TransformerConv(128, 64, 2, edge_dim=64, dropout=0.)
+@@ -47,16 +32,8 @@
+         # PyG2.0.4 upstream SAGPooling has no extra select scalar.
+         self.readout.select.weight.data.fill_(1.)
+         self.readout.select.weight.requires_grad_(False)
+-        self.interAtt = InterGraphAttention(128)
+-        self.inter_projection = Linear(192, 128, bias=True, weight_initializer='glorot')
+ 
+-    def inter_pair_batch(self, h, t, cross_edges):
+-        # One call on the packed batch: cross_edges holds only within-pair
+-        # edges (global offsets) with each pair's own min(n_h, n_t) local loops.
+-        return self.interAtt(SimpleNamespace(x=h.x), SimpleNamespace(x=t.x),
+-                             SimpleNamespace(edge_index=cross_edges))
+-
+-    def forward(self, h, t, cross_edges):
++    def forward(self, h, t):
+         # Original ne_update order.
+         h.x = self.feature_conv(h.x, h.edge_index, h.edge_attr)
+         t.x = self.feature_conv(t.x, t.edge_index, t.edge_attr)
+@@ -66,18 +43,16 @@
+         t.edge_attr = self.lin_up(t.edge_attr)
+         h.edge_attr = F.elu(h.edge_attr)
+         t.edge_attr = F.elu(t.edge_attr)
+-        # Original second convolution and bond update before GlobalPool.
++        # Original second convolution and bond update, then GlobalPool.
+         h.x = self.feature_conv2(h.x, h.edge_index, h.edge_attr)
+         t.x = self.feature_conv2(t.x, t.edge_index, t.edge_attr)
+         h.edge_attr = self.lin_up2(h.edge_attr)
+         t.edge_attr = self.lin_up2(t.edge_attr)
+-        hi, ti = self.inter_pair_batch(h, t, cross_edges)
+-        h.x = self.inter_projection(torch.cat([h.x, hi], dim=-1))
+-        t.x = self.inter_projection(torch.cat([t.x, ti], dim=-1))
+         h_atoms, _, _, h_batch, _, _ = self.readout(h.x, h.edge_index, edge_attr=h.edge_attr, batch=h.batch)
+         t_atoms, _, _, t_batch, _, _ = self.readout(t.x, t.edge_index, edge_attr=t.edge_attr, batch=t.batch)
+         h_pool = global_add_pool(h_atoms, h_batch, size=h.num_graphs)
+         t_pool = global_add_pool(t_atoms, t_batch, size=t.num_graphs)
++        # Original h_data_edge batch: one row per directed bond, molecule order.
+         h_bond = global_add_pool(h.edge_attr, h.batch[h.edge_index[0]], size=h.num_graphs)
+         t_bond = global_add_pool(t.edge_attr, t.batch[t.edge_index[0]], size=t.num_graphs)
+         h_bond = F.elu(self.re_shape_e(h_bond))
+@@ -100,8 +75,7 @@
+         self.blocks = nn.ModuleList([CSEBlock(), CSEBlock()])
+ 
+     def forward(self, batch):
+-        # clone keeps the immutable molecular cache unmodified; no deepcopy of
+-        # learned features occurs anywhere after this point.
++        # clone keeps the immutable molecular cache unmodified.
+         h, t = batch['graph_a'].clone(), batch['graph_b'].clone()
+         h.x = self.initial_node_feature(h.x)
+         t.x = self.initial_node_feature(t.x)
+@@ -113,119 +87,14 @@
+         h.edge_attr, t.edge_attr = F.elu(h.edge_attr), F.elu(t.edge_attr)
+         repr_h, repr_t = [], []
+         for block in self.blocks:
+-            h, t, rh, rt = block(h, t, batch['cross_edges'])
++            h, t, rh, rt = block(h, t)
+             repr_h.append(rh)
+             repr_t.append(rt)
+         return .6 * repr_h[0] + .4 * repr_h[-1], .6 * repr_t[0] + .4 * repr_t[-1]
+ 
+ 
+-class NAI(nn.Module):
+-    """RareDDIE neighbor_encoder with an explicit padding softmax mask."""
+-    def __init__(self):
+-        super().__init__()
+-        self.gcn_w = nn.Linear(256, 128)
+-        nn.init.xavier_normal_(self.gcn_w.weight)
+-        self.dropout = nn.Dropout(.5)
+-        self.Bilinear = nn.Bilinear(128, 128, 1, bias=False)
+-        self.Linear_self = nn.Linear(128, 128, bias=False)
+-        self.Linear_nei = nn.Linear(128, 128, bias=False)
+-        self.Linear_weak_rel = nn.Linear(128, 128, bias=False)
+-
+-    def forward(self, entity, relation, valid, feature, weak_rel):
+-        out = self.gcn_w(torch.cat([self.dropout(relation), self.dropout(entity)], -1))
+-        guide = self.Linear_weak_rel(weak_rel[:, None].expand_as(out))
+-        score = self.Bilinear(guide, out).squeeze(-1)
+-        # All-empty rows produce zero neighbor context, no biased padding.
+-        score = score.masked_fill(~valid, -torch.inf)
+-        score = torch.where(valid.any(1, keepdim=True), score, torch.zeros_like(score))
+-        attention = score.softmax(1) * valid.to(score.dtype)
+-        context = torch.bmm(attention[:, None], out).squeeze(1)
+-        return F.elu(self.Linear_nei(context) + self.Linear_self(feature))
+-
+-
+-class EmerGNNPath(nn.Module):
+-    def __init__(self, n_rel, depth=4):
+-        super().__init__()
+-        self.depth = depth
+-        self.rel_kg = nn.ModuleList([nn.Embedding(2 * n_rel + 1, 128) for _ in range(depth)])
+-        self.linear = nn.ModuleList([nn.Linear(128, 128) for _ in range(depth)])
+-        # Original init_weight affects relation embeddings and layer projections
+-        # before relation gate modules are constructed, leaving gate init default.
+-        for module in [self.rel_kg, self.linear]:
+-            for parameter in module.parameters():
+-                if parameter.ndim > 1:
+-                    nn.init.xavier_uniform_(parameter)
+-        self.relation_linear = nn.ModuleList([nn.Linear(256, 5) for _ in range(depth)])
+-        self.attn_relation = nn.ModuleList([nn.Linear(5, 2 * n_rel + 1) for _ in range(depth)])
+-
+-    def propagate(self, source, source_nodes, target_nodes, graph, gates):
+-        n_nodes = int(graph['n_nodes'])
+-        state = source.new_zeros(n_nodes, 128).index_copy(0, source_nodes, source)
+-        reachable = torch.zeros(n_nodes, dtype=torch.bool, device=source.device)
+-        reachable[source_nodes] = True
+-        src, dst, rel = graph['edge_index'][0], graph['edge_index'][1], graph['relations']
+-        edge_pair, multiplicity = graph['edge_pair'], graph['multiplicity']
+-        for layer in range(self.depth):
+-            # Exactly gated elementwise multiplication, SUM, linear, ReLU.
+-            relation_input = gates[layer][edge_pair, rel, None] * self.rel_kg[layer](rel)
+-            message = state[src] * relation_input * multiplicity[:, None]
+-            aggregated = state.new_zeros(n_nodes, 128).index_add(0, dst, message)
+-            reach_count = torch.zeros(n_nodes, dtype=torch.long, device=source.device)
+-            reach_count.index_add_(0, dst, reachable[src].long())
+-            reachable = reach_count > 0
+-            # Original linear bias can create features at unreachable nodes.
+-            # Apply it only after a real source-reachable edge delivered a state.
+-            state = F.relu(self.linear[layer](aggregated)) * reachable[:, None]
+-        present = reachable[target_nodes] & graph['path_mask']
+-        return state[target_nodes] * present[:, None], present
+-
+-    def forward(self, head, tail, graph):
+-        ordered_pair = torch.cat([head, tail], -1)
+-        # Both directions use these SAME gates from the SAME ordered pair.
+-        gates = [torch.sigmoid(attn(F.relu(proj(ordered_pair))))
+-                 for proj, attn in zip(self.relation_linear, self.attn_relation)]
+-        tail_hid, ht = self.propagate(head, graph['head_nodes'], graph['tail_nodes'], graph, gates)
+-        head_hid, th = self.propagate(tail, graph['tail_nodes'], graph['head_nodes'], graph, gates)
+-        # Original readout order: [head_hid (v->u), tail_hid (u->v)].
+-        return torch.cat([head_hid, tail_hid], -1), torch.stack([th, ht], -1)
+-
+-
+-class PairVAE(nn.Module):
+-    def __init__(self, feature_dim, presence_dim=0):
+-        super().__init__()
+-        self.feature_dim = feature_dim
+-        self.presence_dim = presence_dim
+-        self.encoder = nn.Sequential(nn.Linear(feature_dim + presence_dim, 256), nn.GELU())
+-        self.mu = nn.Linear(256, 128)
+-        self.logvar = nn.Linear(256, 128)
+-        self.decoder = nn.Sequential(nn.Linear(128, 256), nn.GELU(), nn.Linear(256, feature_dim))
+-
+-    def forward(self, pair, path_masks):
+-        # Equalize each continuous 128-dimensional branch at the PVR boundary;
+-        # CSE/NAI/path formulas upstream remain unchanged. No learned affine.
+-        branches = pair.reshape(len(pair), self.feature_dim // 128, 128)
+-        valid = torch.ones(branches.shape[:2], dtype=torch.bool, device=pair.device)
+-        if self.presence_dim:
+-            valid = torch.cat([valid[:, :2], path_masks], dim=1)
+-        branches = F.layer_norm(branches, (128,)) * valid[:, :, None]
+-        continuous = branches.flatten(1)
+-        encoder_input = (torch.cat([continuous, path_masks.to(pair.dtype)], dim=1)
+-                         if self.presence_dim else continuous)
+-        encoded = self.encoder(encoder_input)
+-        mu, logvar = self.mu(encoded), self.logvar(encoded)
+-        z = mu + torch.exp(.5 * logvar) * torch.randn_like(mu)
+-        reconstructed = self.decoder(z)
+-        branch_mse = (reconstructed.reshape_as(branches) - branches.detach()).square().mean(-1)
+-        # Average over the actual valid branches PER SAMPLE, then over samples.
+-        # Every pair has equal weight regardless of missing path directions.
+-        # Flags and absent continuous branches have no reconstruction loss.
+-        rec = ((branch_mse * valid).sum(1) / valid.sum(1)).mean()
+-        kl = -.5 * (1 + logvar - mu.square() - logvar.exp()).mean()
+-        return mu, rec, kl
+-
+-
+-class DSNRareDDI(nn.Module):
+-    def __init__(self, assets, config):
++class RareDDIEControl(nn.Module):
++    def __init__(self, assets):
+         super().__init__()
+         self.fin_entities = nn.Embedding.from_pretrained(assets['fin_entities'].clone(), freeze=False)
+         self.fin_relations = nn.Embedding.from_pretrained(assets['fin_relations'].clone(), freeze=False)
+@@ -233,10 +102,7 @@
+         self.register_buffer('neighbor_relations', assets['neighbor_relations'])
+         self.cse = CSE()
+         self.nai = NAI()
+-        self.with_path = config['with_path']
+-        if self.with_path:
+-            self.path = EmerGNNPath(len(assets['fin_relation_ids']), config['path_depth'])
+-        self.pvr = PairVAE(512, 2) if self.with_path else PairVAE(256)
++        self.pvr = PairVAE(256)
+         self.classifier = nn.Sequential(nn.LayerNorm(128), nn.Linear(128, 256), nn.GELU(),
+                                         nn.Dropout(.2), nn.Linear(256, 85))
+ 
+@@ -253,11 +119,34 @@
+         nai_h = self.nai(*self.neighbors(batch['drug_a']), head, guide)
+         nai_t = self.nai(*self.neighbors(batch['drug_b']), tail, guide)
+         pair = torch.cat([nai_h, nai_t], -1)
+-        masks = torch.empty((len(head), 0), dtype=torch.bool, device=head.device)
+-        if self.with_path:
+-            # Original source is a projected molecular vector; adapt to the live
+-            # DSN-conditioned CSE molecular vector, keeping source-only init.
+-            path, masks = self.path(head, tail, batch['path_graph'])
+-            pair = torch.cat([pair, path], -1)
+-        mu, rec, kl = self.pvr(pair, masks)
+-        return {'logits': self.classifier(mu), 'rec': rec, 'kl': kl, 'path_mask': masks}
++        mu, rec, kl = self.pvr(pair, pair.new_empty((len(pair), 0), dtype=torch.bool))
++        # Deterministic mu_ab classifier, as in the no-path comparator.
++        return {'logits': self.classifier(mu), 'rec': rec, 'kl': kl}
++
++
++GROUPS = {'fin_entities': ('fin_entities.',), 'fin_relations': ('fin_relations.',), 'cse': ('cse.',),
++          'nai': ('nai.',), 'pvr': ('pvr.',), 'classifier': ('classifier.',)}
++FORBIDDEN = ('inter', 'path', 'gat', 'cross')
++
++
++def parameter_inventory(model):
++    """Every named parameter with its group; proves no DSN/path parameters exist."""
++    rows = [{'name': name, 'shape': list(p.shape), 'numel': p.numel(), 'requires_grad': p.requires_grad,
++             'group': next(g for g, prefixes in GROUPS.items() if name.startswith(prefixes))}
++            for name, p in model.named_parameters()]
++    lowered = [r['name'].lower() for r in rows]
++    convs = {name: type(m).__name__ for name, m in model.cse.named_modules() if isinstance(m, TransformerConv)}
++    return {
++        'parameters': sum(r['numel'] for r in rows),
++        'trainable_parameters': sum(r['numel'] for r in rows if r['requires_grad']),
++        'groups': {g: sum(r['numel'] for r in rows if r['group'] == g) for g in GROUPS},
++        'frozen': [r['name'] for r in rows if not r['requires_grad']],
++        'forbidden_name_matches': [n for n in lowered if any(word in n for word in FORBIDDEN)],
++        'dsn_inter_attention_present': any('interatt' in n for n in lowered),
++        'inter_projection_present': any('inter_projection' in n for n in lowered),
++        'path_modules_present': any(n.startswith('path.') for n in lowered),
++        'molecular_transformer_convs': convs,
++        'fin_trainable': model.fin_entities.weight.requires_grad and model.fin_relations.weight.requires_grad,
++        'pair_input': model.pvr.feature_dim, 'latent': model.pvr.mu.out_features,
++        'classifier': [str(m) for m in model.classifier],
++        'tensors': rows}
+--- accelerated_four/dsn/data.py	2026-10-12 11:57:03.149016862 +0800
++++ rareddie_control/data.py	2026-10-12 15:21:18.674944036 +0800
+@@ -1,90 +1,20 @@
+-"""Frozen-row datasets; raw molecules and packed label-free pair subgraphs."""
+-from pathlib import Path
+-import numpy as np
+-import pandas as pd
++"""Frozen-row datasets (accelerated_four.dsn.data) and a molecule-only collator.
++
++The accelerated_four Collator always builds DSN cross_edges; this one builds
++none and has no path branch.
++"""
+ import torch
+-from torch.utils.data import Dataset
+ from torch_geometric.data import Batch
+-
+-
+-class DDIDataset(Dataset):
+-    def __init__(self, prepared, protocol, split):
+-        directory = Path(prepared) / protocol
+-        frame = pd.read_parquet(directory / 'ddi.parquet')
+-        rows = np.flatnonzero(frame.split.eq(split).to_numpy())
+-        self.frame = frame.iloc[rows].copy()
+-        self.rows = rows
+-        self.pair_ids = np.load(directory / 'pair_indices.npy')[rows]
+-        self.a = self.frame.drug_a.to_numpy(np.int64)
+-        self.b = self.frame.drug_b.to_numpy(np.int64)
+-        self.y = self.frame.event_id.to_numpy(np.int64)
+-
+-    def __len__(self):
+-        return len(self.rows)
+-
+-    def __getitem__(self, i):
+-        return int(self.a[i]), int(self.b[i]), int(self.y[i]), int(self.rows[i]), int(self.pair_ids[i])
++from accelerated_four.dsn.data import DDIDataset, to_device  # noqa: F401
+ 
+ 
+ class Collator:
+-    def __init__(self, assets, prepared, with_path):
+-        self.graphs, self.with_path = assets['graphs'], with_path
+-        if with_path:
+-            self.paths = {name: np.load(Path(prepared) / f'{name}.npy', mmap_mode='r')
+-                          for name in ['nodes', 'edges', 'node_ptr', 'edge_ptr', 'endpoints', 'path_mask']}
++    def __init__(self, assets):
++        self.graphs = assets['graphs']
+ 
+     def __call__(self, rows):
+-        a, b, y, original_rows, pairs = zip(*rows)
+-        ga = [self.graphs[i] for i in a]
+-        gb = [self.graphs[i] for i in b]
+-        cross, h_offset, t_offset = [], 0, 0
+-        for h, t in zip(ga, gb):
+-            # np.meshgrid(x1,x2) ordering in original DSN preprocessing.
+-            hi, ti = torch.meshgrid(torch.arange(h.num_nodes), torch.arange(t.num_nodes), indexing='xy')
+-            edges = torch.stack([hi.flatten(), ti.flatten()])
+-            # Default GATConv per pair: drop the LOCAL diagonal, then append
+-            # min(n_h, n_t) LOCAL loops. Offsetting afterwards keeps global
+-            # row==col edges between different offsets as ordinary edges.
+-            edges = edges[:, edges[0] != edges[1]]
+-            loops = torch.arange(min(h.num_nodes, t.num_nodes)).repeat(2, 1)
+-            edges = torch.cat([edges, loops], 1)
+-            edges[0] += h_offset
+-            edges[1] += t_offset
+-            cross.append(edges)
+-            h_offset += h.num_nodes
+-            t_offset += t.num_nodes
+-        result = {'graph_a': Batch.from_data_list(ga), 'graph_b': Batch.from_data_list(gb),
+-                  'cross_edges': torch.cat(cross, 1), 'drug_a': torch.tensor(a), 'drug_b': torch.tensor(b),
+-                  'label': torch.tensor(y), 'row_index': torch.tensor(original_rows)}
+-        if self.with_path:
+-            edge_rows, edge_pairs, head_nodes, tail_nodes, masks = [], [], [], [], []
+-            offset = 0
+-            for batch_idx, pair_id in enumerate(pairs):
+-                start, end = self.paths['edge_ptr'][pair_id:pair_id + 2]
+-                edges = np.array(self.paths['edges'][start:end], dtype=np.int64)
+-                edges[:, :2] += offset
+-                edge_rows.append(edges)
+-                edge_pairs.append(np.full(len(edges), batch_idx, np.int64))
+-                endpoints = self.paths['endpoints'][pair_id] + offset
+-                head_nodes.append(int(endpoints[0]))
+-                tail_nodes.append(int(endpoints[1]))
+-                masks.append(bool(self.paths['path_mask'][pair_id]))
+-                ns, ne = self.paths['node_ptr'][pair_id:pair_id + 2]
+-                offset += int(ne - ns)
+-            edges = torch.from_numpy(np.concatenate(edge_rows))
+-            result['path_graph'] = {'edge_index': edges[:, :2].T.contiguous(), 'relations': edges[:, 2],
+-                                    'multiplicity': edges[:, 3].float(),
+-                                    'edge_pair': torch.from_numpy(np.concatenate(edge_pairs)),
+-                                    'head_nodes': torch.tensor(head_nodes), 'tail_nodes': torch.tensor(tail_nodes),
+-                                    'path_mask': torch.tensor(masks), 'n_nodes': offset}
+-        return result
+-
+-
+-def to_device(value, device):
+-    if isinstance(value, dict):
+-        return {k: to_device(v, device) for k, v in value.items()}
+-    if isinstance(value, list):
+-        return [to_device(v, device) for v in value]
+-    if hasattr(value, 'to'):
+-        return value.to(device, non_blocking=True)
+-    return value
++        a, b, y, original_rows, _ = zip(*rows)
++        return {'graph_a': Batch.from_data_list([self.graphs[i] for i in a]),
++                'graph_b': Batch.from_data_list([self.graphs[i] for i in b]),
++                'drug_a': torch.tensor(a), 'drug_b': torch.tensor(b),
++                'label': torch.tensor(y), 'row_index': torch.tensor(original_rows)}
+--- accelerated_four/dsn/train.py	2026-10-12 11:57:46.000478146 +0800
++++ rareddie_control/train.py	2026-10-12 15:22:17.618203019 +0800
+@@ -1,8 +1,9 @@
+ """Full DDI training, fixed85 validation selection, selected-checkpoint test export.
+ 
+-accelerated_four copy of the production trainer: reviewed GPU3 packed
+-inter-graph attention (model.py/data.py), outputs only under
+-accelerated_four/outputs, validation accuracy and flushed progress lines.
++rareddie_control copy of the accelerated_four trainer: RareDDIE-only model
++(no DSN inter-graph attention, no path), molecule-only collator, outputs only
++under rareddie_control/outputs. --fresh is the initial launch only; --resume
++and --test-only continue this run's own checkpoints with the exact config.
+ """
+ import argparse
+ import json
+@@ -17,20 +18,17 @@
+ import torch.nn.functional as F
+ from torch.utils.data import DataLoader
+ import yaml
++from accelerated_four.dsn.metrics import classification_metrics, validation_selection_metric
+ from .data import DDIDataset, Collator, to_device
+-from .metrics import classification_metrics, validation_selection_metric
+-from .model import DSNRareDDI
++from .model import GROUPS, RareDDIEControl, parameter_inventory
+ 
+-ROOT = Path(__file__).resolve().parents[2]
+-OUTPUTS = ROOT / 'accelerated_four/outputs'
+-GPU = {(True, 'single_drugout'): 4, (True, 'double_drugout'): 5,
+-       (False, 'single_drugout'): 6, (False, 'double_drugout'): 7}
+-# The ONLY configuration entries that differ from the original production
+-# checkpoints (besides output); tools/snapshot.py migrates exactly these.
+-GENERATOR = 'gpt-6.1-sol high; accelerated_four packed-attention copy by claude-opus-5-5'
+-NAMESPACE = 'accelerated_four'
+-OPTIMIZATION = ('GPU3-reviewed packed cross-pair inter-graph attention: one GATConv call per direction, '
+-                'per-pair local self loops built by the collator, add_self_loops=False')
++ROOT = Path(__file__).resolve().parents[1]
++OUTPUTS = ROOT / 'rareddie_control/outputs'
++GPU = {'single_drugout': 6, 'double_drugout': 7}
++GENERATOR = 'gpt-6.1-sol medium plan/review; rareddie_control implementation by claude-opus-5-5'
++NAMESPACE = 'rareddie_control'
++ABLATION = ('accelerated_four no-path model with DSN InterGraphAttention, inter_projection and cross edges '
++            'removed: original RareDDIE CSE order; same NAI/FIN, PVR, mu classifier, loss and protocol')
+ PROGRESS_EVERY = 100
+ 
+ 
+@@ -67,11 +65,17 @@
+     torch.cuda.set_rng_state_all([value.cpu() for value in state['cuda']])
+ 
+ 
++def top_k_accuracy(y, probabilities, k=5):
++    # Report-only metric from the exported probabilities; never used for selection.
++    top = np.argsort(-probabilities, axis=1, kind='stable')[:, :k]
++    return float((top == y[:, None]).any(1).mean())
++
++
+ @torch.no_grad()
+ def evaluate(model, loader, device, config, beta):
+     model.eval()
+     totals = {name: 0. for name in ['ce', 'rec', 'kl', 'loss']}
+-    probabilities, targets, original_rows, masks = [], [], [], []
++    probabilities, targets, original_rows = [], [], []
+     # Reconstruction uses normal Gaussian samples; evaluation sampling never
+     # changes training RNG. Classifier always uses deterministic mu.
+     with torch.random.fork_rng(devices=[0]):
+@@ -87,31 +91,28 @@
+             probabilities.append(output['logits'].softmax(-1).cpu().numpy())
+             targets.append(raw['label'].numpy())
+             original_rows.append(raw['row_index'].numpy())
+-            masks.append(output['path_mask'].cpu().numpy())
+     n = len(loader.dataset)
+     totals = {k: v / n for k, v in totals.items()}
+     probs, y = np.concatenate(probabilities), np.concatenate(targets)
+     totals['macro_f1_85'] = validation_selection_metric(y, probs)
+     totals['kl_beta'] = beta
+-    return totals, probs, y, np.concatenate(original_rows), np.concatenate(masks)
++    return totals, probs, y, np.concatenate(original_rows)
+ 
+ 
+ def export_test(model, dataset, loader, device, config, output, best):
+-    totals, probabilities, y, original_rows, masks = evaluate(model, loader, device, config, config['kl_weight'])
++    totals, probabilities, y, original_rows = evaluate(model, loader, device, config, config['kl_weight'])
+     metrics, per_class, confusion = classification_metrics(y, probabilities)
+-    metrics.update({'loss_terms': totals, 'checkpoint': 'best.pt', 'selected_epoch': best['epoch'],
++    metrics.update({'top5_accuracy': top_k_accuracy(y, probabilities), 'loss_terms': totals,
++                    'checkpoint': 'best.pt', 'selected_epoch': best['epoch'],
+                     'selected_validation_macro_f1_85': best['best_metric'], 'selection': 'validation only'})
+     frame = dataset.frame.copy()
+     assert np.array_equal(original_rows, dataset.rows)
+     frame.insert(0, 'frozen_row_index', original_rows)
+     frame['predicted_event_id'] = probabilities.argmax(1)
+     frame['predicted_probability'] = probabilities.max(1)
+-    if config['with_path']:
+-        frame['path_v_to_u_present'] = masks[:, 0]
+-        frame['path_u_to_v_present'] = masks[:, 1]
+     frame.to_parquet(output / 'test_predictions.parquet', index=False)
+     np.savez_compressed(output / 'test_probabilities.npz', probabilities=probabilities,
+-                        event_ids=np.arange(85), labels=y, frozen_row_indices=original_rows, path_mask=masks)
++                        event_ids=np.arange(85), labels=y, frozen_row_indices=original_rows)
+     events = pd.read_csv(workspace_path(config['prepared']) / 'ddi_events.csv')
+     per_class.merge(events, on='event_id', how='left').to_csv(output / 'test_per_class.csv', index=False)
+     pd.DataFrame(confusion, index=np.arange(85), columns=np.arange(85)).rename_axis('true_event_id').to_csv(output / 'test_confusion.csv')
+@@ -122,18 +123,15 @@
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--config', required=True)
+-    parser.add_argument('--batch-size', type=int)
+-    parser.add_argument('--resume', action='store_true')
+-    parser.add_argument('--test-only', action='store_true')
++    mode = parser.add_mutually_exclusive_group(required=True)
++    mode.add_argument('--fresh', action='store_true')
++    mode.add_argument('--resume', action='store_true')
++    mode.add_argument('--test-only', action='store_true')
+     args = parser.parse_args()
+-    if args.resume and args.test_only:
+-        parser.error('Use either --resume or --test-only')
+     config = yaml.safe_load(workspace_path(args.config).read_text())
+-    if args.batch_size is not None:
+-        config['batch_size'] = args.batch_size
+     # This is checked before the first CUDA operation. Only the assigned one
+     # physical device is visible, including RNG and allocator operations.
+-    assigned = GPU[config['with_path'], config['protocol']]
++    assigned = GPU[config['protocol']]
+     if config['gpu'] != assigned or os.environ.get('CUDA_VISIBLE_DEVICES') != str(assigned):
+         raise ValueError(f'This arm requires CUDA_VISIBLE_DEVICES={assigned} and config gpu={assigned}')
+     torch.set_num_threads(config['cpu_threads'])
+@@ -143,65 +141,51 @@
+     device = torch.device('cuda:0')
+     prepared = workspace_path(config['prepared'])
+     output_dir = workspace_path(config['output'])
+-    # Independent replica output only; production outputs are never written.
++    # Own output only; DSN/accelerated/production checkpoints are never read.
+     if not output_dir.is_relative_to(OUTPUTS):
+         raise ValueError(f'Output must remain inside {OUTPUTS}')
+     output_dir.mkdir(parents=True, exist_ok=True)
+-    saved = torch.load(output_dir / 'last.pt', map_location='cpu', weights_only=False) if args.resume else None
+-    if not args.resume and not args.test_only and (output_dir / 'last.pt').exists():
+-        raise ValueError('Existing training output: use --resume or a new output directory')
++    if args.fresh and any((output_dir / n).exists() for n in ['last.pt', 'best.pt', 'history.jsonl']):
++        raise ValueError('--fresh requires an empty output; recovery uses --resume or --test-only')
++    if not args.fresh:
++        own = torch.load(output_dir / ('best.pt' if args.test_only else 'last.pt'), map_location='cpu', weights_only=False)
++        if own['config'].get('namespace') != NAMESPACE or Path(own['config']['output']) != output_dir:
++            raise ValueError('Checkpoint is not this rareddie_control run')
++    saved = own if args.resume else None
+     if args.test_only:
+-        selected = torch.load(output_dir / 'best.pt', map_location='cpu', weights_only=False)
+-        assert selected['config']['gpu'] == assigned and selected['config']['protocol'] == config['protocol']
+-        # Evaluation restores the authoritative training configuration and keeps
+-        # config.yaml intact, even when the evaluation batch is overridden.
+-        config = selected['config']
+-        del selected
+-    loader_batch = args.batch_size if args.test_only and args.batch_size else config['batch_size']
+-    # Save the fully resolved settings (including memory-driven batch override).
++        assert own['config']['gpu'] == assigned and own['config']['protocol'] == config['protocol']
++        # Evaluation restores the authoritative training configuration.
++        config = own['config']
++        del own
++    if args.fresh:
++        # Seeded state immediately before model construction (exact, restorable).
++        torch.save(rng_state(), output_dir / 'initial_rng.pt')
+     if not args.test_only:
+         config.update({'prepared': str(prepared), 'output': str(output_dir), 'generator': GENERATOR,
+-                       'namespace': NAMESPACE, 'optimization': OPTIMIZATION,
++                       'namespace': NAMESPACE, 'ablation': ABLATION, 'with_path': False,
+                        'selection_metric': 'fixed85 validation macroF1', 'test_selection': False,
+                        'source_provenance': json.loads((ROOT / 'docs/source_provenance.json').read_text())})
+     preparation = json.loads((prepared / 'preparation_report.json').read_text())
+     assert config['nai_cap'] == preparation['nai']['cap']
+-    assert config['path_depth'] == preparation['paths']['depth']
+-    assert config['path_meeting_cap'] == preparation['paths']['meeting_cap']
+-    assert config['path_arm_cap'] == preparation['paths']['arm_cap']
+-    # Full-data audit is a preparation requirement, not a toy model probe.
+     audit = json.loads((prepared / 'audit_report.json').read_text())
+-    assert audit['all_cached_real_edges_found_in_source'] and audit['all_pairs_depth4_reachability_equals_explicit_mask']
++    assert audit['protocols'][config['protocol']]['all_rows_exact']
+     assets = torch.load(prepared / 'assets.pt', map_location='cpu', weights_only=False)
+-    model = DSNRareDDI(assets, config).to(device)
++    model = RareDDIEControl(assets).to(device)
+     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+-    collate = Collator(assets, prepared, config['with_path'])
++    collate = Collator(assets)
+     datasets = {split: DDIDataset(prepared, config['protocol'], split) for split in ['train', 'val']}
+-    loaders = {split: DataLoader(dataset, batch_size=loader_batch, shuffle=split == 'train',
++    loaders = {split: DataLoader(dataset, batch_size=config['batch_size'], shuffle=split == 'train',
+                                  num_workers=config['num_workers'], collate_fn=collate, pin_memory=True,
+                                  persistent_workers=False)
+                for split, dataset in datasets.items()}
+-    planned_updates = config['planned_updates'] if args.test_only else config['epochs'] * len(loaders['train'])
+-    warmup_updates = config['kl_warmup_updates'] if args.test_only else max(1, math.ceil(config['kl_warmup_fraction'] * planned_updates))
+-    if saved is not None:
+-        planned_updates = saved['config']['planned_updates']
+-        warmup_updates = saved['config']['kl_warmup_updates']
+-    config['planned_updates'], config['kl_warmup_updates'] = planned_updates, warmup_updates
++    if args.fresh:
++        config['planned_updates'] = config['epochs'] * len(loaders['train'])
++        config['kl_warmup_updates'] = max(1, math.ceil(config['kl_warmup_fraction'] * config['planned_updates']))
++        (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
++        save_json(output_dir / 'model_inventory.json', parameter_inventory(model))
+     if saved is not None and saved['config'] != config:
+         raise ValueError('Resume configuration differs from last.pt; preserve batch size and schedule')
+-    if not args.test_only:
+-        (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
+-    save_json(output_dir / 'model_inventory.json', {
+-        'parameters': sum(p.numel() for p in model.parameters()),
+-        'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad),
+-        'fin_trainable': model.fin_entities.weight.requires_grad and model.fin_relations.weight.requires_grad,
+-        'fin_entity_table': list(model.fin_entities.weight.shape), 'fin_relation_table': list(model.fin_relations.weight.shape),
+-        'classes': 85, 'latent': 128, 'pair_input': 514 if config['with_path'] else 256,
+-        'pvr_continuous_decoder': 512 if config['with_path'] else 256,
+-        'pvr_branch_normalization': 'affine-free layer_norm per 128; absent directions zero',
+-        'pvr_reconstruction': 'valid-branch mean per sample, then sample mean; detached continuous targets',
+-        'path_depth': config['path_depth'] if config['with_path'] else 0,
+-        'topology_cache': str(prepared), 'learned_state_cache': False})
++    warmup_updates = config['kl_warmup_updates']
+     best_metric, bad_epochs, update, start_epoch = -1., 0, 0, 1
+     if args.resume:
+         model.load_state_dict(saved['model'])
+@@ -213,20 +197,21 @@
+         best_metric, bad_epochs, update = saved['best_metric'], saved['bad_epochs'], saved['update']
+         start_epoch = saved['epoch'] + 1
+         del saved
++    mode_name = 'fresh' if args.fresh else 'resume' if args.resume else 'test-only'
+     will_train = not args.test_only and bad_epochs < config['patience'] and start_epoch <= config['epochs']
+     # Liveness/start line only (device query and print; no RNG use).
+-    print(json.dumps({'phase': 'start', 'mode': 'test-only' if args.test_only else 'resume' if args.resume else 'fresh',
++    print(json.dumps({'phase': 'start', 'mode': mode_name,
+                       'start_epoch': start_epoch, 'update': update, 'best_metric': best_metric,
+                       'bad_epochs': bad_epochs, 'epochs': config['epochs'], 'patience': config['patience'],
+-                      'will_train': will_train, 'planned_updates': planned_updates,
++                      'will_train': will_train, 'planned_updates': config['planned_updates'],
+                       'kl_warmup_updates': warmup_updates, 'train_batches': len(loaders['train']),
+                       'train_rows': len(datasets['train']), 'validation_rows': len(datasets['val']),
+-                      'batch_size': loader_batch, 'output': str(output_dir),
++                      'batch_size': config['batch_size'], 'seed': config['seed'], 'output': str(output_dir),
+                       'cuda_visible_devices': os.environ.get('CUDA_VISIBLE_DEVICES'),
+                       'device_uuid': str(torch.cuda.get_device_properties(device).uuid), 'pid': os.getpid(),
+                       'started_at': time.time()}), flush=True)
+     start_update = update
+-    if not args.test_only and bad_epochs < config['patience']:
++    if will_train:
+         for epoch in range(start_epoch, config['epochs'] + 1):
+             started = time.time()
+             model.train()
+@@ -240,17 +225,19 @@
+                 beta = config['kl_weight'] * min(1., (update + 1) / warmup_updates)
+                 loss = ce + config['reconstruction_weight'] * result['rec'] + beta * result['kl']
+                 loss.backward()
+-                # Capture actual full-training first-step gradient norms for
+-                # coordinator auditing, without a separate probe experiment.
++                # Actual full-training first-update loss terms and gradients.
+                 if update == 0:
+-                    groups = {'cse': model.cse, 'nai': model.nai, 'pvr': model.pvr,
+-                              'classifier': model.classifier, 'fin_entities': model.fin_entities,
+-                              'fin_relations': model.fin_relations}
+-                    if config['with_path']:
+-                        groups['path'] = model.path
+-                    save_json(output_dir / 'first_update_gradients.json', {
+-                        name: float(torch.stack([p.grad.detach().square().sum() for p in module.parameters()
+-                                                 if p.grad is not None]).sum().sqrt()) for name, module in groups.items()})
++                    grads = {name: p.grad for name, p in model.named_parameters() if p.requires_grad}
++                    save_json(output_dir / 'first_update.json', {
++                        'labels': len(batch['label']),
++                        'loss_terms': {'ce': float(ce), 'rec': float(result['rec']), 'kl': float(result['kl']),
++                                       'beta': beta, 'loss': float(loss)},
++                        'gradient_norms': {group: float(torch.stack([g.detach().square().sum() for n, g in grads.items()
++                                                                     if g is not None and n.startswith(prefixes)]).sum().sqrt())
++                                           for group, prefixes in GROUPS.items()},
++                        'all_gradients_finite': all(bool(torch.isfinite(g).all()) for g in grads.values() if g is not None),
++                        # Original forward never consumes the last block's norm2 output.
++                        'trainable_without_gradient': [n for n, g in grads.items() if g is None]})
+                 optimizer.step()
+                 n = len(batch['label'])
+                 for name, value in [('ce', ce), ('rec', result['rec']), ('kl', result['kl']),
+@@ -266,7 +253,7 @@
+                                       'running_loss': totals['loss'] / count}), flush=True)
+             train = {k: v / count for k, v in totals.items()}
+             train['kl_beta_final'] = beta
+-            val, val_probabilities, val_y, _, _ = evaluate(model, loaders['val'], device, config, beta)
++            val, val_probabilities, val_y, _ = evaluate(model, loaders['val'], device, config, beta)
+             val['accuracy'] = float((val_probabilities.argmax(1) == val_y).mean())
+             del val_probabilities, val_y
+             improved = val['macro_f1_85'] > best_metric
+@@ -289,15 +276,16 @@
+             if bad_epochs >= config['patience']:
+                 break
+     # Test is constructed and read by the training process only after validation
+-    # selection has finished. Preprocessing used its endpoints, never labels.
++    # selection has finished.
+     best = torch.load(output_dir / 'best.pt', map_location=device, weights_only=False)
+     model.load_state_dict(best['model'])
+     test_data = DDIDataset(prepared, config['protocol'], 'test')
+-    test_loader = DataLoader(test_data, batch_size=loader_batch, shuffle=False,
++    test_loader = DataLoader(test_data, batch_size=config['batch_size'], shuffle=False,
+                              num_workers=config['num_workers'], collate_fn=collate, pin_memory=True)
+     export_test(model, test_data, test_loader, device, config, output_dir, best)
+     (output_dir / 'test_config.yaml').write_text(yaml.safe_dump(
+-        {**best['config'], 'evaluation_batch_size': loader_batch, 'evaluation_checkpoint': 'best.pt'}, sort_keys=False))
++        {**best['config'], 'evaluation_batch_size': config['batch_size'], 'evaluation_checkpoint': 'best.pt'},
++        sort_keys=False))
+     save_json(output_dir / 'test_complete.json', {
+         'checkpoint': 'best.pt', 'selected_epoch': best['epoch'], 'selected_update': best['update'],
+         'rows': len(test_data), 'completed_at': time.time()})
+--- accelerated_four/configs/no_path_single_drugout.yaml	2026-10-12 11:57:03.161016711 +0800
++++ rareddie_control/configs/single_drugout.yaml	2026-10-12 15:21:21.130913160 +0800
+@@ -1,8 +1,7 @@
+ protocol: single_drugout
+-with_path: false
+ gpu: 6
+ prepared: data/prepared
+-output: accelerated_four/outputs/no_path_single_drugout
++output: rareddie_control/outputs/single_drugout
+ seed: 42
+ epochs: 100
+ patience: 15
+@@ -12,9 +11,6 @@
+ reconstruction_weight: 0.1
+ kl_weight: 0.001
+ kl_warmup_fraction: 0.2
+-path_depth: 4
+-path_meeting_cap: 32
+-path_arm_cap: 2
+ nai_cap: 30
+ cpu_threads: 2
+ num_workers: 2
+--- accelerated_four/configs/no_path_double_drugout.yaml	2026-10-12 11:57:03.165016661 +0800
++++ rareddie_control/configs/double_drugout.yaml	2026-10-12 15:21:21.138913059 +0800
+@@ -1,8 +1,7 @@
+ protocol: double_drugout
+-with_path: false
+ gpu: 7
+ prepared: data/prepared
+-output: accelerated_four/outputs/no_path_double_drugout
++output: rareddie_control/outputs/double_drugout
+ seed: 42
+ epochs: 100
+ patience: 15
+@@ -12,9 +11,6 @@
+ reconstruction_weight: 0.1
+ kl_weight: 0.001
+ kl_warmup_fraction: 0.2
+-path_depth: 4
+-path_meeting_cap: 32
+-path_arm_cap: 2
+ nai_cap: 30
+ cpu_threads: 2
+ num_workers: 2
+--- accelerated_four/env.sh	2026-10-12 11:57:46.008478045 +0800
++++ rareddie_control/env.sh	2026-10-12 15:23:21.889395020 +0800
+@@ -1,24 +1,23 @@
+ #!/usr/bin/env bash
+-# Source only. Runtime for the isolated accelerated_four replicas. The cairn
+-# environment, cairn_dev, the original cairn_dsn package and scripts/ are
+-# read-only; caches/temporary files stay under accelerated_four and its logs.
++# Source only. Runtime for the isolated rareddie_control arms. The cairn
++# environment, cairn_dev, accelerated_four, cairn_dsn and scripts/ are
++# read-only; caches/temporary files stay under rareddie_control and its logs.
+ set -euo pipefail
+ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+-ACCEL_DIR="$ROOT_DIR/accelerated_four"
+-LOG_DIR="$ROOT_DIR/logs/accelerated_four"
++CONTROL_DIR="$ROOT_DIR/rareddie_control"
++LOG_DIR="$ROOT_DIR/logs/rareddie_control"
+ cd "$ROOT_DIR"
+ export PYTHONDONTWRITEBYTECODE=1
+-# accelerated_four.dsn (new) and cairn_dsn (read-only OLD reference) both resolve from ROOT.
++# rareddie_control (new) and accelerated_four (reused, read-only) resolve from ROOT.
+ export PYTHONPATH="$ROOT_DIR"
+-# nvidia-smi index order; identical UUID mapping to the original jobs' GPU4-7.
+ export CUDA_DEVICE_ORDER=PCI_BUS_ID
+ export TMPDIR="$LOG_DIR/tmp"
+-export XDG_CACHE_HOME="$ACCEL_DIR/.cache"
+-export TORCH_HOME="$ACCEL_DIR/.cache/torch"
+-export TRITON_CACHE_DIR="$ACCEL_DIR/.cache/triton"
+-export CUDA_CACHE_PATH="$ACCEL_DIR/.cache/cuda"
+-export MPLCONFIGDIR="$ACCEL_DIR/.cache/matplotlib"
+-export NUMBA_CACHE_DIR="$ACCEL_DIR/.cache/numba"
++export XDG_CACHE_HOME="$CONTROL_DIR/.cache"
++export TORCH_HOME="$CONTROL_DIR/.cache/torch"
++export TRITON_CACHE_DIR="$CONTROL_DIR/.cache/triton"
++export CUDA_CACHE_PATH="$CONTROL_DIR/.cache/cuda"
++export MPLCONFIGDIR="$CONTROL_DIR/.cache/matplotlib"
++export NUMBA_CACHE_DIR="$CONTROL_DIR/.cache/numba"
+ export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+ PYTHON_BIN="$ROOT_DIR/../cairn_dev/.conda/cairn/bin/python"
+ mkdir -p "$TMPDIR" "$XDG_CACHE_HOME" "$TORCH_HOME" "$TRITON_CACHE_DIR" "$CUDA_CACHE_PATH" "$MPLCONFIGDIR" "$NUMBA_CACHE_DIR"
+--- accelerated_four/status.py	2026-10-12 11:58:14.920114577 +0800
++++ rareddie_control/status.py	2026-10-12 15:25:35.443716015 +0800
+@@ -1,17 +1,17 @@
+-"""Merge implementation progress into logs/accelerated_four/status.json (shared with Codex)."""
++"""Merge implementation/launch/monitor progress into logs/rareddie_control/status.json (shared with Codex)."""
+ import json
+ from pathlib import Path
+ import time
+ 
+-STATUS = Path(__file__).resolve().parents[1] / 'logs/accelerated_four/status.json'
++STATUS = Path(__file__).resolve().parents[1] / 'logs/rareddie_control/status.json'
+ 
+ 
+-def update_status(stage, **fields):
++def update_status(stage, section='implementation', **fields):
+     status = json.loads(STATUS.read_text()) if STATUS.exists() else {}
+-    implementation = status.setdefault('implementation', {})
+-    implementation.update(fields)
+-    implementation['stage'] = stage
+-    implementation['updated_at'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
++    part = status.setdefault(section, {})
++    part.update(fields)
++    part['stage'] = stage
++    part['updated_at'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
+     status['stage'] = stage
+     temporary = STATUS.with_name(STATUS.name + '.tmp')
+     temporary.write_text(json.dumps(status, indent=1, allow_nan=False) + '\n')
+--- accelerated_four/jobs.py	2026-10-12 12:06:11.562122375 +0800
++++ rareddie_control/jobs.py	2026-10-12 15:24:44.440357214 +0800
+@@ -1,10 +1,11 @@
+-"""Durable four-arm job records, real export verification, bounded recovery.
++"""Durable two-arm job records, real export verification, bounded recovery.
+ 
+-accelerated_four copy of scripts/server_jobs.py: isolated ROOT-relative state
+-(logs/accelerated_four/jobs), outputs (accelerated_four/outputs) and trainer
+-(accelerated_four.dsn.train). Every run continues its snapshot with --resume
+-(or --test-only once its schedule is finished); nothing restarts from scratch
+-and the batch size is never changed.
++rareddie_control copy of accelerated_four/jobs.py: isolated state
++(logs/rareddie_control/jobs), outputs (rareddie_control/outputs) and trainer
++(rareddie_control.train). The reviewed initial launch is the ONLY --fresh run.
++A recovery continues this run's own checkpoint with its exact recorded config
++(--resume, or --test-only once its schedule is finished); it never restarts
++from scratch, never reads DSN/accelerated/GPU3 state, never changes batch size.
+ 
+ CPU controller only. Training children receive exactly their assigned GPU.
+ No model forward, preparation, smoke run, or credential access here.
+@@ -21,15 +22,15 @@
+ import time
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-ACCEL = ROOT / 'accelerated_four'
+-STATE = ROOT / 'logs/accelerated_four/jobs'
+-OUTPUTS = ACCEL / 'outputs'
+-CONFIGS = ACCEL / 'configs'
+-APPROVAL = ROOT / 'logs/accelerated_four/review_approval.json'
+-EVIDENCE = ACCEL / 'evidence/summary.json'
+-REVIEW_DIFF = ACCEL / 'review/implementation.diff'
+-ARMS = {'path_single_drugout': 4, 'path_double_drugout': 5,
+-        'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
++CONTROL = ROOT / 'rareddie_control'
++STATE = ROOT / 'logs/rareddie_control/jobs'
++OUTPUTS = CONTROL / 'outputs'
++CONFIGS = CONTROL / 'configs'
++APPROVAL = ROOT / 'logs/rareddie_control/review_approval.json'
++EVIDENCE = CONTROL / 'evidence/cse_equivalence.json'
++REVIEW_DIFF = CONTROL / 'review/implementation.diff'
++ARMS = {'single_drugout': 6, 'double_drugout': 7}
++NAMESPACE = 'rareddie_control'
+ MAX_RECOVERIES = 3
+ 
+ 
+@@ -94,6 +95,7 @@
+     import pandas as pd
+     import yaml
+     from accelerated_four.dsn.metrics import classification_metrics
++    from rareddie_control.train import top_k_accuracy
+ 
+     output = OUTPUTS / arm
+     required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+@@ -106,7 +108,7 @@
+         best = checkpoint(output, 'best.pt')
+         last = checkpoint(output, 'last.pt')
+         cfg = best['config']
+-        assert cfg['gpu'] == ARMS[arm] and cfg['namespace'] == 'accelerated_four'
++        assert cfg['gpu'] == ARMS[arm] and cfg['protocol'] == arm and cfg['namespace'] == NAMESPACE
+         assert Path(cfg['output']) == output
+         assert last['config'] == cfg
+         assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+@@ -146,11 +148,9 @@
+             assert np.array_equal(prediction.frozen_row_index.to_numpy(), rows)
+             assert np.array_equal(prediction.predicted_event_id.to_numpy(), probabilities.argmax(1))
+             assert np.allclose(prediction.predicted_probability.to_numpy(), probabilities.max(1))
+-            mask = data['path_mask']
+-            assert mask.shape == (len(rows), 2 if cfg['with_path'] else 0)
+-            if cfg['with_path']:
+-                assert np.array_equal(mask, prediction[['path_v_to_u_present', 'path_u_to_v_present']].to_numpy())
+         actual, per_class, confusion = classification_metrics(labels, probabilities)
++        # Report-only Top-5 from the same exported probabilities.
++        actual['top5_accuracy'] = top_k_accuracy(labels, probabilities)
+         for key, value in actual.items():
+             assert metrics[key] is None if value is None else np.isclose(metrics[key], value, rtol=1e-6, atol=1e-8)
+         exported_class = pd.read_csv(output / 'test_per_class.csv')
+@@ -227,8 +227,8 @@
+     old = read_json(old_path) if old_path.exists() else None
+     if old and live(old):
+         raise RuntimeError(f'{arm} is live; cannot relaunch')
+-    if mode not in ('--resume', '--test-only'):
+-        raise ValueError('accelerated_four runs only continue snapshots: --resume or --test-only')
++    if mode not in ('--fresh', '--resume', '--test-only') or (mode == '--fresh') != (old is None and recoveries == 0):
++        raise ValueError('--fresh is only the first reviewed launch; recovery uses --resume or --test-only')
+     attempt = old['attempt'] + 1 if old else 1
+     log = directory / f'attempt_{attempt}.log'
+     if log.exists():
+@@ -237,7 +237,7 @@
+     if not config_path.is_relative_to(ROOT):
+         raise ValueError('Config must remain in workspace')
+     exit_file = directory / f'attempt_{attempt}_exit.json'
+-    command = [sys.executable, '-m', 'accelerated_four.dsn.train', '--config', str(config_path), mode]
++    command = [sys.executable, '-m', 'rareddie_control.train', '--config', str(config_path), mode]
+     launch_file = directory / f'attempt_{attempt}.json'
+     record = {'arm': arm, 'gpu': ARMS[arm], 'attempt': attempt, 'recoveries': recoveries,
+               'started_at': time.time(), 'config': str(config_path), 'mode': mode,
+@@ -273,12 +273,15 @@
+     last = checkpoint(output, 'last.pt') if (output / 'last.pt').exists() else None
+     best = checkpoint(output, 'best.pt') if (output / 'best.pt').exists() else None
+     if last is None and best is None:
+-        raise RuntimeError('No checkpoint: the snapshot is missing; never restart from scratch')
++        raise RuntimeError('No checkpoint of this run yet; --fresh is initial launch only, never restart from scratch')
+     # Crash between best and last publication: best.pt is the complete newer
+     # epoch (model, AdamW, RNG, update; its history line precedes it).
+     source = 'best.pt' if best is not None and (last is None or best['epoch'] > last['epoch']) else 'last.pt'
+     state = best if source == 'best.pt' else last
+     cfg = state['config']
++    # Own state only: never a DSN/accelerated/GPU3 checkpoint.
++    if cfg.get('namespace') != NAMESPACE or Path(cfg['output']) != output:
++        raise RuntimeError(f'{source} is not this rareddie_control run')
+     done = state['epoch'] >= cfg['epochs'] or state['bad_epochs'] >= cfg['patience']
+     if done and best is None:
+         raise RuntimeError('Training is done but best.pt is missing; do not reset training')
+@@ -337,10 +340,18 @@
+     return start(arm, config_path, mode, record['recoveries'], reason)
+ 
+ 
++def gpu_busy(index):
++    """Compute processes on a physical GPU (nvidia-smi index order)."""
++    query = lambda *a: subprocess.run(['nvidia-smi', *a, '--format=csv,noheader'], capture_output=True,
++                                      text=True, check=True).stdout.split('\n')
++    uuid = dict(line.split(', ') for line in query('--query-gpu=index,uuid') if line)[str(index)]
++    return [line for line in query('--query-compute-apps=gpu_uuid,pid,used_memory') if line.startswith(uuid)]
++
++
+ def launch_refusals():
+     """Initial launch gate: Codex approval newer than code/diff/evidence, passing
+-    evidence, and every arm still exactly at its immutable snapshot."""
+-    code = [p for p in ACCEL.rglob('*') if p.is_file() and p.suffix in ('.py', '.sh', '.yaml', '.md')
++    evidence, idle GPU6/7, and both arms without any record or output state."""
++    code = [p for p in CONTROL.rglob('*') if p.is_file() and p.suffix in ('.py', '.sh', '.yaml', '.md')
+             and 'outputs' not in p.parts and 'evidence' not in p.parts and '.cache' not in p.parts]
+     if not APPROVAL.exists():
+         yield f'missing Codex review approval {APPROVAL}'
+@@ -353,27 +364,22 @@
+         newest = max(code + [EVIDENCE, REVIEW_DIFF], key=lambda p: p.stat().st_mtime if p.exists() else 0)
+         if newest.exists() and APPROVAL.stat().st_mtime < newest.stat().st_mtime:
+             yield f'approval is older than {newest}'
+-    if not EVIDENCE.exists() or read_json(EVIDENCE).get('all_passed') is not True:
+-        yield f'evidence {EVIDENCE} missing or not all passed'
+-    elif EVIDENCE.stat().st_mtime < max(p.stat().st_mtime for p in (ACCEL / 'dsn').glob('*.py')):
+-        yield 'evidence is older than accelerated_four/dsn code'
++    if not EVIDENCE.exists() or read_json(EVIDENCE).get('passed') is not True:
++        yield f'evidence {EVIDENCE} missing or not passed'
++    elif EVIDENCE.stat().st_mtime < max(p.stat().st_mtime for p in CONTROL.glob('*.py')):
++        yield 'evidence is older than rareddie_control code'
+     if not REVIEW_DIFF.exists():
+-        yield f'missing {REVIEW_DIFF} (run accelerated_four/tools/make_review.sh)'
+-    for arm in ARMS:
+-        output = OUTPUTS / arm
++        yield f'missing {REVIEW_DIFF} (run rareddie_control/tools/make_review.sh)'
++    for arm, gpu in ARMS.items():
+         if (STATE / arm / 'record.json').exists():
+             yield f'{arm}: existing job record; use --status and bounded --recover'
+-        provenance = output / 'snapshot/provenance.json'
+-        if not provenance.exists() or read_json(provenance).get('passed') is not True:
+-            yield f'{arm}: missing or failed snapshot provenance'
+-            continue
+-        for name in ['last.pt', 'best.pt']:
+-            if not (output / name).exists() or (output / name).stat().st_ino != (output / 'snapshot' / name).stat().st_ino:
+-                yield f'{arm}: {name} is not the immutable snapshot'
+-        if (output / 'history.jsonl').read_bytes() != (output / 'snapshot/history.jsonl').read_bytes():
+-            yield f'{arm}: history.jsonl differs from the snapshot'
+-        if any((output / n).exists() for n in ['test_complete.json', 'test_metrics.json']):
+-            yield f'{arm}: test exports already exist'
++        existing = [n for n in ['last.pt', 'best.pt', 'history.jsonl', 'test_complete.json']
++                    if (OUTPUTS / arm / n).exists()]
++        if existing:
++            yield f'{arm}: output already has {existing}; --fresh needs an empty output'
++        busy_apps = gpu_busy(gpu)
++        if busy_apps:
++            yield f'{arm}: physical GPU{gpu} is not idle: {busy_apps}'
+ 
+ 
+ def main():
+@@ -417,16 +423,12 @@
+                 raise
+         else:
+             # Initial launch is intentionally distinct from recovery: only after
+-            # Codex approval, from untouched snapshots, without existing records.
++            # Codex approval, fresh, without existing records or outputs.
+             refusals = list(launch_refusals())
+             if refusals:
+                 raise RuntimeError('LAUNCH REFUSED:\n  ' + '\n  '.join(refusals))
+-            result = {}
+-            for arm in ARMS:
+-                mode, source, _ = resume_point(OUTPUTS / arm)
+-                assert source == 'last.pt'
+-                result[arm] = start(arm, CONFIGS / f'{arm}.yaml', mode)
+-            from accelerated_four.status import update_status
++            result = {arm: start(arm, CONFIGS / f'{arm}.yaml', '--fresh') for arm in ARMS}
++            from rareddie_control.status import update_status
+             update_status('launched_awaiting_progress_confirmation',
+                           launch={arm: {k: r[k] for k in ['pid', 'process_start', 'mode', 'log', 'gpu', 'started_at']}
+                                   for arm, r in result.items()})
+--- accelerated_four/launch_four.sh	2026-10-12 12:06:37.973790336 +0800
++++ rareddie_control/launch.sh	2026-10-12 15:25:10.068035031 +0800
+@@ -1,14 +1,15 @@
+ #!/usr/bin/env bash
+-# Host launch of all four accelerated replicas. Codex runs this ONLY after
+-# writing logs/accelerated_four/review_approval.json; the controller refuses
+-# otherwise. Each arm: detached session (wrapper orphaned -> PPID 1) holding
+-# its job.lock, inherited by the training child. Then waits (bounded) for real
+-# progress of every arm and records logs/accelerated_four/launch.json.
+-# Usage: bash accelerated_four/launch_four.sh --launch-reviewed
++# Host launch of both rareddie_control arms (GPU6 single_drugout, GPU7
++# double_drugout). Codex runs this ONLY after writing
++# logs/rareddie_control/review_approval.json; the controller refuses otherwise.
++# Each arm: detached session (wrapper orphaned -> PPID 1) holding its job.lock,
++# inherited by the training child, --fresh. Then waits (bounded) for the actual
++# first update and a 100-update line of both arms; writes launch.json.
++# Usage: bash rareddie_control/launch.sh --launch-reviewed
+ source "$(dirname -- "${BASH_SOURCE[0]}")/env.sh"
+ if [[ "${1:-}" != --launch-reviewed || $# != 1 ]]; then
+-  echo 'Usage: bash accelerated_four/launch_four.sh --launch-reviewed (only after Codex review approval)' >&2
++  echo 'Usage: bash rareddie_control/launch.sh --launch-reviewed (only after Codex review approval)' >&2
+   exit 2
+ fi
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/jobs.py --launch-reviewed
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/tools/confirm_launch.py --wait 1800
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_control/jobs.py --launch-reviewed
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_control/confirm_launch.py --wait 1800
+--- accelerated_four/tools/confirm_launch.py	2026-10-12 12:06:37.977790286 +0800
++++ rareddie_control/confirm_launch.py	2026-10-12 15:25:10.064035081 +0800
+@@ -1,21 +1,22 @@
+-"""Confirm real progress of all four launched arms (no signals, read-only).
++"""Confirm real progress of both launched arms (no signals, read-only).
+ 
+-Per arm: wrapper/trainer PID, PPID, session, process identity; the start line;
+-the first training step and a 100-update progress line (or, for a finished
+-snapshot, the selected-best test export). Also records the original jobs.
+-Writes logs/accelerated_four/launch.json and updates status.json.
++Per arm: wrapper/trainer PID, PPID, session, process identity; the fresh start
++line; the actual first update (finite CE/loss and gradients, first_update.json),
++the parameter inventory and initial RNG record; and a 100-update progress line.
++Writes logs/rareddie_control/launch.json and updates status.json.
+ """
+ import argparse
+ import json
++import math
+ from pathlib import Path
+ import subprocess
+ import sys
+ import time
+ 
+-ROOT = Path(__file__).resolve().parents[2]
++ROOT = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(ROOT))
+-from accelerated_four.jobs import ARMS, STATE, live, process_start, read_json, write_json  # noqa: E402
+-from accelerated_four.status import update_status  # noqa: E402
++from rareddie_control.jobs import ARMS, OUTPUTS, STATE, live, process_start, read_json, write_json  # noqa: E402
++from rareddie_control.status import update_status  # noqa: E402
+ 
+ 
+ def events(log):
+@@ -47,28 +48,32 @@
+     process = STATE / arm / f'attempt_{record["attempt"]}_process.json'
+     trainer = read_json(process) if process.exists() else None
+     found = events(record['log'])
+-    ok = 'start' in found and (('first_step' in found and 'progress_100' in found) or 'best_checkpoint_test' in found)
++    output = OUTPUTS / arm
++    first = read_json(output / 'first_update.json') if (output / 'first_update.json').exists() else None
++    inventory = read_json(output / 'model_inventory.json') if (output / 'model_inventory.json').exists() else None
++    first_ok = bool(first) and first['all_gradients_finite'] and all(
++        math.isfinite(v) for v in [*first['loss_terms'].values(), *first['gradient_norms'].values()]) and all(
++        v > 0 for v in first['gradient_norms'].values()) and sorted(first['trainable_without_gradient']) == [
++        'cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight']
++    inventory_ok = bool(inventory) and not inventory['forbidden_name_matches'] and not (
++        inventory['dsn_inter_attention_present'] or inventory['inter_projection_present']
++        or inventory['path_modules_present']) and len(inventory['molecular_transformer_convs']) == 4
++    fresh = (found.get('start') or {}).get('mode') == 'fresh' or record['mode'] != '--fresh'
++    ok = 'start' in found and fresh and (('first_step' in found and 'progress_100' in found and first_ok
++                                          and inventory_ok) or 'best_checkpoint_test' in found)
+     return {'pid': record['pid'], 'wrapper_ps': ps(record['pid']),
+             'wrapper_ppid_is_1': (ps(record['pid']) or '').split()[1:2] == ['1'],
+             'trainer': trainer, 'trainer_ps': ps(trainer['pid']) if trainer else None,
+             'trainer_alive_same_process': bool(trainer) and process_start(trainer['pid']) == trainer['process_start'],
+             'live': live(record), 'mode': record['mode'], 'log': record['log'],
+             'start': found.get('start'), 'first_step': found.get('first_step'), 'progress_100': found.get('progress_100'),
++            'first_update': first, 'first_update_ok': first_ok, 'inventory_ok': inventory_ok,
++            'initial_rng_recorded': (output / 'initial_rng.pt').is_file(),
+             'test_export': found.get('best_checkpoint_test', {}).get('macro_f1_85'),
+             'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None,
+             'progress_confirmed': ok}
+ 
+ 
+-def originals():
+-    result = {}
+-    for arm in ARMS:
+-        record = read_json(ROOT / 'logs/server_jobs' / arm / 'record.json')
+-        process = read_json(ROOT / 'logs/server_jobs' / arm / f'attempt_{record["attempt"]}_process.json')
+-        result[arm] = {'pid': process['pid'], 'alive_same_process': process_start(process['pid']) == process['process_start'],
+-                       'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+-    return result
+-
+-
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--wait', type=float, default=0.)
+@@ -82,12 +87,12 @@
+         time.sleep(15)
+     gpus = subprocess.run(['nvidia-smi', '--query-compute-apps=gpu_uuid,pid,used_memory', '--format=csv,noheader'],
+                           capture_output=True, text=True).stdout.splitlines()
+-    launch = {'checked_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'arms': arms, 'original_jobs': originals(),
++    launch = {'checked_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'arms': arms,
+               'gpu_compute_apps': gpus, 'loadavg': list(__import__('os').getloadavg()),
+               'all_progress_confirmed': all(a['progress_confirmed'] for a in arms.values())}
+-    write_json(ROOT / 'logs/accelerated_four/launch.json', launch)
++    write_json(ROOT / 'logs/rareddie_control/launch.json', launch)
+     update_status('launched_progress_confirmed' if launch['all_progress_confirmed'] else 'launched_progress_unconfirmed',
+-                  launch_check={'json': str(ROOT / 'logs/accelerated_four/launch.json'),
++                  launch_check={'json': str(ROOT / 'logs/rareddie_control/launch.json'),
+                                 'all_progress_confirmed': launch['all_progress_confirmed'],
+                                 'pids': {a: v['pid'] for a, v in arms.items()},
+                                 'trainer_pids': {a: (v['trainer'] or {}).get('pid') for a, v in arms.items()}})
+--- accelerated_four/monitor/monitor_loop.sh	2026-10-12 12:07:21.593241965 +0800
++++ rareddie_control/monitor/monitor_loop.sh	2026-10-12 15:26:00.063406504 +0800
+@@ -1,8 +1,9 @@
+ #!/usr/bin/env bash
+-# Detached accelerated_four monitor daemon (started only by start_monitor.sh).
+-# Pattern of scripts/monitor_loop.sh (left untouched): deterministic status,
+-# one gpt-6.1-sol LOW Codex check, host drain of recovery requests, after
+-# status, local note/notifications; a check starts every 2400 seconds.
++# Detached rareddie_control monitor daemon (started only by start_monitor.sh).
++# Pattern of accelerated_four/monitor/monitor_loop.sh (left untouched):
++# deterministic status, one gpt-6.1-sol LOW Codex check, host drain of recovery
++# requests, after status; first check immediately, then one every 2400 seconds.
++# Local state only (logs/rareddie_control/monitor, status.json); no notifications.
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ MONITOR_DIR="$LOG_DIR/monitor"
+@@ -11,7 +12,8 @@
+ flock -n 9 || exit 0
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+-export CUDA_VISIBLE_DEVICES=4,5,6,7
++# The monitor never needs a GPU; training jobs run in their own sessions.
++export CUDA_VISIBLE_DEVICES=''
+ # Use the existing proxy service without shell initialization/history writes.
+ export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
+ export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
+@@ -22,12 +24,33 @@
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ status_to() {
+   # A status/verifier error is recorded and never stops monitoring.
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/jobs.py --status > "$1" 2> "$1.err" \
++  "$PYTHON_BIN" rareddie_control/jobs.py --status > "$1" 2> "$1.err" \
+     || printf '{"all_complete": false, "status_error": true, "runs": {}}\n' > "$1"
+ }
++record_status() {
++  # monitor section of logs/rareddie_control/status.json; failures never stop monitoring.
++  "$PYTHON_BIN" - "$MONITOR_DIR" "$CHECK_ID" "$1" "${CODEX_EXIT:-}" <<'PY' || true
++import json, sys
++from pathlib import Path
++from rareddie_control.status import update_status
++monitor, check, outcome, codex_exit = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
++after = monitor / 'checks' / check / 'after.json'
++runs = json.loads(after.read_text()).get('runs', {}) if after.exists() else {}
++update_status('monitor_' + outcome, section='monitor', pid=int((monitor / 'monitor.pid').read_text()),
++              last_check=check, last_codex_exit=int(codex_exit) if codex_exit else None,
++              last_successful_check=(monitor / 'last_successful_check.txt').read_text().strip()
++              if (monitor / 'last_successful_check.txt').exists() else None,
++              next_check=(monitor / 'next_check.txt').read_text().strip() if (monitor / 'next_check.txt').exists() else None,
++              interval_seconds=2400, model='gpt-6.1-sol low', outcome=outcome,
++              runs={arm: {k: r.get(k) for k in ['state', 'attempt', 'recoveries', 'history_last_epoch',
++                                                 'history_best_validation_macro_f1_85', 'history_bad_epochs']}
++                    for arm, r in runs.items()})
++PY
++}
+ while true; do
+   CHECK_ID="$(date -u +%Y%m%dT%H%M%SZ)_$$"
+   CHECK_DIR="$MONITOR_DIR/checks/$CHECK_ID"
++  CODEX_EXIT=''
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+@@ -41,11 +64,12 @@
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+ PY
+   then
++    cp "$CHECK_DIR/before.json" "$CHECK_DIR/after.json"
+     cp "$CHECK_DIR/before.json" "$MONITOR_DIR/final_summary.json"
+-    "$PYTHON_BIN" accelerated_four/monitor/notify.py "$CHECK_DIR/before.json" complete || true
+     echo 'complete' > "$MONITOR_DIR/state.txt"
+-    echo 'All four selected-best checkpoint tests and complete exports verified.'
+     rm -f "$MONITOR_DIR/next_check.txt"
++    record_status complete
++    echo 'Both selected-best checkpoint tests and complete exports verified.'
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
+@@ -53,19 +77,20 @@
+   # A CLI timeout affects ONLY this check, never a training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+-      --skip-git-repo-check --ephemeral --ignore-user-config \
+-      -s workspace-write -c 'sandbox_workspace_write.network_access=true' \
++      --dangerously-bypass-approvals-and-sandbox --ignore-user-config --ephemeral --skip-git-repo-check \
+       -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+-      -o "$CHECK_DIR/codex_final.txt" - < accelerated_four/monitor/prompt.md \
++      -o "$CHECK_DIR/codex_final.txt" - < rareddie_control/monitor/prompt.md \
+       > "$CHECK_DIR/codex.log" 2>&1; then
++    CODEX_EXIT=0
+     CLI_FAILURES=0
+   else
+-    CLI_EXIT=$?
++    CODEX_EXIT=$?
+     CLI_FAILURES=$((CLI_FAILURES + 1))
+-    printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
++    printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CODEX_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
++  echo "$CODEX_EXIT" > "$CHECK_DIR/codex_exit.txt"
+   # Launch recovery only here, outside the CLI timeout and its PID namespace.
+-  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/monitor/drain_recovery_requests.py \
++  if "$PYTHON_BIN" rareddie_control/monitor/drain_recovery_requests.py \
+       > "$CHECK_DIR/recovery_drain.log" 2>&1; then
+     :
+   else
+@@ -74,6 +99,8 @@
+   fi
+   status_to "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  # Successful check: Codex exit 0 and after.json persisted (next_check.txt above).
++  [[ "$CODEX_EXIT" == 0 ]] && echo "$CHECK_ID" > "$MONITOR_DIR/last_successful_check.txt"
+   OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY' || echo monitoring
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+@@ -86,15 +113,15 @@
+ PY
+   )"
+   echo "$OUTCOME" > "$MONITOR_DIR/state.txt"
+-  "$PYTHON_BIN" accelerated_four/monitor/notify.py "$CHECK_DIR/after.json" "$OUTCOME" \
+-    > "$CHECK_DIR/notify.log" 2>&1 || true
+   if [[ "$OUTCOME" != monitoring ]]; then
+     cp "$CHECK_DIR/after.json" "$MONITOR_DIR/final_summary.json"
+     rm -f "$MONITOR_DIR/next_check.txt"
++    record_status "$OUTCOME"
+     [[ "$OUTCOME" == complete ]] && exit 0
+     echo "Monitor blocked: $OUTCOME; see final_summary.json and attempt logs" >&2
+     exit 1
+   fi
++  record_status monitoring
+   flock -u 7
+   # Maintain a 2400-second interval between check starts, including CLI time.
+   NEXT_EPOCH="$(date -u -d "$(cat "$MONITOR_DIR/next_check.txt")" +%s)"
+--- accelerated_four/monitor/start_monitor.sh	2026-10-12 12:07:42.728976253 +0800
++++ rareddie_control/monitor/start_monitor.sh	2026-10-12 15:26:17.107192234 +0800
+@@ -1,7 +1,9 @@
+ #!/usr/bin/env bash
+-# Start the detached accelerated_four monitor daemon ONLY after all four jobs
+-# have records and confirmed real progress. Safe to repeat while it is live.
+-# Usage: bash accelerated_four/monitor/start_monitor.sh
++# Start the detached rareddie_control monitor daemon ONLY after both jobs have
++# records and confirmed real progress. The daemon is double-forked (setsid -f,
++# PPID 1, own session). Waits for its FIRST SUCCESSFUL check: Codex exit 0,
++# after.json and next_check.txt persisted. Safe to repeat while it is live.
++# Usage: bash rareddie_control/monitor/start_monitor.sh
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ export CUDA_VISIBLE_DEVICES=''
+@@ -19,35 +21,55 @@
+ import sys
+ import time
+ from pathlib import Path
+-from accelerated_four.jobs import ARMS, STATE
+-from accelerated_four.tools.confirm_launch import arm_state
+-from accelerated_four.status import update_status
++from rareddie_control.jobs import ARMS, STATE, process_start
++from rareddie_control.confirm_launch import arm_state, ps
++from rareddie_control.status import update_status
+ monitor = Path(sys.argv[1])
+ for arm in ARMS:
+     if not (STATE / arm / 'record.json').is_file():
+-        raise SystemExit('Launch and confirm all four jobs before starting the monitor')
++        raise SystemExit('Launch and confirm both jobs before starting the monitor')
+     state = arm_state(arm)
+     if not (state['progress_confirmed'] or state['exit'] is not None):
+-        raise SystemExit(f'{arm}: no confirmed real progress yet (start line, first step and 100-update line)')
++        raise SystemExit(f'{arm}: no confirmed real progress yet (fresh start, first update, 100-update line)')
+ if not Path('/data/interns/zhangpc/.local/bin/codex').is_file():
+     raise SystemExit('Existing Codex CLI is unavailable')
+ root = Path.cwd()
++(monitor / 'monitor.pid').unlink(missing_ok=True)
++started = time.time()
+ with (monitor / 'daemon.log').open('a') as log:
+-    process = subprocess.Popen(['bash', str(root / 'accelerated_four/monitor/monitor_loop.sh')],
+-                               cwd=root, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+-                               start_new_session=True, close_fds=True)
+-(monitor / 'monitor.pid').write_text(str(process.pid) + '\n')
+-# Confirm initialization before reporting a successful detached launch.
+-for _ in range(600):
+-    if process.poll() is not None:
+-        raise SystemExit(f'Monitor exited during startup; see {monitor}/daemon.log')
+-    if (monitor / 'next_check.txt').is_file() and any((monitor / 'checks').glob(f'*_{process.pid}/before.json')):
++    subprocess.run(['setsid', '-f', 'bash', str(root / 'rareddie_control/monitor/monitor_loop.sh')], cwd=root,
++                   stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, close_fds=True, check=True)
++for _ in range(300):
++    if (monitor / 'monitor.pid').is_file() and (monitor / 'monitor.pid').read_text().strip():
+         break
+     time.sleep(0.1)
+ else:
+-    raise SystemExit('Monitor startup not confirmed; inspect daemon.log and daemon.lock before retrying')
+-update_status('monitor_started', monitor={'pid': process.pid, 'state_dir': str(monitor),
+-                                          'next_check': (monitor / 'next_check.txt').read_text().strip(),
+-                                          'interval_seconds': 2400, 'model': 'gpt-6.1-sol low'})
+-print(f'Detached accelerated_four monitor PID {process.pid}; checks every 2400 seconds')
++    raise SystemExit(f'Monitor did not start; see {monitor}/daemon.log')
++pid = int((monitor / 'monitor.pid').read_text())
++# First check is immediate; Codex is bounded by 1200 s plus 30 s kill grace.
++deadline = started + 1500
++while time.time() < deadline:
++    if process_start(pid) is None:
++        raise SystemExit(f'Monitor PID {pid} exited before its first check completed; see {monitor}/daemon.log')
++    checks = sorted((monitor / 'checks').glob(f'*_{pid}'))
++    if checks and (checks[0] / 'after.json').is_file() and (checks[0] / 'codex_exit.txt').is_file():
++        break
++    time.sleep(5)
++else:
++    raise SystemExit(f'First monitor check not finished within 1500 s; daemon PID {pid} still running')
++check = checks[0]
++codex_exit = int((check / 'codex_exit.txt').read_text())
++next_check = (monitor / 'next_check.txt').read_text().strip() if (monitor / 'next_check.txt').is_file() else None
++success = codex_exit == 0 and next_check is not None
++daemon_ps = ps(pid)
++fields = {'pid': pid, 'ps': daemon_ps, 'ppid_is_1': (daemon_ps or '').split()[1:2] == ['1'],
++          'state_dir': str(monitor), 'first_check': check.name, 'first_check_codex_exit': codex_exit,
++          'first_check_after_json': str(check / 'after.json'), 'next_check': next_check,
++          'interval_seconds': 2400, 'model': 'gpt-6.1-sol low'}
++update_status('monitor_first_check_succeeded' if success else 'monitor_first_check_failed', section='monitor_start',
++              **fields)
++print(fields)
++if not success:
++    raise SystemExit(f'First monitor check NOT successful (codex exit {codex_exit}); daemon keeps its 2400 s schedule')
++print(f'Detached rareddie_control monitor PID {pid}; first check succeeded; next check {next_check}')
+ PY
+--- accelerated_four/monitor/drain_recovery_requests.py	2026-10-12 12:07:42.724976303 +0800
++++ rareddie_control/monitor/drain_recovery_requests.py	2026-10-12 15:25:35.447715965 +0800
+@@ -1,7 +1,7 @@
+ """Consume monitor recovery requests in the host daemon, once per request.
+ 
+-Copy of scripts/drain_recovery_requests.py for accelerated_four: requests carry
+-only arm and reason (no batch changes); accelerated_four/jobs.py alone decides.
++Copy of accelerated_four/monitor/drain_recovery_requests.py for rareddie_control:
++requests carry only arm and reason; rareddie_control/jobs.py alone decides.
+ """
+ import json
+ from pathlib import Path
+@@ -11,7 +11,7 @@
+ 
+ 
+ ROOT = Path(__file__).resolve().parents[2]
+-REQUESTS = ROOT / 'logs/accelerated_four/monitor/recovery_requests'
++REQUESTS = ROOT / 'logs/rareddie_control/monitor/recovery_requests'
+ 
+ 
+ def write_record(path, record):
+@@ -44,7 +44,7 @@
+                     or set(request) - {'arm', 'reason'}):
+                 raise ValueError('Request requires exactly arm and a nonempty reason')
+             record['request'] = {key: request[key] for key in ('arm', 'reason')}
+-            command = [sys.executable, str(ROOT / 'accelerated_four/jobs.py'),
++            command = [sys.executable, str(ROOT / 'rareddie_control/jobs.py'),
+                        '--recover', request['arm'], '--reason', request['reason']]
+             record['command'] = command
+             write_record(claimed, record)
+--- accelerated_four/monitor/prompt.md	2026-10-12 12:08:03.276717933 +0800
++++ rareddie_control/monitor/prompt.md	2026-10-12 15:26:30.827019753 +0800
+@@ -1,81 +1,84 @@
+-You are the detached SERVER monitor for the four ACCELERATED replica DDI jobs in
+-/data/interns/zhangpc/cairn_new (namespace accelerated_four). Use gpt-6.1-sol
++You are the detached SERVER monitor for the two rareddie_control DDI jobs in
++/data/interns/zhangpc/cairn_new (namespace rareddie_control). Use gpt-6.1-sol
+ with reasoning LOW. The main chat has ended; do not require it, app automation,
+ or user confirmation. Scheduled networked CLI execution and the existing private
+ .codex_runtime authentication are authorized. Never inspect, print, copy, or
+ commit authentication credentials. The daemon supplies process-local proxy
+ variables for the existing service. Do not source .bashrc, call clashon, or
+-start interactive shells/history writes.
++start interactive shells/history writes. Do not notify or message anyone.
+ 
+-SCOPE: only the accelerated replicas: state logs/accelerated_four/jobs/, outputs
+-accelerated_four/outputs/<arm>/, their recorded wrapper/trainer PIDs. The
+-ORIGINAL jobs (logs/server_jobs/, outputs/, scripts/, cairn_dsn/, configs/) and
+-the original monitor (logs/server_monitor/) are someone else's: never read their
+-checkpoints for decisions, never signal them, never write there. Exact GPU
+-mapping: path single=4, path double=5, no_path single=6, no_path double=7
+-(shared with the original jobs by design). GPUs 0-3 are forbidden.
++SCOPE: only the rareddie_control arms: state logs/rareddie_control/jobs/,
++outputs rareddie_control/outputs/<arm>/, their recorded wrapper/trainer PIDs.
++Exact GPU mapping: single_drugout=GPU6, double_drugout=GPU7. Everything else is
++someone else's: the original jobs (logs/server_jobs/, outputs/, scripts/,
++cairn_dsn/, configs/), accelerated_four/ and logs/accelerated_four/, GPU0-5 and
++their monitors. Never read their checkpoints for decisions, never signal them,
++never write there.
+ 
+-First read logs/accelerated_four/jobs/status.json (written immediately before
+-this check by `accelerated_four/jobs.py --status`), then as needed the per-run
++First read logs/rareddie_control/jobs/status.json (written immediately before
++this check by `rareddie_control/jobs.py --status`), then as needed the per-run
+ record.json, current attempt log tail, attempt_<N>_process.json and exit records,
+ history.jsonl tail and output state. Use the read-only Python environment via
+-`source accelerated_four/env.sh` ($PYTHON_BIN). Keep every write, temporary file
+-and cache inside cairn_new, under logs/accelerated_four/monitor/ only.
++`source rareddie_control/env.sh` ($PYTHON_BIN). Keep every write, temporary file
++and cache inside cairn_new, under logs/rareddie_control/monitor/ only.
+ cairn_dev is READ ONLY. No permission changes, broad audits, hashes, smoke runs,
+ preparation, new experiments, or changes to data/model/selection formulas.
+ 
+-`accelerated_four/jobs.py --status` performs the real export verification:
+-stopped schedule (epoch limit or patience), selected best.pt consistent with
+-last.pt and the strict fixed85 history maximum, frozen test rows, 85-way
+-probabilities, metrics, predictions, per-class and confusion exports, test config
+-and completion marker. Exit status alone never proves success. Do not mark a run
+-complete yourself or manufacture output files. The loop writes final_summary and
+-exits only with verified success (or when all runs are complete/exhausted).
+-Codex CLI failures never end monitoring.
++`rareddie_control/jobs.py --status` performs the real export verification:
++stopped schedule (100 epochs or patience 15), selected best.pt consistent with
++last.pt and the strict fixed85 validation MacroF1 history maximum, frozen test
++rows, 85-way probabilities, metrics incl. report-only Top-5, predictions,
++per-class and confusion exports, test config and completion marker. Exit status
++alone never proves success. Do not mark a run complete yourself or manufacture
++output files. The loop writes final_summary and exits only with verified
++success (or when all runs are complete/exhausted). Codex CLI failures never end
++monitoring.
+ 
+ Leave every LIVE job alone even if its log has not changed for hours. If the
+ wrapper died, the job.lock may still be held by its live training child
+ (attempt_<N>_process.json). Never kill/restart live jobs because of SSH loss,
+ CLI timeout, polling timeout, stale epoch lines, or missing logs. The trainer
+ prints a train_progress line every 100 updates; one epoch is 1165 updates.
+-If all states are live/complete with no actionable change, stay quiet: the
+-daemon already writes logs/accelerated_four/monitor/check_note.json and
+-notifications. Optionally append one short line to
+-logs/accelerated_four/monitor/codex_notes.jsonl; no chat output, no questions.
++If all states are live/complete with no actionable change, stay quiet.
++Optionally append one short line to logs/rareddie_control/monitor/codex_notes.jsonl;
++no chat output, no questions.
+ 
+-You may ONLY: read logs/artifacts, run `accelerated_four/jobs.py --status`, and
++You may ONLY: read logs/artifacts, run `rareddie_control/jobs.py --status`, and
+ file recovery requests. Do not edit any code, config, data, model, checkpoint,
+ history or output file. Never launch, resume or test-run training yourself.
+-NEVER execute accelerated_four/jobs.py --recover, --launch-reviewed, --block or
+---worker, accelerated_four/launch_four.sh, or
+-accelerated_four/monitor/drain_recovery_requests.py, and never call the
++NEVER execute rareddie_control/jobs.py --recover, --launch-reviewed, --block or
++--worker, rareddie_control/launch.sh, or
++rareddie_control/monitor/drain_recovery_requests.py, and never call the
+ controller's functions through Python or another wrapper: a Codex tool's PID
+ namespace and lifetime are scoped to this check.
+ 
+ For an actually FAILED job (state failed: dead process AND unlocked job.lock AND
+-unverified exports), inspect its recorded errors first. Then write ONE JSON
+-recovery request under logs/accelerated_four/monitor/recovery_requests/:
++unverified exports, i.e. a genuine exited failure), inspect its recorded errors
++first. Then write ONE JSON recovery request under
++logs/rareddie_control/monitor/recovery_requests/:
+ 
+   {"arm": "<exact arm name>", "reason": "<actual observed failure>"}
+ 
+ Use a unique filename (timestamp plus UUID), write a .tmp file in that same
+ directory, then atomically rename it to .json. Do not create a duplicate request
+ for an arm with a pending request. Record the request path and observed failure
+-in logs/accelerated_four/monitor/actions.jsonl. Never request recovery for live
++in logs/rareddie_control/monitor/actions.jsonl. Never request recovery for live
+ or complete runs. The host daemon drains requests AFTER this Codex invocation
+-ends and BEFORE its after-status snapshot, invoking the bounded controller
+-(at most three recoveries per arm, preparation errors included). It archives
+-checkpoints/history/configs, resumes the exact recorded config with
+-optimizer/update/RNG/schedule (--resume), or runs --test-only once training has
+-stopped; a crash between best/last publication resumes the complete newer
+-best.pt epoch and the history is trimmed to the resumed epoch. It never
+-restarts from scratch and never changes the batch size. Processed requests and
+-their results are in recovery_requests/processed/; interrupted requests are not
+-replayed. A queued request is not a completed recovery.
++ends and BEFORE its after-status snapshot, invoking the bounded controller (at
++most three recoveries per arm, preparation errors included). It archives
++checkpoints/history/configs and continues THIS run's own checkpoint with its
++exact recorded config, optimizer, update, RNG and schedule (--resume), or runs
++--test-only once training has stopped. It never restarts from scratch (--fresh
++is the initial launch only; a run that died before its first epoch checkpoint
++is not recoverable and stays failed), never restores DSN/accelerated/GPU3
++weights, and never changes the batch size. Processed requests and their results
++are in recovery_requests/processed/; interrupted requests are not replayed. A
++queued request is not a completed recovery.
+ 
+ If a failure cannot be repaired within these constraints (e.g. the same
+-deterministic error after recovery), do not request recovery again; record the
+-observation in actions.jsonl so the exhausted/failed state stays explicit.
+-Never claim completion without the verifier. The daemon handles the next
+-2400-second check, next-check timestamp, PID, overlap lock, summary and exit.
+-Do not start another daemon, sleep for the interval, or create a new automation.
++deterministic error after recovery, or no checkpoint yet), do not request
++recovery again; record the observation in actions.jsonl so the failed state
++stays explicit. Never claim completion without the verifier. The daemon handles
++the next 2400-second check, next-check timestamp, PID, overlap lock, summary
++and exit. Do not start another daemon, sleep for the interval, or create a new
++automation.
+### original RareDDIE MVN_DDI_Block (references/RareDDIE/models_t_struc.py lines 79-145) for CSE order
+class MVN_DDI_Block(nn.Module):
+    def __init__(self, in_features, n_heads, head_out_feats, edge_feature, dp):
+        super().__init__()
+        self.n_heads = n_heads
+        self.in_features = in_features
+        self.out_features = head_out_feats
+        self.feature_conv = TransformerConv(in_features, head_out_feats, n_heads, edge_dim=edge_feature,dropout=dp)
+        self.lin_up = Linear(64, 64, bias=True, weight_initializer='glorot')
+        
+        self.feature_conv2 = TransformerConv(in_features, head_out_feats, n_heads, edge_dim=edge_feature,dropout=dp)
+        self.lin_up2 = Linear(64, 64, bias=True, weight_initializer='glorot')
+        
+        self.readout = SAGPooling(n_heads * head_out_feats, min_score=-1)
+        self.re_shape = Linear(64 + 128, 128, bias=True, weight_initializer='glorot')
+        self.norm = LayerNorm(n_heads * head_out_feats)
+        self.norm2 = LayerNorm(n_heads * head_out_feats)
+        
+        self.re_shape_e = Linear(64, 128, bias=True, weight_initializer='glorot')
+    
+    def forward(self, h_data,t_data,h_data_edge, t_data_edge):
+        h_data, t_data = self.ne_update(h_data, t_data)
+        h_data.x = self.feature_conv2(h_data.x, h_data.edge_index, h_data.edge_attr)
+        t_data.x = self.feature_conv2(t_data.x, t_data.edge_index, t_data.edge_attr)
+        h_data.edge_attr = self.lin_up2(h_data.edge_attr)
+        t_data.edge_attr = self.lin_up2(t_data.edge_attr)
+
+        h_global_graph_emb, t_global_graph_emb = self.GlobalPool(h_data, t_data, h_data_edge, t_data_edge)
+        h_global_graph_emb = nn.ELU()(F.normalize(h_global_graph_emb, 2, 1))
+        t_global_graph_emb = nn.ELU()(F.normalize(t_global_graph_emb, 2, 1))
+
+        h_data.x = F.elu(self.norm2(h_data.x, h_data.batch))
+        t_data.x = F.elu(self.norm2(t_data.x, t_data.batch))
+        h_data.edge_attr = F.elu(h_data.edge_attr)
+        t_data.edge_attr = F.elu(t_data.edge_attr)
+
+        return h_data, t_data, h_global_graph_emb, t_global_graph_emb
+
+    def ne_update(self, h_data, t_data):
+        h_data.x = self.feature_conv(h_data.x, h_data.edge_index, h_data.edge_attr)
+        t_data.x = self.feature_conv(t_data.x, t_data.edge_index, t_data.edge_attr)
+        h_data.x = F.elu(self.norm(h_data.x, h_data.batch))
+        t_data.x = F.elu(self.norm(t_data.x, t_data.batch))
+
+        h_data.edge_attr = self.lin_up(h_data.edge_attr)
+        t_data.edge_attr = self.lin_up(t_data.edge_attr)
+        h_data.edge_attr = F.elu(h_data.edge_attr)
+        t_data.edge_attr = F.elu(t_data.edge_attr)
+
+        return h_data, t_data
+
+    def GlobalPool(self, h_data, t_data,h_data_edge, t_data_edge):
+        h_att_x, att_edge_index, att_edge_attr, h_att_batch, att_perm, h_att_scores= self.readout(h_data.x, h_data.edge_index, edge_attr=h_data.edge_attr, batch=h_data.batch)
+        t_att_x, att_edge_index, att_edge_attr, t_att_batch, att_perm, t_att_scores= self.readout(t_data.x, t_data.edge_index, edge_attr=t_data.edge_attr, batch=t_data.batch)
+        h_global_graph_emb = global_add_pool(h_att_x, h_att_batch)
+        t_global_graph_emb = global_add_pool(t_att_x, t_att_batch)
+
+        h_data_edge.x = h_data.edge_attr
+        t_data_edge.x = t_data.edge_attr
+        h_global_graph_emb_edge = global_add_pool(h_data_edge.x, batch=h_data_edge.batch)
+        t_global_graph_emb_edge = global_add_pool(t_data_edge.x, batch=t_data_edge.batch)
+        h_global_graph_emb_edge = F.elu(self.re_shape_e(h_global_graph_emb_edge))
+        t_global_graph_emb_edge = F.elu(self.re_shape_e(t_global_graph_emb_edge))
+
+        h_global_graph_emb = h_global_graph_emb * h_global_graph_emb_edge
+        t_global_graph_emb = t_global_graph_emb * t_global_graph_emb_edge
+        return h_global_graph_emb, t_global_graph_emb
+

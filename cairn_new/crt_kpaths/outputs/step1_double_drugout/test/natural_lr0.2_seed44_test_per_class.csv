@@ -1,0 +1,86 @@
+event_id,precision,recall,f1,support,predicted,roc_auc_ovr,average_precision_ovr,template
+0,0.0,0.0,0.0,0,0,,,The absorption of {drug_B} can be decreased when combined with {drug_A}.
+1,0.0,0.0,0.0,0,1,,,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.
+2,0.0,0.0,0.0,0,0,,,The bioavailability of {drug_B} can be increased when combined with {drug_A}.
+3,0.44871794871794873,0.33653846153846156,0.38461538461538464,104,78,0.8010621645796066,0.43179782690016155,The metabolism of {drug_B} can be decreased when combined with {drug_A}.
+4,0.5666666666666667,0.5666666666666667,0.5666666666666667,30,30,0.933068783068783,0.5505810241441594,The metabolism of {drug_B} can be increased when combined with {drug_A}.
+5,0.0,0.0,0.0,0,0,,,The protein binding of {drug_B} can be decreased when combined with {drug_A}.
+6,0.0,0.0,0.0,0,0,,,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.
+7,0.0,0.0,0.0,0,2,,,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.
+8,0.5625,0.648,0.6022304832713755,125,144,0.8294474327628363,0.5780165153713676,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.
+9,0.0,0.0,0.0,0,0,,,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.
+10,0.0,0.0,0.0,0,0,,,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.
+11,0.0,0.0,0.0,0,0,,,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.
+12,0.0,0.0,0.0,0,0,,,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.
+13,0.0,0.0,0.0,0,1,,,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.
+14,0.0,0.0,0.0,0,2,,,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.
+15,0.125,0.16666666666666666,0.14285714285714285,6,8,0.7730429292929293,0.09655731906876071,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.
+16,0.40625,0.3333333333333333,0.36619718309859156,39,32,0.8195804195804196,0.31202794755207636,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.
+17,0.3076923076923077,0.3333333333333333,0.32,72,78,0.7489929052429052,0.3046172494060432,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.
+18,0.2903225806451613,0.6,0.391304347826087,15,31,0.9129094412331406,0.3438677671976359,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.
+19,0.0,0.0,0.0,0,2,,,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.
+20,0.0,0.0,0.0,0,0,,,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.
+21,0.0,0.0,0.0,0,0,,,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.
+22,0.0,0.0,0.0,0,0,,,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.
+23,0.0,0.0,0.0,0,0,,,{drug_A} may decrease the analgesic activities of {drug_B}.
+24,0.0,0.0,0.0,0,0,,,{drug_A} may decrease the anticoagulant activities of {drug_B}.
+25,0.75,0.375,0.5,8,4,0.8826045627376427,0.4517276680411779,{drug_A} may decrease the antihypertensive activities of {drug_B}.
+26,0.0,0.0,0.0,0,0,,,{drug_A} may decrease the antiplatelet activities of {drug_B}.
+27,0.0,0.0,0.0,1,0,0.99812382739212,0.5,{drug_A} may decrease the bronchodilatory activities of {drug_B}.
+28,0.9583333333333334,0.9583333333333334,0.9583333333333334,24,24,0.9977124183006536,0.9524709909378519,{drug_A} may decrease the cardiotoxic activities of {drug_B}.
+29,0.0,0.0,0.0,0,3,,,{drug_A} may decrease the diuretic activities of {drug_B}.
+30,0.8,1.0,0.8888888888888888,8,10,1.0,1.0,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.
+31,0.0,0.0,0.0,0,0,,,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.
+32,0.0,0.0,0.0,0,0,,,{drug_A} may decrease the sedative activities of {drug_B}.
+33,0.0,0.0,0.0,0,1,,,{drug_A} may decrease the stimulatory activities of {drug_B}.
+34,0.0,0.0,0.0,0,0,,,{drug_A} may decrease the vasoconstricting activities of {drug_B}.
+35,0.14285714285714285,0.16666666666666666,0.15384615384615385,24,28,0.7871323529411764,0.1356245043904176,{drug_A} may increase the QTc-prolonging activities of {drug_B}.
+36,0.0,0.0,0.0,0,0,,,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.
+37,0.0,0.0,0.0,0,0,,,{drug_A} may increase the analgesic activities of {drug_B}.
+38,0.0,0.0,0.0,1,0,0.9587242026266416,0.043478260869565216,{drug_A} may increase the anticholinergic activities of {drug_B}.
+39,0.0,0.0,0.0,0,0,,,{drug_A} may increase the anticoagulant activities of {drug_B}.
+40,0.0,0.0,0.0,0,0,,,{drug_A} may increase the antihypertensive activities of {drug_B}.
+41,0.0,0.0,0.0,0,4,,,{drug_A} may increase the antiplatelet activities of {drug_B}.
+42,0.0,0.0,0.0,2,0,0.9906015037593985,0.2361111111111111,{drug_A} may increase the antipsychotic activities of {drug_B}.
+43,0.09090909090909091,0.3333333333333333,0.14285714285714285,3,11,0.620841180163214,0.3403181574497917,{drug_A} may increase the arrhythmogenic activities of {drug_B}.
+44,0.0,0.0,0.0,2,0,0.7631578947368421,0.011430208863983698,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.
+45,0.2,0.5,0.2857142857142857,2,5,0.9924812030075187,0.6,{drug_A} may increase the bradycardic activities of {drug_B}.
+46,0.0,0.0,0.0,0,0,,,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.
+47,0.0,0.0,0.0,22,0,0.5551313920454546,0.06832524304185299,{drug_A} may increase the cardiotoxic activities of {drug_B}.
+48,0.0,0.0,0.0,9,0,0.44232804232804235,0.03372408862080989,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.
+49,0.0,0.0,0.0,0,0,,,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.
+50,0.0,0.0,0.0,0,0,,,{drug_A} may increase the central neurotoxic activities of {drug_B}.
+51,0.0,0.0,0.0,0,1,,,{drug_A} may increase the constipating activities of {drug_B}.
+52,0.0,0.0,0.0,0,0,,,{drug_A} may increase the dermatologic adverse activities of {drug_B}.
+53,0.0,0.0,0.0,0,0,,,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.
+54,0.5,1.0,0.6666666666666666,1,2,0.99812382739212,0.5,{drug_A} may increase the fluid retaining activities of {drug_B}.
+55,0.0,0.0,0.0,0,4,,,{drug_A} may increase the hepatotoxic activities of {drug_B}.
+56,0.0,0.0,0.0,0,0,,,{drug_A} may increase the hypercalcemic activities of {drug_B}.
+57,0.0,0.0,0.0,0,0,,,{drug_A} may increase the hyperglycemic activities of {drug_B}.
+58,0.0,0.0,0.0,0,0,,,{drug_A} may increase the hyperkalemic activities of {drug_B}.
+59,0.0,0.0,0.0,0,1,,,{drug_A} may increase the hypertensive activities of {drug_B}.
+60,0.0,0.0,0.0,0,0,,,{drug_A} may increase the hypocalcemic activities of {drug_B}.
+61,0.25,0.16666666666666666,0.2,6,4,0.7976641414141414,0.11016511112246863,{drug_A} may increase the hypoglycemic activities of {drug_B}.
+62,0.0,0.0,0.0,0,1,,,{drug_A} may increase the hypokalemic activities of {drug_B}.
+63,0.0,0.0,0.0,0,0,,,{drug_A} may increase the hyponatremic activities of {drug_B}.
+64,0.0,0.0,0.0,4,2,0.7556603773584906,0.021154219858577926,{drug_A} may increase the hypotensive activities of {drug_B}.
+65,0.0,0.0,0.0,0,0,,,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.
+66,0.0,0.0,0.0,11,3,0.6149834868764122,0.028317044182718586,{drug_A} may increase the immunosuppressive activities of {drug_B}.
+67,0.0,0.0,0.0,0,1,,,{drug_A} may increase the myelosuppressive activities of {drug_B}.
+68,0.0,0.0,0.0,0,0,,,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.
+69,0.0,0.0,0.0,5,0,0.2480151228733459,0.007053275129989127,{drug_A} may increase the nephrotoxic activities of {drug_B}.
+70,0.8,1.0,0.8888888888888888,4,5,1.0,1.0,{drug_A} may increase the neuroexcitatory activities of {drug_B}.
+71,0.0,0.0,0.0,0,0,,,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.
+72,0.0,0.0,0.0,0,0,,,{drug_A} may increase the neurotoxic activities of {drug_B}.
+73,0.0,0.0,0.0,3,0,0.7055869428750785,0.02151563328033916,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.
+74,0.0,0.0,0.0,0,0,,,{drug_A} may increase the ototoxic activities of {drug_B}.
+75,0.0,0.0,0.0,0,0,,,{drug_A} may increase the respiratory depressant activities of {drug_B}.
+76,0.0,0.0,0.0,0,2,,,{drug_A} may increase the sedative activities of {drug_B}.
+77,0.3333333333333333,1.0,0.5,2,6,0.9990601503759399,0.8333333333333333,{drug_A} may increase the serotonergic activities of {drug_B}.
+78,0.0,0.0,0.0,0,0,,,{drug_A} may increase the stimulatory activities of {drug_B}.
+79,1.0,1.0,1.0,1,1,1.0,1.0,{drug_A} may increase the tachycardic activities of {drug_B}.
+80,0.0,0.0,0.0,0,0,,,{drug_A} may increase the thrombogenic activities of {drug_B}.
+81,0.0,0.0,0.0,0,0,,,{drug_A} may increase the ulcerogenic activities of {drug_B}.
+82,0.0,0.0,0.0,0,0,,,{drug_A} may increase the vasoconstricting activities of {drug_B}.
+83,0.0,0.0,0.0,0,0,,,{drug_A} may increase the vasodilatory activities of {drug_B}.
+84,0.0,0.0,0.0,0,2,,,{drug_A} may increase the vasopressor activities of {drug_B}.

@@ -1,0 +1,4 @@
+path_single_drugout: None -> live (attempt 1, epoch 29, test macroF1 None)
+path_double_drugout: None -> live (attempt 1, epoch 33, test macroF1 None)
+no_path_single_drugout: None -> live (attempt 1, epoch 30, test macroF1 None)
+no_path_double_drugout: None -> live (attempt 1, epoch 32, test macroF1 None)

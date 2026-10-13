@@ -1,0 +1,47 @@
+15c15,16
+<     assigned = GPU[config['with_path'], config['protocol']]
+---
+>     assigned = GPU[config['protocol']]
+>     assert config['with_path']
+24a26
+>     path_cache = workspace_path(config['path_cache'])
+43c45,46
+<                        'namespace': NAMESPACE, 'optimization': OPTIMIZATION,
+---
+>                        'namespace': NAMESPACE, 'optimization': OPTIMIZATION, 'topology': TOPOLOGY,
+>                        'path_cache': str(path_cache), 'initialization': INITIALIZATION,
+49,53c52,59
+<     assert config['path_meeting_cap'] == preparation['paths']['meeting_cap']
+<     assert config['path_arm_cap'] == preparation['paths']['arm_cap']
+<     # Full-data audit is a preparation requirement, not a toy model probe.
+<     audit = json.loads((prepared / 'audit_report.json').read_text())
+<     assert audit['all_cached_real_edges_found_in_source'] and audit['all_pairs_depth4_reachability_equals_explicit_mask']
+---
+>     # K-Paths topology replaces the old route cache; same pair indexing.
+>     kpaths = json.loads((path_cache / 'report.json').read_text())
+>     assert kpaths['complete'] and kpaths['pairs'] == len(np.load(prepared / 'pairs.npy'))
+>     assert (config['kpaths_k'], config['kpaths_max_length'], config['kpaths_candidate_budget']) == (
+>         kpaths['k'], kpaths['max_length'], kpaths['candidate_budget'])
+>     assert config['kpaths_max_length'] <= config['path_depth']
+>     cache_check = json.loads((ROOT / 'crt_kpaths/evidence/kpaths_cache_check.json').read_text())
+>     assert cache_check['path_mask_equals_connected_depth4_reachability'] and cache_check['pairs'] == kpaths['pairs']
+55a62,67
+>     if not args.resume and not args.test_only:
+>         # Shared initial state: the original trainer's seed-42 construction
+>         # replayed (no extra RNG use); this run's own record, nothing loaded.
+>         save_checkpoint(output_dir / 'initial_state.pt', {
+>             'model': {k: v.detach().cpu() for k, v in model.state_dict().items()},
+>             'source': INITIALIZATION})
+57c69
+<     collate = Collator(assets, prepared, config['with_path'])
+---
+>     collate = Collator(assets, path_cache, config['with_path'])
+83c95
+<         'topology_cache': str(prepared), 'learned_state_cache': False})
+---
+>         'topology_cache': str(path_cache), 'learned_state_cache': False})
+177a190,193
+>     metrics, counts = step2_test_additions(output_dir, {
+>         'train': datasets['train'].y, 'val': datasets['val'].y, 'test': test_data.y})
+>     save_json(output_dir / 'test_metrics.json', metrics)
+>     counts.to_csv(output_dir / 'test_class_counts.csv', index=False)

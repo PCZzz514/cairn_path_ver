@@ -1,0 +1,37 @@
+The DSN no-path PairOut/CellOut controls are implemented and ready for your review. Nothing has been launched. The CPU evidence check passed, and a dry run of the launch gate, after the review diffs were generated, now refuses on only one thing: the missing `logs/dsn_pairout_cellout/review_approval.json`.
+
+**Byte-equality of model/data**
+- `cmp` shows `dsn_pairout_cellout/dsn/{model,data}.py` are identical to `accelerated_four/dsn/`. Those files are also identical to the GPU3-verified `benchmarks/gpu3_speed/dsn_gpu3/` copies.
+- The `cmp` result, followed by empty `diff -u` output, is at the top of `dsn_pairout_cellout/review/implementation.diff`.
+- `dsn/__init__.py` is new and contains only a docstring.
+
+**What's in `dsn_pairout_cellout/`** (all diffs against the rareddie pipeline are in `review/implementation.diff` and `review/new_files.diff`):
+- **`inventory.py` (new):** holds the parameter groups and the inventory, so the cloned files stay untouched. The groups don't overlap: `dsn_inter_attention`, `inter_projection`, `cse` (the rest), `fin_entities`, `fin_relations`, `nai`, `pvr`, `classifier`. There is no path group. The only trainable parameters expected to get no gradient are the last block's `norm2` (its output is never used). The frozen `readout.select` weights are not required to have gradients.
+- **`train.py`:**
+  - Uses `DSNRareDDI(assets, config)` and `Collator(assets, prepared, with_path=False)`, and refuses any config where `with_path` isn't false.
+  - `first_update.json` now also records the cross-edge count, an empty path mask (`[128, 0]`), and a gradient norm for each of the 8 groups.
+  - Everything else is unchanged from the rareddie trainer: loss, schedule, logging, best-validation selection, test exports and resume.
+- **`configs/{pairout,cellout}.yaml`:** the pure-control settings plus `with_path: false`, with the same-split note: independent fresh seed42 replicates on the same frozen split, not true cell-cold.
+- **`jobs.py`:** the launch gate now checks byte-identity against `accelerated_four/dsn`, and requires the GPU3 evidence and the gpu3_speed/accelerated_four approvals.
+- **`confirm_launch.py`:** before confirming, requires finite, nonzero first-update gradients in all 8 groups, cross edges present, no path graph, and an inventory that matches the evidence. It does not require a path gradient.
+- **Monitor files:** the same mechanism as the rareddie monitor; only the namespace and the scope text in the prompt changed. The prompt now says GPU6/7 are shared with the live pure trainers and those must never be signalled.
+
+**Change to review:** the rareddie launch gate refused unless GPU6/7 were idle. Since the pure controls are running there, I replaced that with "at least 8192 MiB free". The other processes on each card are recorded in `status.json` at launch. Each card currently has about 39 GiB free.
+
+**Evidence (`evidence/cohort_copy_evidence.json`, passed)**
+- Data: source and prepared frames are identical, row counts are 151508/18939/18938, classes 85/82/83, and the schedule is 1184/177600/35520.
+- Model: I built it on CPU only, with no forward pass. It has 13,206,361 parameters, the same as the accelerated_four no-path inventory.
+  - The DSN attention adds 33,152 and the projection 49,408.
+  - Every other group equals the live pure control's count exactly.
+  - Path is NONE, and the data loader loads no path arrays.
+
+**Run order (all yours):**
+1. Write `logs/dsn_pairout_cellout/review_approval.json`. It must say `approved: true`, name a Codex reviewer, and be newer than all the code, the evidence and the diff.
+2. `bash dsn_pairout_cellout/launch.sh --launch-reviewed` starts both arms detached (PPID 1). It then waits up to 1800 s for both arms to show their first update and 100 updates, and writes `launch.json`.
+3. `bash dsn_pairout_cellout/monitor/start_monitor.sh` starts the gpt-6.1-sol LOW monitor, runs the first check immediately, then every 2400 s.
+
+Write-ups are in `logs/dsn_pairout_cellout/`: `plan.md`, `implementation_handoff.md`, and `status.json` (stage `implemented_awaiting_codex_review`).
+
+I didn't signal, edit or read checkpoints from any existing job. The pure trainers (PIDs 3321255/3321256) and the GPU4/5 trainers are still running.
+
+I'm not giving a time estimate: the accelerated_four DSN no-path run took about 1,470 s per epoch, and here the host has only 2 CPUs and the GPUs are shared.

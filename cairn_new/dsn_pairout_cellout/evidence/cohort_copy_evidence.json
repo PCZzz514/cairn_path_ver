@@ -1,0 +1,203 @@
+{
+ "sources": {
+  "pairout": {
+   "path": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet",
+   "resolved": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet"
+  },
+  "cellout": {
+   "path": "/data/interns/zhangpc/cairn_dev/data/experiments/reference85/cellout/ddi.parquet",
+   "resolved": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet"
+  }
+ },
+ "columns": [
+  "drug_a",
+  "drug_b",
+  "event_id",
+  "split",
+  "source_drugbank_a",
+  "source_drugbank_b",
+  "source_y",
+  "source_template",
+  "template",
+  "pair_group"
+ ],
+ "dtypes": [
+  "int64",
+  "int64",
+  "int64",
+  "str",
+  "str",
+  "str",
+  "int64",
+  "str",
+  "str",
+  "str"
+ ],
+ "source_pairout_vs_cellout": {
+  "columns_and_order": true,
+  "dtypes": true,
+  "index": true,
+  "values": true
+ },
+ "prepared_pairout_vs_cellout": {
+  "columns_and_order": true,
+  "dtypes": true,
+  "index": true,
+  "values": true
+ },
+ "pair_indices_pairout_equal_cellout": true,
+ "arms": {
+  "pairout": {
+   "prepared_vs_source": {
+    "columns_and_order": true,
+    "dtypes": true,
+    "index": true,
+    "values": true
+   },
+   "counts": {
+    "train": 151508,
+    "val": 18939,
+    "test": 18938
+   },
+   "counts_exact": true,
+   "classes_present": {
+    "train": 85,
+    "val": 82,
+    "test": 83
+   },
+   "classes_exact": true,
+   "pair_indices_rows": 189385,
+   "pair_indices_rows_exact": true,
+   "drugs": 1666,
+   "all_drugs_have_graph": true,
+   "all_drugs_have_nai_row": true,
+   "event_ids_in_0_84": true
+  },
+  "cellout": {
+   "prepared_vs_source": {
+    "columns_and_order": true,
+    "dtypes": true,
+    "index": true,
+    "values": true
+   },
+   "counts": {
+    "train": 151508,
+    "val": 18939,
+    "test": 18938
+   },
+   "counts_exact": true,
+   "classes_present": {
+    "train": 85,
+    "val": 82,
+    "test": 83
+   },
+   "classes_exact": true,
+   "pair_indices_rows": 189385,
+   "pair_indices_rows_exact": true,
+   "drugs": 1666,
+   "all_drugs_have_graph": true,
+   "all_drugs_have_nai_row": true,
+   "event_ids_in_0_84": true
+  }
+ },
+ "event_names_exact": true,
+ "schedule": {
+  "train_batches": 1184,
+  "planned_updates": 177600,
+  "kl_warmup_updates": 35520,
+  "kl_warmup_epochs": 30.0
+ },
+ "copy": {
+  "model_py_byte_identical_to_accelerated_four": true,
+  "data_py_byte_identical_to_accelerated_four": true,
+  "accelerated_four_byte_identical_to_gpu3_verified": true,
+  "prior_gpu3_evidence": "benchmarks/gpu3_speed/evidence/gpu3_evidence.json",
+  "prior_gpu3_passed": true,
+  "prior_approvals": [
+   "logs/gpu3_speed/review_approval.json",
+   "logs/accelerated_four/review_approval.json"
+  ],
+  "prior_approved": true,
+  "note": "dsn/model.py+data.py are the GPU3-verified accelerated_four files; no new benchmark was run"
+ },
+ "inventory": {
+  "parameters": 13206361,
+  "trainable_parameters": 13206359,
+  "groups": {
+   "dsn_inter_attention": 33152,
+   "inter_projection": 49408,
+   "cse": 340356,
+   "fin_entities": 12386048,
+   "fin_relations": 13440,
+   "nai": 98432,
+   "pvr": 230400,
+   "classifier": 55125
+  },
+  "frozen": [
+   "cse.blocks.0.readout.select.weight",
+   "cse.blocks.1.readout.select.weight"
+  ],
+  "dsn_inter_attention_present": true,
+  "dsn_inter_attention_gatconvs": {
+   "blocks.0.interAtt.inter": {
+    "type": "GATConv",
+    "heads": 2,
+    "out_channels": 32,
+    "add_self_loops": false
+   },
+   "blocks.1.interAtt.inter": {
+    "type": "GATConv",
+    "heads": 2,
+    "out_channels": 32,
+    "add_self_loops": false
+   }
+  },
+  "inter_projection_present": true,
+  "molecular_transformer_convs": {
+   "blocks.0.feature_conv": "TransformerConv",
+   "blocks.0.feature_conv2": "TransformerConv",
+   "blocks.1.feature_conv": "TransformerConv",
+   "blocks.1.feature_conv2": "TransformerConv"
+  },
+  "with_path": false,
+  "path_module": "NONE",
+  "path_parameters": 0,
+  "collator_path_arrays_loaded": false,
+  "fin_trainable": true,
+  "fin_entity_table": [
+   96766,
+   128
+  ],
+  "fin_relation_table": [
+   105,
+   128
+  ],
+  "pair_input": 256,
+  "pvr_presence_dim": 0,
+  "latent": 128,
+  "classifier_route": "deterministic PVR mu (128) -> classifier; same classifier as pure/full-path",
+  "classifier": [
+   "LayerNorm((128,), eps=1e-05, elementwise_affine=True)",
+   "Linear(in_features=128, out_features=256, bias=True)",
+   "GELU(approximate='none')",
+   "Dropout(p=0.2, inplace=False)",
+   "Linear(in_features=256, out_features=85, bias=True)"
+  ]
+ },
+ "inventory_checks": {
+  "non_dsn_groups_equal_pure_control": true,
+  "dsn_groups_nonzero": true,
+  "total_equals_pure_plus_dsn": true,
+  "total_equals_accelerated_four_no_path": true,
+  "frozen_only_readout_select": true,
+  "two_dsn_gatconvs_without_auto_self_loops": true,
+  "inter_projection_present": true,
+  "path_module_none": true,
+  "collator_loads_no_path_arrays": true,
+  "pvr_no_path_input": true,
+  "classifier_same_as_pure": true,
+  "fin_trainable_same_tables": true
+ },
+ "ddi_split_note": "same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicates, NOT true cell-cold DDI generalization",
+ "passed": true
+}

@@ -1,0 +1,1564 @@
+### Unchanged copies (no diff output expected)
+### accelerated_four/dsn/model.py -> pairout_cellout/dsn/model.py
+### accelerated_four/dsn/data.py -> pairout_cellout/dsn/data.py
+### accelerated_four/dsn/metrics.py -> pairout_cellout/dsn/metrics.py
+### accelerated_four/dsn/__init__.py -> pairout_cellout/dsn/__init__.py
+### cairn_dsn/paths.py -> pairout_cellout/paths.py
+### Preparation/audit adapted from the original cairn_dsn
+### cairn_dsn/prepare.py -> pairout_cellout/prepare.py
+--- cairn_dsn/prepare.py	2026-10-11 22:56:10.790030781 +0800
++++ pairout_cellout/prepare.py	2026-10-12 18:44:50.285423302 +0800
+@@ -1,8 +1,22 @@
+-"""Prepare all real frozen DDI rows and reusable label-free graph topology on CPU."""
++"""Prepare the frozen PairOut/CellOut DDI rows and label-free graph topology on CPU.
++
++pairout_cellout adaptation of cairn_dsn/prepare.py. The old data/prepared cache
++covers ONLY the single/double DrugOut pair union, so the cohort is rebuilt here:
++every ordered (drug_a, drug_b) pair of the frozen frames gets a NEW pair index.
++Topology of a pair already in data/prepared is copied verbatim from its audited
++segment (it depends only on the two global endpoints); missing pairs are
++extracted with the unchanged original RouteExtractor (pairout_cellout/paths.py ==
++cairn_dsn/paths.py) on the same full non-DDI DRKG with the same caps. A spaced
++sample of reused pairs is re-extracted and must equal the old segments exactly.
++Global drug IDs, FIN tables, the six-type NAI table and molecular graphs keep the
++original global indexing. Read-only inputs: ../cairn_dev, data/prepared.
++"""
+ import argparse
+ from collections import Counter
++import filecmp
+ import json
+ import multiprocessing as mp
++import os
+ from pathlib import Path
+ import shutil
+ import numpy as np
+@@ -13,7 +27,18 @@
+ ROOT = Path(__file__).resolve().parents[1]
+ DEV = ROOT.parent / 'cairn_dev'
+ PROCESSED = DEV / 'data/processed'
+-OUT = ROOT / 'data/prepared'
++OLD = ROOT / 'data/prepared'
++OUT = ROOT / 'pairout_cellout/prepared'
++# PairOut is the stage-1 processed frame (outputs/stage1/config.yaml processed:
++# data/processed); there is no reference85/pairout directory. CellOut keeps the
++# PairOut DDI split (its ddi.parquet links to the same processed frame).
++SOURCES = {'pairout': PROCESSED / 'ddi.parquet',
++           'cellout': DEV / 'data/experiments/reference85/cellout/ddi.parquet'}
++EXPECTED = {'train': 151508, 'val': 18939, 'test': 18938}
++COLUMNS = ['drug_a', 'drug_b', 'event_id', 'split', 'source_drugbank_a', 'source_drugbank_b',
++           'source_y', 'source_template', 'template', 'pair_group']
++TOPOLOGY = ['nodes', 'edges', 'node_ptr', 'edge_ptr', 'endpoints', 'path_mask']
++SAMPLE_REEXTRACT = 2048
+ EXTRACTOR = None
+ DRUG_FIN = None
+ 
+@@ -26,55 +51,116 @@
+     return nodes, edges, ends, present
+ 
+ 
++def file_stats(directory):
++    return {str(p.relative_to(directory)): [p.stat().st_size, p.stat().st_mtime_ns]
++            for p in sorted(directory.rglob('*')) if p.is_file()}
++
++
++def pair_sets(frame, split):
++    chosen = frame[frame.split.eq(split)]
++    ordered = set(chosen[['drug_a', 'drug_b']].itertuples(index=False, name=None))
++    return ordered, {tuple(sorted(p)) for p in ordered}, set(chosen.pair_group), set(np.unique(chosen[['drug_a', 'drug_b']]))
++
++
++def leakage(frame):
++    sets = {split: pair_sets(frame, split) for split in EXPECTED}
++    result = {}
++    for left, right in [('train', 'val'), ('train', 'test'), ('val', 'test')]:
++        lo, lu, lg, ld = sets[left]
++        ro, ru, rg, rd = sets[right]
++        result[f'{left}_{right}'] = {'ordered_pairs': len(lo & ro), 'reversed_ordered_pairs': len(lo & {(b, a) for a, b in ro}),
++                                     'unordered_pairs': len(lu & ru), 'pair_groups': len(lg & rg),
++                                     'shared_drugs_expected_for_pairout': len(ld & rd)}
++    return result
++
++
+ def main():
+     global EXTRACTOR, DRUG_FIN
+     parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument('--workers', type=int, default=8)
++    parser.add_argument('--workers', type=int, default=2)
+     parser.add_argument('--meeting-cap', type=int, default=32)
+     parser.add_argument('--arm-cap', type=int, default=2)
+     args = parser.parse_args()
++    assert (args.meeting_cap, args.arm_cap) == (32, 2), 'same bounded construction as data/prepared'
+     OUT.mkdir(parents=True, exist_ok=True)
++    original_stats = file_stats(OLD)
++    old_report = json.loads((OLD / 'preparation_report.json').read_text())
++    old_audit = json.loads((OLD / 'audit_report.json').read_text())
++    assert (old_report['paths']['depth'], old_report['paths']['meeting_cap'], old_report['paths']['arm_cap']) == (4, 32, 2)
++    assert old_audit['all_cached_real_edges_found_in_source'] and old_audit['all_pairs_depth4_reachability_equals_explicit_mask']
+     bundle = torch.load(PROCESSED / 'bundle.pt', map_location='cpu', weights_only=False)
+     fin = torch.load(PROCESSED / 'fin.pt', map_location='cpu', weights_only=False)
+     drkg = torch.load(PROCESSED / 'drkg_triples.pt', map_location='cpu', weights_only=False)
++    old_assets = torch.load(OLD / 'assets.pt', map_location='cpu', weights_only=False)
+     entities, relations = drkg['entities'], drkg['relations']
+     assert fin['entity_ids'] == entities and fin['relation_ids'] == relations
+     assert pd.read_csv(PROCESSED / 'drkg_entities.csv').entity.tolist() == entities
+     assert pd.read_csv(PROCESSED / 'drkg_relations.csv').relation.tolist() == relations
+     assert torch.equal(fin['entities'], bundle['fin_entities'])
+     assert torch.equal(fin['relations'], bundle['fin_relations'])
++    # Reuse the global FIN tables and drug->FIN mapping (no renumbering).
++    assert old_assets['drug_ids'] == bundle['drug_ids'] and torch.equal(old_assets['drug_fin_idx'], bundle['drug_fin_idx'])
++    assert torch.equal(old_assets['fin_entities'], fin['entities']) and torch.equal(old_assets['fin_relations'], fin['relations'])
++    assert old_assets['fin_entity_ids'] == entities and old_assets['fin_relation_ids'] == relations
+     events = pd.read_csv(PROCESSED / 'ddi_events.csv')
+     assert events.event_id.tolist() == list(range(85))
+-    assert events.template.tolist() == bundle['ddi_event_names']
+-    frames, report = {}, {'protocols': {}}
+-    expected = {'single_drugout': {'train': 149048, 'val': 20785, 'test': 16978},
+-                'double_drugout': {'train': 149048, 'val': 760, 'test': 534}}
+-    for protocol in expected:
+-        source = DEV / 'data/experiments/reference85' / protocol / 'ddi.parquet'
++    assert events.template.tolist() == bundle['ddi_event_names'] == old_assets['ddi_event_names']
++    assert events.equals(pd.read_csv(OLD / 'ddi_events.csv'))
++    drugs = pd.read_parquet(PROCESSED / 'drugs.parquet')
++    assert drugs.drug_id.tolist() == bundle['drug_ids']
++    drug_sources = drugs.source_ids.map(json.loads).tolist()
++    frames, report = {}, {'namespace': 'pairout_cellout', 'protocols': {}}
++    for protocol, source in SOURCES.items():
+         frame = pd.read_parquet(source)
+         counts = frame.groupby('split').size().to_dict()
+-        assert counts == expected[protocol]
++        assert counts == EXPECTED and frame.columns.tolist() == COLUMNS
+         assert frame.event_id.between(0, 84).all()
+         for col in ['drug_a', 'drug_b']:
+             assert frame[col].between(0, len(bundle['drug_ids']) - 1).all()
++        # Exact original event names and global drug identities on every row.
++        assert (np.asarray(bundle['ddi_event_names'])[frame.event_id] == frame.template.to_numpy()).all()
++        for col, db in [('drug_a', 'source_drugbank_a'), ('drug_b', 'source_drugbank_b')]:
++            assert all(name in drug_sources[i] for i, name in zip(frame[col].tolist(), frame[db].tolist()))
++        assert not frame.duplicated(['drug_a', 'drug_b']).any() and not (frame.drug_a == frame.drug_b).any()
+         dest = OUT / protocol
+         dest.mkdir(exist_ok=True)
+         shutil.copyfile(source, dest / 'ddi.parquet')
+-        assert pd.read_parquet(dest / 'ddi.parquet').equals(frame)
++        cached = pd.read_parquet(dest / 'ddi.parquet')
++        assert cached.equals(frame) and cached.dtypes.equals(frame.dtypes)
++        assert filecmp.cmp(source, dest / 'ddi.parquet', shallow=False)
+         frames[protocol] = frame
+-        report['protocols'][protocol] = {'counts': counts, 'source': str(source),
+-                                          'exact_dataframe_equal': True, 'splits': {}}
++        report['protocols'][protocol] = {'counts': counts, 'source': str(source), 'resolved_source': os.path.realpath(source),
++                                          'exact_dataframe_equal': True, 'byte_identical_copy': True,
++                                          'leakage': leakage(frame), 'splits': {}}
++    identical = frames['pairout'].equals(frames['cellout'])
++    assert identical, 'PairOut and CellOut DDI frames must be exactly identical'
++    report['source_identity'] = {
++        'pairout_cellout_dataframes_identical': True,
++        'byte_identical_sources': filecmp.cmp(SOURCES['pairout'], SOURCES['cellout'], shallow=False),
++        'resolved_sources': {p: os.path.realpath(s) for p, s in SOURCES.items()},
++        'note': ('CellOut DDI rows, order, labels and split are exactly the PairOut frame; the cell split only '
++                 'affects cell-level tasks. Both DDI-only jobs are independent fresh seed42 same-DDI-split '
++                 'replicates, NOT DDI cell-cold generalization. No synergy/LINCS/DepMap/cell features are used.')}
+     shutil.copyfile(PROCESSED / 'ddi_events.csv', OUT / 'ddi_events.csv')
+-    pairs = pd.concat([f[['drug_a', 'drug_b']] for f in frames.values()]).drop_duplicates().sort_values(['drug_a', 'drug_b'])
++    frame = frames['pairout']
++    pairs = frame[['drug_a', 'drug_b']].drop_duplicates().sort_values(['drug_a', 'drug_b'])
+     pairs = pairs.to_numpy(np.int32)
+     np.save(OUT / 'pairs.npy', pairs)
+     active = np.unique(pairs)
+     assert all(bundle['graphs'][int(d)].x.shape[1] == 55 and
+                bundle['graphs'][int(d)].edge_attr.shape[1] == 17 for d in active)
+-    # Original IDs stay global; store only active molecular graphs.
++    # Original IDs stay global; store only active molecular graphs, unchanged
++    # from the read-only bundle. Graphs already in data/prepared must be equal.
+     graphs = {int(d): bundle['graphs'][int(d)] for d in active}
++    reused_graphs = [d for d in graphs if d in old_assets['graphs']]
++    for d in reused_graphs:
++        old, new = old_assets['graphs'][d], graphs[d]
++        assert sorted(old.keys()) == sorted(new.keys()) and all(torch.equal(old[k], new[k]) for k in new.keys())
++    report['graphs'] = {'active_drugs': len(active), 'reused_identical_to_data_prepared': len(reused_graphs),
++                        'added_from_bundle': len(graphs) - len(reused_graphs), 'atom_features': 55, 'bond_features': 17}
+     # Reuse the existing audited six-type neighborhood table (all DrugBank
+-    # aliases + original XML target prefix). Select a deterministic balanced cap.
++    # aliases + original XML target prefix). Re-derive the deterministic balanced
++    # cap with the original selection; it must equal the global data/prepared table.
+     source_neigh = DEV / 'data/experiments/no_gene_embeddings_six_relations/shared/neighbours.parquet'
+     neighbors = pd.read_parquet(source_neigh)
+     six_file = DEV / 'references/RareDDIE_source/RareDDIE-f658cae053af1e93eecc88ad77dc3af2e33cf527/RareDDIE/dataset1/dti_rel.csv'
+@@ -104,7 +190,10 @@
+             local_ent[int(drug), slot] = int(row['fin_idx'])
+             local_rel[int(drug), slot] = int(row['relation_idx'])
+             selected_rows.append({**row, 'selected_slot': slot})
+-    pd.DataFrame(selected_rows).to_parquet(OUT / 'nai_neighbors.parquet', index=False)
++    assert torch.equal(local_ent, old_assets['neighbor_entities']) and torch.equal(local_rel, old_assets['neighbor_relations'])
++    selected_rows = pd.DataFrame(selected_rows)
++    assert selected_rows.equals(pd.read_parquet(OLD / 'nai_neighbors.parquet'))
++    selected_rows.to_parquet(OUT / 'nai_neighbors.parquet', index=False)
+     DRUG_FIN = bundle['drug_fin_idx'].numpy()
+     torch.save({'graphs': graphs, 'drug_ids': bundle['drug_ids'], 'drug_fin_idx': bundle['drug_fin_idx'],
+                 'fin_entities': fin['entities'], 'fin_relations': fin['relations'],
+@@ -112,6 +201,7 @@
+                 'neighbor_entities': local_ent, 'neighbor_relations': local_rel,
+                 'ddi_event_names': bundle['ddi_event_names'], 'num_classes': 85}, OUT / 'assets.pt')
+     report['nai'] = {'source': str(source_neigh), 'cap': 30, 'selection': 'official relation order round-robin; original slot order within relation',
++                     'equal_to_data_prepared_global_table': True,
+                      'six_relation_ids': dict(zip(six, six_ids)), 'selected_per_relation': {relations[r]: int((local_rel == r).sum()) for r in six_ids},
+                      'active_drugs': len(active), 'active_with_neighbors': int((local_ent[active] >= 0).any(1).sum()),
+                      'active_truncated': int(neighbors.groupby('drug').size().reindex(active, fill_value=0).gt(30).sum())}
+@@ -124,63 +214,127 @@
+                       'gene_pathway': int(((types[triples[:, 0]] == 'Gene') & (types[triples[:, 2]] == 'Pathway')).sum() +
+                                           ((types[triples[:, 2]] == 'Gene') & (types[triples[:, 0]] == 'Pathway')).sum()),
+                       'relation_counts': dict(zip(relations, relation_counts.tolist()))}
++    assert report['drkg']['triples'] == old_report['drkg']['triples'] == 4488504
++    # Map every new ordered pair to its audited data/prepared segment, if any.
++    old = {name: np.load(OLD / f'{name}.npy', mmap_mode='r') for name in ['pairs', *TOPOLOGY]}
++    old_index = {tuple(p): i for i, p in enumerate(old['pairs'].tolist())}
++    source_index = np.asarray([old_index.get(tuple(p), -1) for p in pairs.tolist()], np.int64)
++    missing = np.flatnonzero(source_index < 0)
++    reused = np.flatnonzero(source_index >= 0)
++    sample = reused[np.unique(np.linspace(0, len(reused) - 1, SAMPLE_REEXTRACT).astype(np.int64))]
++    print(f'{len(pairs)} cohort pairs: {len(reused)} reused, {len(missing)} to extract, '
++          f'{len(sample)} reused re-extracted for equality', flush=True)
+     print('Building full-graph two-hop endpoint balls', flush=True)
+     EXTRACTOR = RouteExtractor(triples, entities, len(relations), args.meeting_cap, args.arm_cap)
+-    endpoints = np.unique(DRUG_FIN[active])
++    jobs = np.concatenate([missing, sample])
++    endpoints = np.unique(DRUG_FIN[pairs[jobs]])
+     EXTRACTOR.build_balls(endpoints[endpoints >= 0])
+-    print(f'Extracting {len(pairs)} full-data pair subgraphs', flush=True)
+-    # Stream results to workspace binary files, then materialize mmap-friendly
+-    # .npy arrays. This avoids retaining every subgraph in Python objects.
+-    node_ptr, edge_ptr, endpoint_rows, masks = [0], [0], [], []
++    print(f'Extracting {len(jobs)} full-data pair subgraphs', flush=True)
++    extracted = {}
++    with mp.get_context('fork').Pool(args.workers) as pool:
++        for i, result in zip(jobs.tolist(), pool.imap(extract_job, pairs[jobs].tolist(), chunksize=32)):
++            extracted[i] = result
++    sample_mismatch = []
++    for i in sample.tolist():
++        nodes, edges, ends, present = extracted.pop(i)
++        j = int(source_index[i])
++        same = (np.array_equal(nodes, old['nodes'][old['node_ptr'][j]:old['node_ptr'][j + 1]]) and
++                np.array_equal(edges.reshape(-1, 4), old['edges'][old['edge_ptr'][j]:old['edge_ptr'][j + 1]]) and
++                np.array_equal(ends, old['endpoints'][j]) and bool(present) == bool(old['path_mask'][j]))
++        if not same:
++            sample_mismatch.append(i)
++    assert not sample_mismatch, f'Re-extraction differs from data/prepared for cohort pairs {sample_mismatch[:10]}'
++    node_counts = np.zeros(len(pairs), np.int64)
++    edge_counts = np.zeros(len(pairs), np.int64)
++    node_counts[reused] = np.diff(old['node_ptr'])[source_index[reused]]
++    edge_counts[reused] = np.diff(old['edge_ptr'])[source_index[reused]]
++    for i, (nodes, edges, ends, present) in extracted.items():
++        node_counts[i], edge_counts[i] = len(nodes), len(edges)
++    node_ptr = np.concatenate([[0], node_counts.cumsum()]).astype(np.int64)
++    edge_ptr = np.concatenate([[0], edge_counts.cumsum()]).astype(np.int64)
++    endpoint_rows = np.zeros((len(pairs), 2), np.int64)
++    masks = np.zeros(len(pairs), bool)
++    endpoint_rows[reused] = old['endpoints'][source_index[reused]]
++    masks[reused] = old['path_mask'][source_index[reused]]
++    nodes_out = np.lib.format.open_memmap(OUT / 'nodes.npy', mode='w+', dtype=np.int32, shape=(int(node_ptr[-1]),))
++    edges_out = np.lib.format.open_memmap(OUT / 'edges.npy', mode='w+', dtype=np.int32, shape=(int(edge_ptr[-1]), 4))
++    # Copy contiguous runs of reused pairs (consecutive new AND old indices) as
++    # whole old segments; local node indices are pair-relative, so only the
++    # global offsets (pointers) change.
++    breaks = np.flatnonzero((np.diff(reused) != 1) | (np.diff(source_index[reused]) != 1)) + 1
++    for run in np.split(reused, breaks):
++        first, last = int(run[0]), int(run[-1])
++        j0, j1 = int(source_index[first]), int(source_index[last])
++        for name, ptr, target in [('nodes', node_ptr, nodes_out), ('edges', edge_ptr, edges_out)]:
++            source_ptr = old[f'{name[:4]}_ptr']
++            step = 4000000
++            for start in range(int(source_ptr[j0]), int(source_ptr[j1 + 1]), step):
++                stop = min(start + step, int(source_ptr[j1 + 1]))
++                offset = int(ptr[first]) + start - int(source_ptr[j0])
++                target[offset:offset + stop - start] = old[name][start:stop]
++    for i, (nodes, edges, ends, present) in extracted.items():
++        nodes_out[node_ptr[i]:node_ptr[i + 1]] = nodes
++        edges_out[edge_ptr[i]:edge_ptr[i + 1]] = edges.reshape(-1, 4)
++        endpoint_rows[i], masks[i] = ends, present
+     retained = Counter()
+-    with (OUT / 'nodes.bin').open('wb') as nf, (OUT / 'edges.bin').open('wb') as ef:
+-        with mp.get_context('fork').Pool(args.workers) as pool:
+-            for i, (nodes, edges, ends, present) in enumerate(pool.imap(extract_job, pairs.tolist(), chunksize=128)):
+-                nodes.tofile(nf)
+-                edges.tofile(ef)
+-                node_ptr.append(node_ptr[-1] + len(nodes))
+-                edge_ptr.append(edge_ptr[-1] + len(edges))
+-                endpoint_rows.append(ends)
+-                masks.append(present)
+-                retained.update(edges[:, 2].tolist())
+-                if (i + 1) % 10000 == 0:
+-                    print(f'prepared {i + 1}/{len(pairs)} pairs, {edge_ptr[-1]} edges', flush=True)
+-    for name, shape in [('nodes', (node_ptr[-1],)), ('edges', (edge_ptr[-1], 4))]:
+-        raw = np.memmap(OUT / f'{name}.bin', dtype=np.int32, mode='r', shape=shape)
+-        dest = np.lib.format.open_memmap(OUT / f'{name}.npy', mode='w+', dtype=np.int32, shape=shape)
+-        for start in range(0, len(raw), 1000000):
+-            dest[start:start + 1000000] = raw[start:start + 1000000]
+-        del dest, raw
+-        (OUT / f'{name}.bin').unlink()
++    for start in range(0, len(edges_out), 4000000):
++        retained.update(dict(enumerate(np.bincount(edges_out[start:start + 4000000, 2], minlength=2 * len(relations) + 1).tolist())))
++    edges_out.flush()
++    nodes_out.flush()
++    del nodes_out, edges_out
+     for name, array in [('node_ptr', node_ptr), ('edge_ptr', edge_ptr), ('endpoints', endpoint_rows), ('path_mask', masks)]:
+         np.save(OUT / f'{name}.npy', np.asarray(array, dtype=bool if name == 'path_mask' else np.int64))
++    np.save(OUT / 'source_pair_index.npy', source_index)
+     pair_index = {tuple(p): i for i, p in enumerate(pairs.tolist())}
++    support_rows = []
++    is_new = source_index < 0
+     for protocol, frame in frames.items():
+         indices = np.asarray([pair_index[a, b] for a, b in frame[['drug_a', 'drug_b']].itertuples(index=False, name=None)], np.int64)
+         np.save(OUT / protocol / 'pair_indices.npy', indices)
+         for split in ['train', 'val', 'test']:
+             chosen = frame.split.eq(split).to_numpy()
+             rows = indices[chosen]
+-            drugs = np.unique(frame.loc[chosen, ['drug_a', 'drug_b']].to_numpy())
++            split_drugs = np.unique(frame.loc[chosen, ['drug_a', 'drug_b']].to_numpy())
++            support = np.bincount(frame.loc[chosen, 'event_id'], minlength=85)
++            support_rows += [{'protocol': protocol, 'split': split, 'event_id': e, 'support': int(s)} for e, s in enumerate(support)]
+             report['protocols'][protocol]['splits'][split] = {
+-                'rows': int(chosen.sum()), 'classes_present': int(frame.loc[chosen].event_id.nunique()),
+-                'with_real_path_le4': int(np.asarray(masks)[rows].sum()),
+-                'path_fraction': float(np.asarray(masks)[rows].mean()),
+-                'mapped_drugs': int((DRUG_FIN[drugs] >= 0).sum()), 'drugs': len(drugs),
+-                'nai_drugs_present': int((local_ent[drugs] >= 0).any(1).sum())}
++                'rows': int(chosen.sum()), 'classes_present': int((support > 0).sum()),
++                'zero_support_classes': np.flatnonzero(support == 0).tolist(),
++                'min_support_present': int(support[support > 0].min()), 'max_support': int(support.max()),
++                'with_real_path_le4': int(masks[rows].sum()),
++                'path_fraction': float(masks[rows].mean()), 'missing_path_rate': float(1 - masks[rows].mean()),
++                'rows_reusing_data_prepared_topology': int((~is_new[rows]).sum()),
++                'rows_with_newly_extracted_topology': int(is_new[rows].sum()),
++                'missing_path_rate_new_pairs': float(1 - masks[rows[is_new[rows]]].mean()) if is_new[rows].any() else None,
++                'mapped_drugs': int((DRUG_FIN[split_drugs] >= 0).sum()), 'drugs': len(split_drugs),
++                'nai_drugs_present': int((local_ent[split_drugs] >= 0).any(1).sum())}
++    pd.DataFrame(support_rows).to_csv(OUT / 'class_support.csv', index=False)
+     report['paths'] = {'unique_ordered_pairs': len(pairs), 'depth': 4, 'meeting_cap': args.meeting_cap,
+-                       'arm_cap': args.arm_cap, 'nodes': node_ptr[-1], 'edges_with_inverses_self': edge_ptr[-1],
+-                       'max_nodes': int(np.diff(node_ptr).max()), 'max_edges': int(np.diff(edge_ptr).max()),
+-                       'pairs_with_paths': int(sum(masks)), 'missing': int(len(masks) - sum(masks)),
++                       'arm_cap': args.arm_cap, 'nodes': int(node_ptr[-1]), 'edges_with_inverses_self': int(edge_ptr[-1]),
++                       'max_nodes': int(node_counts.max()), 'max_edges': int(edge_counts.max()),
++                       'pairs_with_paths': int(masks.sum()), 'missing': int((~masks).sum()),
++                       'missing_path_rate': float(1 - masks.mean()),
++                       'reused_from_data_prepared': len(reused), 'newly_extracted': len(missing),
++                       'newly_extracted_with_paths': int(masks[missing].sum()),
++                       'newly_extracted_missing_path_rate': float(1 - masks[missing].mean()) if len(missing) else None,
++                       'data_prepared_pairs_not_in_cohort': int(len(old['pairs']) - len(reused)),
++                       'reused_reextracted_equal': {'pairs': len(sample), 'mismatches': 0,
++                                                     'selection': f'{SAMPLE_REEXTRACT} evenly spaced reused cohort positions'},
++                       'reuse_rule': 'ordered global (drug_a, drug_b) pair; topology depends only on its two FIN endpoints',
++                       'source_pair_index': 'source_pair_index.npy: data/prepared pair index or -1 (newly extracted)',
+                        'coverage_test': 'full unbounded two-hop-ball intersection before selecting real routes',
+-                       'retained_relation_counts': {str(k): v for k, v in sorted(retained.items())}}
++                       'label_free': 'endpoints only; no labels, splits, learned states or NAI slots in extraction',
++                       'retained_relation_counts': {str(k): v for k, v in sorted(retained.items()) if v}}
+     records = [json.loads(line) for line in (DEV / 'outputs/fin/train.jsonl').read_text().splitlines()]
+     report['fin'] = {'selected_epoch': fin['epoch'], 'completed_epoch': records[-1]['epoch'],
+                      'dimension': fin['dimension'], 'training_loss': fin['training_loss'],
+                      'mapping_order_verified': True, 'published_embeddings_used': False,
+-                     'source': str(PROCESSED / 'fin.pt')}
++                     'equal_to_data_prepared_global_table': True, 'source': str(PROCESSED / 'fin.pt')}
++    assert file_stats(OLD) == original_stats, 'data/prepared changed during preparation'
++    report['original_prepared_file_stats'] = original_stats
+     (OUT / 'preparation_report.json').write_text(json.dumps(report, indent=2) + '\n')
+-    print(json.dumps({'complete': True, 'paths': report['paths'], 'protocols': report['protocols']}, indent=2), flush=True)
++    print(json.dumps({'complete': True, 'paths': {k: v for k, v in report['paths'].items() if k != 'retained_relation_counts'},
++                      'protocols': report['protocols'], 'source_identity': report['source_identity']}, indent=2), flush=True)
+ 
+ 
+ if __name__ == '__main__':
+### cairn_dsn/audit.py -> pairout_cellout/audit.py
+--- cairn_dsn/audit.py	2026-10-11 23:03:03.548841700 +0800
++++ pairout_cellout/audit.py	2026-10-12 19:01:58.508496787 +0800
+@@ -1,26 +1,53 @@
+-"""Full real-cache/source audit and syntax review; no model forward or training."""
++"""Full real-cache/source audit and syntax review; no model forward or training.
++
++pairout_cellout adaptation of cairn_dsn/audit.py: the same every-pair topology
++checks (source facts, multiplicity, inverses, explicit self relations, exact
++both-direction depth-4 reachability == mask) on the new cohort cache, plus exact
++repack of every reused data/prepared segment, frozen PairOut/CellOut rows, event
++names and global drug IDs, split leakage, molecular graphs, FIN/NAI tables and
++the two full-path configurations. Writes pairout_cellout/prepared/audit_report.json.
++"""
+ import ast
++import filecmp
+ import json
++import math
+ from pathlib import Path
+ import numpy as np
+ import pandas as pd
+ import torch
+ import yaml
++from .dsn.train import SCHEDULE, TRAIN_BATCHES
++from .prepare import COLUMNS, EXPECTED, OLD, SOURCES, file_stats, leakage
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-DATA = ROOT / 'data/prepared'
++DATA = ROOT / 'pairout_cellout/prepared'
+ DEV = ROOT.parent / 'cairn_dev'
++GPU = {'pairout': 6, 'cellout': 7}
++UNCHANGED = {'pairout_cellout/dsn/model.py': 'accelerated_four/dsn/model.py',
++             'pairout_cellout/dsn/data.py': 'accelerated_four/dsn/data.py',
++             'pairout_cellout/dsn/metrics.py': 'accelerated_four/dsn/metrics.py',
++             'pairout_cellout/paths.py': 'cairn_dsn/paths.py'}
+ 
+ 
+ def main():
+     syntax = []
+-    for file in sorted((ROOT / 'cairn_dsn').glob('*.py')):
++    for file in sorted((ROOT / 'pairout_cellout').rglob('*.py')):
+         ast.parse(file.read_text(), filename=str(file))
+         syntax.append(str(file.relative_to(ROOT)))
++    for copy, original in UNCHANGED.items():
++        assert filecmp.cmp(ROOT / copy, ROOT / original, shallow=False), f'{copy} differs from {original}'
++    preparation = json.loads((DATA / 'preparation_report.json').read_text())
++    assert preparation['namespace'] == 'pairout_cellout'
++    assert file_stats(OLD) == preparation['original_prepared_file_stats'], 'data/prepared changed'
+     assets = torch.load(DATA / 'assets.pt', map_location='cpu', weights_only=False)
+     n_rel, n_ent = len(assets['fin_relation_ids']), len(assets['fin_entity_ids'])
+     source = torch.load(DEV / 'data/processed/drkg_triples.pt', map_location='cpu', weights_only=False)
++    assert len(source['triples']) == 4488504
++    assert source['entities'] == assets['fin_entity_ids'] and source['relations'] == assets['fin_relation_ids']
+     h, r, t = source['triples'].numpy().T
++    source_types = np.asarray([e.split('::', 1)[0] for e in source['entities']])
++    # No DDI (Compound-Compound) fact exists in the path background.
++    assert not np.any((source_types[h] == 'Compound') & (source_types[t] == 'Compound'))
+     source_key, source_count = np.unique((h * n_ent + t) * n_rel + r, return_counts=True)
+     arrays = {name: np.load(DATA / f'{name}.npy', mmap_mode='r') for name in
+               ['pairs', 'nodes', 'edges', 'node_ptr', 'edge_ptr', 'endpoints', 'path_mask']}
+@@ -89,32 +116,126 @@
+         self_edges += int((~real).sum())
+         gene_gene += int((gene[hs] & gene[ts]).sum())
+         gene_pathway += int(((gene[hs] & pathway[ts]) | (pathway[hs] & gene[ts])).sum())
+-    protocols = {}
+-    for protocol in ['single_drugout', 'double_drugout']:
++    # Every reused pair is an exact copy of its audited data/prepared segment
++    # (nodes, edges, endpoints, mask); only its global offsets changed.
++    old = {name: np.load(OLD / f'{name}.npy', mmap_mode='r') for name in arrays}
++    source_index = np.load(DATA / 'source_pair_index.npy')
++    reused = np.flatnonzero(source_index >= 0)
++    assert len(source_index) == len(pairs) and len(np.unique(source_index[reused])) == len(reused)
++    assert np.array_equal(old['pairs'][source_index[reused]], pairs[reused])
++    old_pairs = set(map(tuple, old['pairs'].tolist()))
++    assert not any(tuple(p) in old_pairs for p in pairs[source_index < 0].tolist())
++    assert np.array_equal(ends[reused], old['endpoints'][source_index[reused]])
++    assert np.array_equal(masks[reused], old['path_mask'][source_index[reused]])
++    assert np.array_equal(np.diff(nptr)[reused], np.diff(old['node_ptr'])[source_index[reused]])
++    assert np.array_equal(np.diff(eptr)[reused], np.diff(old['edge_ptr'])[source_index[reused]])
++    breaks = np.flatnonzero((np.diff(reused) != 1) | (np.diff(source_index[reused]) != 1)) + 1
++    for run in np.split(reused, breaks):
++        first, last = int(run[0]), int(run[-1])
++        j0, j1 = int(source_index[first]), int(source_index[last])
++        for name, ptr in [('nodes', 'node_ptr'), ('edges', 'edge_ptr')]:
++            new_start, old_start, length = int(arrays[ptr][first]), int(old[ptr][j0]), int(old[ptr][j1 + 1] - old[ptr][j0])
++            for start in range(0, length, 4000000):
++                stop = min(start + 4000000, length)
++                assert np.array_equal(arrays[name][new_start + start:new_start + stop], old[name][old_start + start:old_start + stop])
++    # Frozen sources: exact rows/columns/order/events/global IDs, both protocols.
++    bundle = torch.load(DEV / 'data/processed/bundle.pt', map_location='cpu', weights_only=False)
++    drugs = pd.read_parquet(DEV / 'data/processed/drugs.parquet')
++    assert drugs.drug_id.tolist() == bundle['drug_ids'] == assets['drug_ids']
++    drug_sources = drugs.source_ids.map(json.loads).tolist()
++    events = pd.read_csv(DATA / 'ddi_events.csv')
++    assert events.equals(pd.read_csv(DEV / 'data/processed/ddi_events.csv'))
++    assert events.event_id.tolist() == list(range(85)) and events.template.tolist() == assets['ddi_event_names'] == bundle['ddi_event_names']
++    protocols, frames = {}, {}
++    for protocol, path in SOURCES.items():
+         cached = pd.read_parquet(DATA / protocol / 'ddi.parquet')
+-        original = pd.read_parquet(DEV / 'data/experiments/reference85' / protocol / 'ddi.parquet')
+-        assert original.equals(cached)
++        original = pd.read_parquet(path)
++        assert original.equals(cached) and original.dtypes.equals(cached.dtypes) and cached.columns.tolist() == COLUMNS
++        assert filecmp.cmp(path, DATA / protocol / 'ddi.parquet', shallow=False)
++        assert cached.groupby('split').size().to_dict() == EXPECTED
++        assert (np.asarray(assets['ddi_event_names'])[cached.event_id] == cached.template.to_numpy()).all()
++        for col, db in [('drug_a', 'source_drugbank_a'), ('drug_b', 'source_drugbank_b')]:
++            assert all(name in drug_sources[i] for i, name in zip(cached[col].tolist(), cached[db].tolist()))
+         pair_ids = np.load(DATA / protocol / 'pair_indices.npy')
+         assert np.array_equal(pairs[pair_ids], cached[['drug_a', 'drug_b']].to_numpy())
+-        protocols[protocol] = {'all_rows_exact': True, 'pair_index_exact': True,
+-                               'counts': cached.groupby('split').size().to_dict()}
+-    expected_gpu = {'path_single_drugout': 4, 'path_double_drugout': 5,
+-                    'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
+-    for name, gpu in expected_gpu.items():
+-        cfg = yaml.safe_load((ROOT / 'configs' / f'{name}.yaml').read_text())
+-        assert cfg['gpu'] == gpu
+-        assert cfg['epochs'] == 100 and cfg['patience'] == 15 and cfg['batch_size'] == 128
+-        assert cfg['kl_warmup_fraction'] == .2 and cfg['nai_cap'] == 30 and cfg['path_depth'] == 4
+-    report = {'syntax': syntax, 'protocols': protocols, 'all_cached_real_edges_found_in_source': True,
++        split_leakage = leakage(cached)
++        assert all(v[k] == 0 for v in split_leakage.values() for k in
++                   ['ordered_pairs', 'reversed_ordered_pairs', 'unordered_pairs', 'pair_groups'])
++        assert split_leakage == preparation['protocols'][protocol]['leakage']
++        frames[protocol] = cached
++        support = {split: np.bincount(cached[cached.split.eq(split)].event_id, minlength=85).tolist() for split in EXPECTED}
++        protocols[protocol] = {'all_rows_exact': True, 'all_columns_order_dtypes_exact': True, 'byte_identical_copy': True,
++                               'event_names_exact': True, 'global_drug_ids_exact': True, 'pair_index_exact': True,
++                               'split_pair_leakage_zero': True, 'counts': cached.groupby('split').size().to_dict(),
++                               'classes_present': {s: int(np.count_nonzero(v)) for s, v in support.items()},
++                               'zero_support_classes': {s: [i for i, c in enumerate(v) if c == 0] for s, v in support.items()},
++                               'missing_path_rate': {s: float(1 - masks[pair_ids[cached.split.eq(s).to_numpy()]].mean()) for s in EXPECTED}}
++    assert frames['pairout'].equals(frames['cellout'])
++    assert np.array_equal(np.load(DATA / 'pairout/pair_indices.npy'), np.load(DATA / 'cellout/pair_indices.npy'))
++    cohort = frames['pairout'][['drug_a', 'drug_b']].drop_duplicates().sort_values(['drug_a', 'drug_b']).to_numpy()
++    assert np.array_equal(cohort, pairs)
++    # Molecular graphs: unchanged bundle graphs for exactly the active global IDs.
++    active = np.unique(pairs)
++    assert sorted(assets['graphs']) == active.tolist()
++    for d, graph in assets['graphs'].items():
++        reference = bundle['graphs'][d]
++        assert graph.x.shape[1] == 55 and graph.edge_attr.shape[1] == 17
++        assert sorted(graph.keys()) == sorted(reference.keys()) and all(torch.equal(graph[k], reference[k]) for k in graph.keys())
++    # Global FIN/NAI tables (pretrained FIN; no published embeddings).
++    fin = torch.load(DEV / 'data/processed/fin.pt', map_location='cpu', weights_only=False)
++    old_assets = torch.load(OLD / 'assets.pt', map_location='cpu', weights_only=False)
++    assert torch.equal(assets['fin_entities'], fin['entities']) and torch.equal(assets['fin_relations'], fin['relations'])
++    assert torch.equal(assets['drug_fin_idx'], bundle['drug_fin_idx'])
++    assert torch.equal(assets['neighbor_entities'], old_assets['neighbor_entities'])
++    assert torch.equal(assets['neighbor_relations'], old_assets['neighbor_relations'])
++    nai = pd.read_parquet(DATA / 'nai_neighbors.parquet')
++    assert nai.equals(pd.read_parquet(OLD / 'nai_neighbors.parquet'))
++    assert set(nai.relation_idx) <= set(preparation['nai']['six_relation_ids'].values())
++    assert all(assets['fin_entity_ids'][i].startswith('Gene::') for i in nai.fin_idx.unique())
++    assert int((assets['neighbor_entities'] >= 0).sum(1).max()) <= 30
++    # Two full-path seed42 configurations; derived schedule from the frozen rows.
++    # Latest human update: 150 maximum epochs (not 100), patience 15, KL warmup 20%.
++    train_batches = math.ceil(EXPECTED['train'] / 128)
++    schedule = {'epochs': 150, 'patience': 15, 'kl_warmup_fraction': .2, 'train_batches': train_batches,
++                'planned_updates': 150 * train_batches, 'kl_warmup_updates': math.ceil(.2 * 150 * train_batches)}
++    assert schedule == {'epochs': 150, 'patience': 15, 'kl_warmup_fraction': .2, 'train_batches': 1184,
++                        'planned_updates': 177600, 'kl_warmup_updates': 35520}
++    assert schedule == {**SCHEDULE, 'train_batches': TRAIN_BATCHES}
++    expected_cfg = {'with_path': True, 'prepared': 'pairout_cellout/prepared', 'seed': 42, 'epochs': 150, 'patience': 15,
++                    'batch_size': 128, 'learning_rate': 1e-4, 'weight_decay': 1e-4, 'reconstruction_weight': .1,
++                    'kl_weight': .001, 'kl_warmup_fraction': .2, 'path_depth': 4, 'path_meeting_cap': 32,
++                    'path_arm_cap': 2, 'nai_cap': 30, 'cpu_threads': 2, 'num_workers': 2}
++    configs = {}
++    for name, gpu in GPU.items():
++        cfg = yaml.safe_load((ROOT / 'pairout_cellout/configs' / f'{name}.yaml').read_text())
++        assert cfg['protocol'] == name and cfg['gpu'] == gpu and cfg['output'] == f'pairout_cellout/outputs/{name}'
++        assert all(cfg[k] == v for k, v in expected_cfg.items()), name
++        # No extra keys (e.g. planned_updates/kl_warmup_updates overrides): the
++        # trainer derives the schedule only from these reviewed values.
++        assert set(cfg) == set(expected_cfg) | {'protocol', 'gpu', 'output', 'ddi_split_note'}, name
++        configs[name] = {'gpu': gpu, 'output': cfg['output']}
++    report = {'namespace': 'pairout_cellout', 'syntax': syntax, 'unchanged_copies': UNCHANGED,
++              'protocols': protocols, 'pairout_cellout_frames_identical': True,
++              'source_identity_note': preparation['source_identity']['note'],
++              'all_cached_real_edges_found_in_source': True,
+               'source_fact_multiplicity_preserved': True, 'all_real_edges_have_inverse': True,
+               'endpoint_mapping_exact': True, 'all_pairs_depth4_reachability_equals_explicit_mask': True,
+               'missing_paths_have_no_edges': True, 'explicit_self_count_exact': True,
++              'no_compound_compound_background_facts': True,
++              'reused_segments_exact_copies': {'pairs': len(reused), 'runs': len(breaks) + 1},
++              'newly_extracted_pairs': int((source_index < 0).sum()),
++              'molecular_graphs_exact_from_bundle': len(assets['graphs']),
++              'fin_tables_exact': True, 'nai_table_equal_to_data_prepared': True,
++              'original_data_prepared_unchanged': True,
++              'pairs': len(pairs), 'pairs_with_paths': int(masks.sum()), 'missing_paths': int((~masks).sum()),
++              'missing_path_rate': float(1 - masks.mean()),
+               'real_edges': real_edges, 'explicit_self_edges': self_edges,
+               'cached_gene_gene_edges_both_directions': gene_gene,
+               'cached_gene_pathway_edges_both_directions': gene_pathway,
+               'max_nodes': int(np.diff(nptr).max()), 'max_edges': int(np.diff(eptr).max()),
+-              'gpu_config': expected_gpu,
+-              'validation': 'Full real-data and static checks only; no model forward, smoke experiment, or GPU training'}
++              'gpu_config': GPU, 'configs': configs, 'schedule': schedule,
++              'validation': 'Full real-data and static checks only; no model forward, smoke experiment, or GPU training',
++              'passed': True}
+     (DATA / 'audit_report.json').write_text(json.dumps(report, indent=2) + '\n')
+     print(json.dumps(report, indent=2), flush=True)
+ 
+### Trainer and configs adapted from the reviewed accelerated_four path arm
+### accelerated_four/dsn/train.py -> pairout_cellout/dsn/train.py
+--- accelerated_four/dsn/train.py	2026-10-12 11:57:46.000478146 +0800
++++ pairout_cellout/dsn/train.py	2026-10-12 18:57:43.743699614 +0800
+@@ -1,8 +1,11 @@
+ """Full DDI training, fixed85 validation selection, selected-checkpoint test export.
+ 
+-accelerated_four copy of the production trainer: reviewed GPU3 packed
+-inter-graph attention (model.py/data.py), outputs only under
+-accelerated_four/outputs, validation accuracy and flushed progress lines.
++pairout_cellout copy of the accelerated_four trainer: the same reviewed GPU3
++packed model.py/data.py, ALWAYS with the EmerGNN path branch, protocols pairout
++(GPU6) and cellout (GPU7) on the identical frozen PairOut DDI split, outputs
++only under pairout_cellout/outputs. Strict gate on the new pairout_cellout
++preparation/audit reports. --fresh is the initial launch only; --resume and
++--test-only continue this run's own checkpoints with the exact config.
+ """
+ import argparse
+ import json
+@@ -22,16 +25,53 @@
+ from .model import DSNRareDDI
+ 
+ ROOT = Path(__file__).resolve().parents[2]
+-OUTPUTS = ROOT / 'accelerated_four/outputs'
+-GPU = {(True, 'single_drugout'): 4, (True, 'double_drugout'): 5,
+-       (False, 'single_drugout'): 6, (False, 'double_drugout'): 7}
+-# The ONLY configuration entries that differ from the original production
+-# checkpoints (besides output); tools/snapshot.py migrates exactly these.
+-GENERATOR = 'gpt-6.1-sol high; accelerated_four packed-attention copy by claude-opus-5-5'
+-NAMESPACE = 'accelerated_four'
++OUTPUTS = ROOT / 'pairout_cellout/outputs'
++PREPARED = ROOT / 'pairout_cellout/prepared'
++GPU = {'pairout': 6, 'cellout': 7}
++GENERATOR = 'gpt-6.1-sol medium plan/review; pairout_cellout implementation by claude-opus-5-5'
++NAMESPACE = 'pairout_cellout'
+ OPTIMIZATION = ('GPU3-reviewed packed cross-pair inter-graph attention: one GATConv call per direction, '
+                 'per-pair local self loops built by the collator, add_self_loops=False')
+ PROGRESS_EVERY = 100
++# Authorized schedule for THESE jobs (latest human update: 150 maximum epochs,
++# overriding 100): 151508 rows / 128 -> 1184 batches, 150 * 1184 = 177600
++# planned updates, KL warmup ceil(0.2 * 177600) = 35520 (30 epochs), patience 15.
++SCHEDULE = {'epochs': 150, 'patience': 15, 'kl_warmup_fraction': .2,
++            'planned_updates': 177600, 'kl_warmup_updates': 35520}
++TRAIN_BATCHES = 1184
++# Parameter groups for the actual first-update diagnostics (all must receive
++# finite nonzero gradients); the last CSE block's norm2 output is never consumed.
++GROUPS = {'fin_entities': ('fin_entities.',), 'fin_relations': ('fin_relations.',), 'cse': ('cse.',),
++          'nai': ('nai.',), 'path': ('path.',), 'pvr': ('pvr.',), 'classifier': ('classifier.',)}
++AUDIT_CHECKS = ['all_cached_real_edges_found_in_source', 'source_fact_multiplicity_preserved',
++                'all_real_edges_have_inverse', 'endpoint_mapping_exact',
++                'all_pairs_depth4_reachability_equals_explicit_mask', 'missing_paths_have_no_edges',
++                'explicit_self_count_exact', 'no_compound_compound_background_facts', 'pairout_cellout_frames_identical',
++                'fin_tables_exact', 'nai_table_equal_to_data_prepared', 'original_data_prepared_unchanged', 'passed']
++
++
++def preparation_gate(prepared, config):
++    """Strict new-cohort preparation + full audit requirement (no toy probe)."""
++    if prepared != PREPARED:
++        raise ValueError(f'prepared must be {PREPARED}')
++    preparation = json.loads((prepared / 'preparation_report.json').read_text())
++    audit = json.loads((prepared / 'audit_report.json').read_text())
++    assert preparation['namespace'] == audit['namespace'] == NAMESPACE
++    failed = [name for name in AUDIT_CHECKS if audit.get(name) is not True]
++    if failed:
++        raise ValueError(f'Full preparation audit not passed: {failed}')
++    newest = max((p for p in prepared.rglob('*') if p.is_file() and p.name != 'audit_report.json'),
++                 key=lambda p: p.stat().st_mtime)
++    if (prepared / 'audit_report.json').stat().st_mtime < newest.stat().st_mtime:
++        raise ValueError(f'audit_report.json is older than {newest}; rerun pairout_cellout.audit')
++    protocol = audit['protocols'][config['protocol']]
++    assert all(protocol[k] is True for k in ['all_rows_exact', 'all_columns_order_dtypes_exact', 'event_names_exact',
++                                             'global_drug_ids_exact', 'pair_index_exact', 'split_pair_leakage_zero'])
++    assert config['nai_cap'] == preparation['nai']['cap']
++    assert config['path_depth'] == preparation['paths']['depth']
++    assert config['path_meeting_cap'] == preparation['paths']['meeting_cap']
++    assert config['path_arm_cap'] == preparation['paths']['arm_cap']
++    return preparation, audit
+ 
+ 
+ def workspace_path(value):
+@@ -67,6 +107,12 @@
+     torch.cuda.set_rng_state_all([value.cpu() for value in state['cuda']])
+ 
+ 
++def top_k_accuracy(y, probabilities, k=5):
++    # Report-only metric from the exported probabilities; never used for selection.
++    top = np.argsort(-probabilities, axis=1, kind='stable')[:, :k]
++    return float((top == y[:, None]).any(1).mean())
++
++
+ @torch.no_grad()
+ def evaluate(model, loader, device, config, beta):
+     model.eval()
+@@ -99,7 +145,8 @@
+ def export_test(model, dataset, loader, device, config, output, best):
+     totals, probabilities, y, original_rows, masks = evaluate(model, loader, device, config, config['kl_weight'])
+     metrics, per_class, confusion = classification_metrics(y, probabilities)
+-    metrics.update({'loss_terms': totals, 'checkpoint': 'best.pt', 'selected_epoch': best['epoch'],
++    metrics.update({'top5_accuracy': top_k_accuracy(y, probabilities), 'loss_terms': totals,
++                    'checkpoint': 'best.pt', 'selected_epoch': best['epoch'],
+                     'selected_validation_macro_f1_85': best['best_metric'], 'selection': 'validation only'})
+     frame = dataset.frame.copy()
+     assert np.array_equal(original_rows, dataset.rows)
+@@ -122,18 +169,18 @@
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--config', required=True)
+-    parser.add_argument('--batch-size', type=int)
+-    parser.add_argument('--resume', action='store_true')
+-    parser.add_argument('--test-only', action='store_true')
++    mode = parser.add_mutually_exclusive_group(required=True)
++    mode.add_argument('--fresh', action='store_true')
++    mode.add_argument('--resume', action='store_true')
++    mode.add_argument('--test-only', action='store_true')
+     args = parser.parse_args()
+-    if args.resume and args.test_only:
+-        parser.error('Use either --resume or --test-only')
+     config = yaml.safe_load(workspace_path(args.config).read_text())
+-    if args.batch_size is not None:
+-        config['batch_size'] = args.batch_size
+-    # This is checked before the first CUDA operation. Only the assigned one
+-    # physical device is visible, including RNG and allocator operations.
+-    assigned = GPU[config['with_path'], config['protocol']]
++    # Full-path model only, on the assigned GPU. This is checked before the
++    # first CUDA operation. Only the assigned one physical device is visible,
++    # including RNG and allocator operations.
++    if config['with_path'] is not True:
++        raise ValueError('pairout_cellout always trains the full path model (with_path: true)')
++    assigned = GPU[config['protocol']]
+     if config['gpu'] != assigned or os.environ.get('CUDA_VISIBLE_DEVICES') != str(assigned):
+         raise ValueError(f'This arm requires CUDA_VISIBLE_DEVICES={assigned} and config gpu={assigned}')
+     torch.set_num_threads(config['cpu_threads'])
+@@ -143,54 +190,55 @@
+     device = torch.device('cuda:0')
+     prepared = workspace_path(config['prepared'])
+     output_dir = workspace_path(config['output'])
+-    # Independent replica output only; production outputs are never written.
++    # Own output only; DSN/accelerated/GPU3/production checkpoints are never read.
+     if not output_dir.is_relative_to(OUTPUTS):
+         raise ValueError(f'Output must remain inside {OUTPUTS}')
+     output_dir.mkdir(parents=True, exist_ok=True)
+-    saved = torch.load(output_dir / 'last.pt', map_location='cpu', weights_only=False) if args.resume else None
+-    if not args.resume and not args.test_only and (output_dir / 'last.pt').exists():
+-        raise ValueError('Existing training output: use --resume or a new output directory')
++    if args.fresh and any((output_dir / n).exists() for n in ['last.pt', 'best.pt', 'history.jsonl']):
++        raise ValueError('--fresh requires an empty output; recovery uses --resume or --test-only')
++    if not args.fresh:
++        own = torch.load(output_dir / ('best.pt' if args.test_only else 'last.pt'), map_location='cpu', weights_only=False)
++        if own['config'].get('namespace') != NAMESPACE or Path(own['config']['output']) != output_dir:
++            raise ValueError('Checkpoint is not this pairout_cellout run')
++    saved = own if args.resume else None
+     if args.test_only:
+-        selected = torch.load(output_dir / 'best.pt', map_location='cpu', weights_only=False)
+-        assert selected['config']['gpu'] == assigned and selected['config']['protocol'] == config['protocol']
+-        # Evaluation restores the authoritative training configuration and keeps
+-        # config.yaml intact, even when the evaluation batch is overridden.
+-        config = selected['config']
+-        del selected
+-    loader_batch = args.batch_size if args.test_only and args.batch_size else config['batch_size']
+-    # Save the fully resolved settings (including memory-driven batch override).
++        assert own['config']['gpu'] == assigned and own['config']['protocol'] == config['protocol']
++        # Evaluation restores the authoritative training configuration.
++        config = own['config']
++        del own
++    if args.fresh:
++        # Seeded state immediately before model construction (exact, restorable).
++        torch.save(rng_state(), output_dir / 'initial_rng.pt')
++    preparation, audit = preparation_gate(prepared, config)
+     if not args.test_only:
+         config.update({'prepared': str(prepared), 'output': str(output_dir), 'generator': GENERATOR,
+                        'namespace': NAMESPACE, 'optimization': OPTIMIZATION,
+                        'selection_metric': 'fixed85 validation macroF1', 'test_selection': False,
++                       'cohort_source_identity': preparation['source_identity'],
+                        'source_provenance': json.loads((ROOT / 'docs/source_provenance.json').read_text())})
+-    preparation = json.loads((prepared / 'preparation_report.json').read_text())
+-    assert config['nai_cap'] == preparation['nai']['cap']
+-    assert config['path_depth'] == preparation['paths']['depth']
+-    assert config['path_meeting_cap'] == preparation['paths']['meeting_cap']
+-    assert config['path_arm_cap'] == preparation['paths']['arm_cap']
+-    # Full-data audit is a preparation requirement, not a toy model probe.
+-    audit = json.loads((prepared / 'audit_report.json').read_text())
+-    assert audit['all_cached_real_edges_found_in_source'] and audit['all_pairs_depth4_reachability_equals_explicit_mask']
+     assets = torch.load(prepared / 'assets.pt', map_location='cpu', weights_only=False)
+     model = DSNRareDDI(assets, config).to(device)
+     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+     collate = Collator(assets, prepared, config['with_path'])
+     datasets = {split: DDIDataset(prepared, config['protocol'], split) for split in ['train', 'val']}
+-    loaders = {split: DataLoader(dataset, batch_size=loader_batch, shuffle=split == 'train',
++    loaders = {split: DataLoader(dataset, batch_size=config['batch_size'], shuffle=split == 'train',
+                                  num_workers=config['num_workers'], collate_fn=collate, pin_memory=True,
+                                  persistent_workers=False)
+                for split, dataset in datasets.items()}
+-    planned_updates = config['planned_updates'] if args.test_only else config['epochs'] * len(loaders['train'])
+-    warmup_updates = config['kl_warmup_updates'] if args.test_only else max(1, math.ceil(config['kl_warmup_fraction'] * planned_updates))
+-    if saved is not None:
+-        planned_updates = saved['config']['planned_updates']
+-        warmup_updates = saved['config']['kl_warmup_updates']
+-    config['planned_updates'], config['kl_warmup_updates'] = planned_updates, warmup_updates
++    # Audited schedule: 151508 rows / 128 -> 1184 batches, 177600 updates, KL warmup 35520.
++    assert len(loaders['train']) == audit['schedule']['train_batches'] == TRAIN_BATCHES
++    if args.fresh:
++        config['planned_updates'] = config['epochs'] * len(loaders['train'])
++        config['kl_warmup_updates'] = max(1, math.ceil(config['kl_warmup_fraction'] * config['planned_updates']))
++        assert config['planned_updates'] == audit['schedule']['planned_updates']
++        assert config['kl_warmup_updates'] == audit['schedule']['kl_warmup_updates']
++        (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
+     if saved is not None and saved['config'] != config:
+         raise ValueError('Resume configuration differs from last.pt; preserve batch size and schedule')
+-    if not args.test_only:
+-        (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
++    # Every mode (fresh, resume, test-only) runs only the authorized schedule.
++    if any(config[k] != v for k, v in SCHEDULE.items()):
++        raise ValueError(f'Schedule must be {SCHEDULE}')
++    planned_updates, warmup_updates = config['planned_updates'], config['kl_warmup_updates']
+     save_json(output_dir / 'model_inventory.json', {
+         'parameters': sum(p.numel() for p in model.parameters()),
+         'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad),
+@@ -201,7 +249,11 @@
+         'pvr_branch_normalization': 'affine-free layer_norm per 128; absent directions zero',
+         'pvr_reconstruction': 'valid-branch mean per sample, then sample mean; detached continuous targets',
+         'path_depth': config['path_depth'] if config['with_path'] else 0,
+-        'topology_cache': str(prepared), 'learned_state_cache': False})
++        'topology_cache': str(prepared), 'learned_state_cache': False,
++        'groups': {g: sum(p.numel() for n, p in model.named_parameters() if n.startswith(prefixes))
++                   for g, prefixes in GROUPS.items()},
++        'state_dict_keys': list(model.state_dict()),
++        'frozen': [n for n, p in model.named_parameters() if not p.requires_grad]})
+     best_metric, bad_epochs, update, start_epoch = -1., 0, 0, 1
+     if args.resume:
+         model.load_state_dict(saved['model'])
+@@ -221,7 +273,8 @@
+                       'will_train': will_train, 'planned_updates': planned_updates,
+                       'kl_warmup_updates': warmup_updates, 'train_batches': len(loaders['train']),
+                       'train_rows': len(datasets['train']), 'validation_rows': len(datasets['val']),
+-                      'batch_size': loader_batch, 'output': str(output_dir),
++                      'batch_size': config['batch_size'], 'seed': config['seed'], 'with_path': config['with_path'],
++                      'protocol': config['protocol'], 'output': str(output_dir),
+                       'cuda_visible_devices': os.environ.get('CUDA_VISIBLE_DEVICES'),
+                       'device_uuid': str(torch.cuda.get_device_properties(device).uuid), 'pid': os.getpid(),
+                       'started_at': time.time()}), flush=True)
+@@ -240,17 +293,24 @@
+                 beta = config['kl_weight'] * min(1., (update + 1) / warmup_updates)
+                 loss = ce + config['reconstruction_weight'] * result['rec'] + beta * result['kl']
+                 loss.backward()
+-                # Capture actual full-training first-step gradient norms for
+-                # coordinator auditing, without a separate probe experiment.
++                # Actual full-training first-update loss terms and gradients of
++                # every group including path, without a separate probe experiment.
+                 if update == 0:
+-                    groups = {'cse': model.cse, 'nai': model.nai, 'pvr': model.pvr,
+-                              'classifier': model.classifier, 'fin_entities': model.fin_entities,
+-                              'fin_relations': model.fin_relations}
+-                    if config['with_path']:
+-                        groups['path'] = model.path
+-                    save_json(output_dir / 'first_update_gradients.json', {
+-                        name: float(torch.stack([p.grad.detach().square().sum() for p in module.parameters()
+-                                                 if p.grad is not None]).sum().sqrt()) for name, module in groups.items()})
++                    grads = {name: p.grad for name, p in model.named_parameters() if p.requires_grad}
++                    graph = batch['path_graph']
++                    save_json(output_dir / 'first_update.json', {
++                        'labels': len(batch['label']),
++                        'loss_terms': {'ce': float(ce), 'rec': float(result['rec']), 'kl': float(result['kl']),
++                                       'beta': beta, 'loss': float(loss)},
++                        'logits_finite': bool(torch.isfinite(result['logits']).all()),
++                        'gradient_norms': {group: float(torch.stack([g.detach().square().sum() for n, g in grads.items()
++                                                                     if g is not None and n.startswith(prefixes)]).sum().sqrt())
++                                           for group, prefixes in GROUPS.items()},
++                        'all_gradients_finite': all(bool(torch.isfinite(g).all()) for g in grads.values() if g is not None),
++                        'trainable_without_gradient': [n for n, g in grads.items() if g is None],
++                        'path_batch': {'nodes': int(graph['n_nodes']), 'edges': int(graph['edge_index'].shape[1]),
++                                       'pairs_with_cached_path': int(graph['path_mask'].sum()),
++                                       'present_directions_v_to_u_u_to_v': result['path_mask'].sum(0).tolist()}})
+                 optimizer.step()
+                 n = len(batch['label'])
+                 for name, value in [('ce', ce), ('rec', result['rec']), ('kl', result['kl']),
+@@ -293,11 +353,11 @@
+     best = torch.load(output_dir / 'best.pt', map_location=device, weights_only=False)
+     model.load_state_dict(best['model'])
+     test_data = DDIDataset(prepared, config['protocol'], 'test')
+-    test_loader = DataLoader(test_data, batch_size=loader_batch, shuffle=False,
++    test_loader = DataLoader(test_data, batch_size=config['batch_size'], shuffle=False,
+                              num_workers=config['num_workers'], collate_fn=collate, pin_memory=True)
+     export_test(model, test_data, test_loader, device, config, output_dir, best)
+     (output_dir / 'test_config.yaml').write_text(yaml.safe_dump(
+-        {**best['config'], 'evaluation_batch_size': loader_batch, 'evaluation_checkpoint': 'best.pt'}, sort_keys=False))
++        {**best['config'], 'evaluation_batch_size': config['batch_size'], 'evaluation_checkpoint': 'best.pt'}, sort_keys=False))
+     save_json(output_dir / 'test_complete.json', {
+         'checkpoint': 'best.pt', 'selected_epoch': best['epoch'], 'selected_update': best['update'],
+         'rows': len(test_data), 'completed_at': time.time()})
+### accelerated_four/configs/path_single_drugout.yaml -> pairout_cellout/configs/pairout.yaml
+--- accelerated_four/configs/path_single_drugout.yaml	2026-10-12 11:57:03.153016812 +0800
++++ pairout_cellout/configs/pairout.yaml	2026-10-12 18:57:43.711700017 +0800
+@@ -1,10 +1,10 @@
+-protocol: single_drugout
++protocol: pairout
+ with_path: true
+-gpu: 4
+-prepared: data/prepared
+-output: accelerated_four/outputs/path_single_drugout
++gpu: 6
++prepared: pairout_cellout/prepared
++output: pairout_cellout/outputs/pairout
+ seed: 42
+-epochs: 100
++epochs: 150
+ patience: 15
+ batch_size: 128
+ learning_rate: 0.0001
+@@ -18,3 +18,4 @@
+ nai_cap: 30
+ cpu_threads: 2
+ num_workers: 2
++ddi_split_note: same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicate, not DDI cell-cold generalization
+### accelerated_four/configs/path_single_drugout.yaml -> pairout_cellout/configs/cellout.yaml
+--- accelerated_four/configs/path_single_drugout.yaml	2026-10-12 11:57:03.153016812 +0800
++++ pairout_cellout/configs/cellout.yaml	2026-10-12 18:57:43.711700017 +0800
+@@ -1,10 +1,10 @@
+-protocol: single_drugout
++protocol: cellout
+ with_path: true
+-gpu: 4
+-prepared: data/prepared
+-output: accelerated_four/outputs/path_single_drugout
++gpu: 7
++prepared: pairout_cellout/prepared
++output: pairout_cellout/outputs/cellout
+ seed: 42
+-epochs: 100
++epochs: 150
+ patience: 15
+ batch_size: 128
+ learning_rate: 0.0001
+@@ -18,3 +18,4 @@
+ nai_cap: 30
+ cpu_threads: 2
+ num_workers: 2
++ddi_split_note: same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicate, not DDI cell-cold generalization
+### Two-arm controller/monitor adapted from rareddie_control
+### rareddie_control/env.sh -> pairout_cellout/env.sh
+--- rareddie_control/env.sh	2026-10-12 15:23:21.889395020 +0800
++++ pairout_cellout/env.sh	2026-10-12 18:45:09.089186906 +0800
+@@ -1,14 +1,14 @@
+ #!/usr/bin/env bash
+-# Source only. Runtime for the isolated rareddie_control arms. The cairn
+-# environment, cairn_dev, accelerated_four, cairn_dsn and scripts/ are
+-# read-only; caches/temporary files stay under rareddie_control and its logs.
++# Source only. Runtime for the isolated pairout_cellout arms. The cairn
++# environment, cairn_dev, data/prepared, accelerated_four, rareddie_control, cairn_dsn
++# and scripts/ are read-only; caches/temporary files stay under pairout_cellout and its logs.
+ set -euo pipefail
+ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+-CONTROL_DIR="$ROOT_DIR/rareddie_control"
+-LOG_DIR="$ROOT_DIR/logs/rareddie_control"
++CONTROL_DIR="$ROOT_DIR/pairout_cellout"
++LOG_DIR="$ROOT_DIR/logs/pairout_cellout"
+ cd "$ROOT_DIR"
+ export PYTHONDONTWRITEBYTECODE=1
+-# rareddie_control (new) and accelerated_four (reused, read-only) resolve from ROOT.
++# pairout_cellout (new) resolves from ROOT; it imports no other namespace.
+ export PYTHONPATH="$ROOT_DIR"
+ export CUDA_DEVICE_ORDER=PCI_BUS_ID
+ export TMPDIR="$LOG_DIR/tmp"
+### rareddie_control/status.py -> pairout_cellout/status.py
+--- rareddie_control/status.py	2026-10-12 15:25:35.443716015 +0800
++++ pairout_cellout/status.py	2026-10-12 18:45:15.729103431 +0800
+@@ -1,9 +1,9 @@
+-"""Merge implementation/launch/monitor progress into logs/rareddie_control/status.json (shared with Codex)."""
++"""Merge implementation/launch/monitor progress into logs/pairout_cellout/status.json (shared with Codex)."""
+ import json
+ from pathlib import Path
+ import time
+ 
+-STATUS = Path(__file__).resolve().parents[1] / 'logs/rareddie_control/status.json'
++STATUS = Path(__file__).resolve().parents[1] / 'logs/pairout_cellout/status.json'
+ 
+ 
+ def update_status(stage, section='implementation', **fields):
+### rareddie_control/jobs.py -> pairout_cellout/jobs.py
+--- rareddie_control/jobs.py	2026-10-12 15:24:44.440357214 +0800
++++ pairout_cellout/jobs.py	2026-10-12 19:01:58.508496787 +0800
+@@ -1,11 +1,13 @@
+ """Durable two-arm job records, real export verification, bounded recovery.
+ 
+-rareddie_control copy of accelerated_four/jobs.py: isolated state
+-(logs/rareddie_control/jobs), outputs (rareddie_control/outputs) and trainer
+-(rareddie_control.train). The reviewed initial launch is the ONLY --fresh run.
+-A recovery continues this run's own checkpoint with its exact recorded config
+-(--resume, or --test-only once its schedule is finished); it never restarts
+-from scratch, never reads DSN/accelerated/GPU3 state, never changes batch size.
++pairout_cellout copy of rareddie_control/jobs.py: isolated state
++(logs/pairout_cellout/jobs), outputs (pairout_cellout/outputs) and trainer
++(pairout_cellout.dsn.train, full path model). Arms pairout (GPU6) and cellout
++(GPU7) are independent same-DDI-split seed42 replicates. The reviewed initial
++launch is the ONLY --fresh run. A recovery continues this run's own checkpoint
++with its exact recorded config (--resume, or --test-only once its schedule is
++finished); it never restarts from scratch, never reads DSN/accelerated/GPU3/
++rareddie state, never changes batch size.
+ 
+ CPU controller only. Training children receive exactly their assigned GPU.
+ No model forward, preparation, smoke run, or credential access here.
+@@ -22,16 +24,23 @@
+ import time
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-CONTROL = ROOT / 'rareddie_control'
+-STATE = ROOT / 'logs/rareddie_control/jobs'
++CONTROL = ROOT / 'pairout_cellout'
++STATE = ROOT / 'logs/pairout_cellout/jobs'
+ OUTPUTS = CONTROL / 'outputs'
+ CONFIGS = CONTROL / 'configs'
+-APPROVAL = ROOT / 'logs/rareddie_control/review_approval.json'
+-EVIDENCE = CONTROL / 'evidence/cse_equivalence.json'
++APPROVAL = ROOT / 'logs/pairout_cellout/review_approval.json'
++# Full real preparation audit (pairout_cellout.audit) replaces model evidence.
++EVIDENCE = CONTROL / 'prepared/audit_report.json'
+ REVIEW_DIFF = CONTROL / 'review/implementation.diff'
+-ARMS = {'single_drugout': 6, 'double_drugout': 7}
+-NAMESPACE = 'rareddie_control'
++ARMS = {'pairout': 6, 'cellout': 7}
++NAMESPACE = 'pairout_cellout'
+ MAX_RECOVERIES = 3
++# The ONLY schedule these jobs may verify or recover with (latest human update:
++# 150 maximum epochs, overriding 100). Literal here, independent of the trainer
++# constant, so a 100-epoch (118400/23680) state can never pass as complete.
++AUTHORIZED_SCHEDULE = {'epochs': 150, 'patience': 15, 'kl_warmup_fraction': .2,
++                       'planned_updates': 177600, 'kl_warmup_updates': 35520}
++AUTHORIZED_TRAIN_BATCHES = 1184
+ 
+ 
+ def write_json(path, value):
+@@ -94,8 +103,8 @@
+     import numpy as np
+     import pandas as pd
+     import yaml
+-    from accelerated_four.dsn.metrics import classification_metrics
+-    from rareddie_control.train import top_k_accuracy
++    from pairout_cellout.dsn.metrics import classification_metrics
++    from pairout_cellout.dsn.train import SCHEDULE, TRAIN_BATCHES, top_k_accuracy
+ 
+     output = OUTPUTS / arm
+     required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+@@ -109,13 +118,24 @@
+         last = checkpoint(output, 'last.pt')
+         cfg = best['config']
+         assert cfg['gpu'] == ARMS[arm] and cfg['protocol'] == arm and cfg['namespace'] == NAMESPACE
++        assert cfg['with_path'] is True and cfg['batch_size'] == 128 and cfg['seed'] == 42
++        # Only the authorized 150-epoch schedule can ever verify as complete.
++        assert SCHEDULE == AUTHORIZED_SCHEDULE and TRAIN_BATCHES == AUTHORIZED_TRAIN_BATCHES
++        assert all(cfg[k] == v for k, v in AUTHORIZED_SCHEDULE.items()), f'schedule differs from {AUTHORIZED_SCHEDULE}'
++        assert cfg['planned_updates'] == cfg['epochs'] * AUTHORIZED_TRAIN_BATCHES
+         assert Path(cfg['output']) == output
+         assert last['config'] == cfg
+         assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
++        # Every finished epoch ran all 1184 updates of the frozen train split.
++        assert last['epoch'] <= cfg['epochs'] and last['update'] == last['epoch'] * AUTHORIZED_TRAIN_BATCHES
++        assert best['update'] == best['epoch'] * AUTHORIZED_TRAIN_BATCHES
++        run_cfg = yaml.safe_load((output / 'config.yaml').read_text())
++        assert all(run_cfg.get(k) == v for k, v in AUTHORIZED_SCHEDULE.items())
+         # Selected best is the strict fixed85 maximum of the full history.
+         assert best['epoch'] <= last['epoch'] and best['best_metric'] == last['best_metric']
+         records = history(output)
+         assert [r['epoch'] for r in records] == list(range(1, last['epoch'] + 1))
++        assert all(r['update'] == r['epoch'] * AUTHORIZED_TRAIN_BATCHES for r in records)
+         assert records[-1] == last['metrics'] and records[best['epoch'] - 1] == best['metrics']
+         assert best['best_metric'] == records[best['epoch'] - 1]['validation']['macro_f1_85']
+         assert all(r['validation']['macro_f1_85'] <= best['best_metric'] for r in records)
+@@ -148,6 +168,11 @@
+             assert np.array_equal(prediction.frozen_row_index.to_numpy(), rows)
+             assert np.array_equal(prediction.predicted_event_id.to_numpy(), probabilities.argmax(1))
+             assert np.allclose(prediction.predicted_probability.to_numpy(), probabilities.max(1))
++            # Full path model: per-row v->u / u->v path presence exported with predictions.
++            mask = data['path_mask']
++            assert mask.shape == (len(rows), 2) and mask.dtype == bool
++            assert np.array_equal(prediction.path_v_to_u_present.to_numpy(), mask[:, 0])
++            assert np.array_equal(prediction.path_u_to_v_present.to_numpy(), mask[:, 1])
+         actual, per_class, confusion = classification_metrics(labels, probabilities)
+         # Report-only Top-5 from the same exported probabilities.
+         actual['top5_accuracy'] = top_k_accuracy(labels, probabilities)
+@@ -237,7 +262,7 @@
+     if not config_path.is_relative_to(ROOT):
+         raise ValueError('Config must remain in workspace')
+     exit_file = directory / f'attempt_{attempt}_exit.json'
+-    command = [sys.executable, '-m', 'rareddie_control.train', '--config', str(config_path), mode]
++    command = [sys.executable, '-m', 'pairout_cellout.dsn.train', '--config', str(config_path), mode]
+     launch_file = directory / f'attempt_{attempt}.json'
+     record = {'arm': arm, 'gpu': ARMS[arm], 'attempt': attempt, 'recoveries': recoveries,
+               'started_at': time.time(), 'config': str(config_path), 'mode': mode,
+@@ -279,9 +304,12 @@
+     source = 'best.pt' if best is not None and (last is None or best['epoch'] > last['epoch']) else 'last.pt'
+     state = best if source == 'best.pt' else last
+     cfg = state['config']
+-    # Own state only: never a DSN/accelerated/GPU3 checkpoint.
++    # Own state only: never a DSN/accelerated/GPU3/rareddie checkpoint.
+     if cfg.get('namespace') != NAMESPACE or Path(cfg['output']) != output:
+-        raise RuntimeError(f'{source} is not this rareddie_control run')
++        raise RuntimeError(f'{source} is not this pairout_cellout run')
++    from pairout_cellout.dsn.train import SCHEDULE
++    if SCHEDULE != AUTHORIZED_SCHEDULE or any(cfg[k] != v for k, v in AUTHORIZED_SCHEDULE.items()):
++        raise RuntimeError(f'{source} schedule differs from the authorized {AUTHORIZED_SCHEDULE}')
+     done = state['epoch'] >= cfg['epochs'] or state['bad_epochs'] >= cfg['patience']
+     if done and best is None:
+         raise RuntimeError('Training is done but best.pt is missing; do not reset training')
+@@ -349,10 +377,11 @@
+ 
+ 
+ def launch_refusals():
+-    """Initial launch gate: Codex approval newer than code/diff/evidence, passing
+-    evidence, idle GPU6/7, and both arms without any record or output state."""
++    """Initial launch gate: Codex approval newer than code/diff/audit, passing
++    full preparation audit newer than the code, idle GPU6/7, and both arms
++    without any record or output state."""
+     code = [p for p in CONTROL.rglob('*') if p.is_file() and p.suffix in ('.py', '.sh', '.yaml', '.md')
+-            and 'outputs' not in p.parts and 'evidence' not in p.parts and '.cache' not in p.parts]
++            and 'outputs' not in p.parts and 'prepared' not in p.parts and '.cache' not in p.parts]
+     if not APPROVAL.exists():
+         yield f'missing Codex review approval {APPROVAL}'
+     else:
+@@ -365,11 +394,11 @@
+         if newest.exists() and APPROVAL.stat().st_mtime < newest.stat().st_mtime:
+             yield f'approval is older than {newest}'
+     if not EVIDENCE.exists() or read_json(EVIDENCE).get('passed') is not True:
+-        yield f'evidence {EVIDENCE} missing or not passed'
+-    elif EVIDENCE.stat().st_mtime < max(p.stat().st_mtime for p in CONTROL.glob('*.py')):
+-        yield 'evidence is older than rareddie_control code'
++        yield f'audit {EVIDENCE} missing or not passed'
++    elif EVIDENCE.stat().st_mtime < max(p.stat().st_mtime for p in code if p.suffix == '.py'):
++        yield 'audit is older than pairout_cellout code (rerun python -m pairout_cellout.audit)'
+     if not REVIEW_DIFF.exists():
+-        yield f'missing {REVIEW_DIFF} (run rareddie_control/tools/make_review.sh)'
++        yield f'missing {REVIEW_DIFF} (run pairout_cellout/tools/make_review.sh)'
+     for arm, gpu in ARMS.items():
+         if (STATE / arm / 'record.json').exists():
+             yield f'{arm}: existing job record; use --status and bounded --recover'
+@@ -428,7 +457,7 @@
+             if refusals:
+                 raise RuntimeError('LAUNCH REFUSED:\n  ' + '\n  '.join(refusals))
+             result = {arm: start(arm, CONFIGS / f'{arm}.yaml', '--fresh') for arm in ARMS}
+-            from rareddie_control.status import update_status
++            from pairout_cellout.status import update_status
+             update_status('launched_awaiting_progress_confirmation',
+                           launch={arm: {k: r[k] for k in ['pid', 'process_start', 'mode', 'log', 'gpu', 'started_at']}
+                                   for arm, r in result.items()})
+### rareddie_control/launch.sh -> pairout_cellout/launch.sh
+--- rareddie_control/launch.sh	2026-10-12 15:25:10.068035031 +0800
++++ pairout_cellout/launch.sh	2026-10-12 18:52:05.635950204 +0800
+@@ -1,15 +1,15 @@
+ #!/usr/bin/env bash
+-# Host launch of both rareddie_control arms (GPU6 single_drugout, GPU7
+-# double_drugout). Codex runs this ONLY after writing
+-# logs/rareddie_control/review_approval.json; the controller refuses otherwise.
++# Host launch of both pairout_cellout full-path arms (GPU6 pairout, GPU7
++# cellout; same-DDI-split seed42 replicates). Codex runs this ONLY after writing
++# logs/pairout_cellout/review_approval.json; the controller refuses otherwise.
+ # Each arm: detached session (wrapper orphaned -> PPID 1) holding its job.lock,
+ # inherited by the training child, --fresh. Then waits (bounded) for the actual
+ # first update and a 100-update line of both arms; writes launch.json.
+-# Usage: bash rareddie_control/launch.sh --launch-reviewed
++# Usage: bash pairout_cellout/launch.sh --launch-reviewed
+ source "$(dirname -- "${BASH_SOURCE[0]}")/env.sh"
+ if [[ "${1:-}" != --launch-reviewed || $# != 1 ]]; then
+-  echo 'Usage: bash rareddie_control/launch.sh --launch-reviewed (only after Codex review approval)' >&2
++  echo 'Usage: bash pairout_cellout/launch.sh --launch-reviewed (only after Codex review approval)' >&2
+   exit 2
+ fi
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_control/jobs.py --launch-reviewed
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_control/confirm_launch.py --wait 1800
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" pairout_cellout/jobs.py --launch-reviewed
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" pairout_cellout/confirm_launch.py --wait 1800
+### rareddie_control/confirm_launch.py -> pairout_cellout/confirm_launch.py
+--- rareddie_control/confirm_launch.py	2026-10-12 15:25:10.064035081 +0800
++++ pairout_cellout/confirm_launch.py	2026-10-12 19:01:58.508496787 +0800
+@@ -1,9 +1,11 @@
+ """Confirm real progress of both launched arms (no signals, read-only).
+ 
+-Per arm: wrapper/trainer PID, PPID, session, process identity; the fresh start
+-line; the actual first update (finite CE/loss and gradients, first_update.json),
+-the parameter inventory and initial RNG record; and a 100-update progress line.
+-Writes logs/rareddie_control/launch.json and updates status.json.
++Per arm: wrapper/trainer PID, PPID, session, process identity; the fresh seed42
++full-path start line; the actual first update (finite CE/rec/KL/loss, logits and
++gradients of EVERY group including path, first_update.json), the parameter
++inventory (accelerated_four path architecture, packed attention and path keys)
++and initial RNG record; and a 100-update progress line.
++Writes logs/pairout_cellout/launch.json and updates status.json.
+ """
+ import argparse
+ import json
+@@ -12,11 +14,21 @@
+ import subprocess
+ import sys
+ import time
++import yaml
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(ROOT))
+-from rareddie_control.jobs import ARMS, OUTPUTS, STATE, live, process_start, read_json, write_json  # noqa: E402
+-from rareddie_control.status import update_status  # noqa: E402
++from pairout_cellout.jobs import (ARMS, AUTHORIZED_SCHEDULE, AUTHORIZED_TRAIN_BATCHES, OUTPUTS, STATE,  # noqa: E402
++                                  live, process_start, read_json, write_json)
++from pairout_cellout.dsn.train import GROUPS, SCHEDULE, TRAIN_BATCHES  # noqa: E402
++from pairout_cellout.status import update_status  # noqa: E402
++
++# accelerated_four/outputs/path_single_drugout/model_inventory.json (reviewed
++# packed full-path model; same global FIN tables): 13522485 / 13522483.
++PARAMETERS, TRAINABLE = 13522485, 13522483
++REQUIRED_KEYS = ['cse.blocks.0.interAtt.inter.lin_src.weight', 'cse.blocks.1.interAtt.inter.att_dst',
++                 'cse.blocks.1.inter_projection.weight', 'path.rel_kg.3.weight', 'path.attn_relation.3.weight',
++                 'pvr.encoder.0.weight', 'classifier.4.weight', 'fin_entities.weight', 'fin_relations.weight']
+ 
+ 
+ def events(log):
+@@ -51,16 +63,34 @@
+     output = OUTPUTS / arm
+     first = read_json(output / 'first_update.json') if (output / 'first_update.json').exists() else None
+     inventory = read_json(output / 'model_inventory.json') if (output / 'model_inventory.json').exists() else None
+-    first_ok = bool(first) and first['all_gradients_finite'] and all(
+-        math.isfinite(v) for v in [*first['loss_terms'].values(), *first['gradient_norms'].values()]) and all(
+-        v > 0 for v in first['gradient_norms'].values()) and sorted(first['trainable_without_gradient']) == [
+-        'cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight']
+-    inventory_ok = bool(inventory) and not inventory['forbidden_name_matches'] and not (
+-        inventory['dsn_inter_attention_present'] or inventory['inter_projection_present']
+-        or inventory['path_modules_present']) and len(inventory['molecular_transformer_convs']) == 4
+-    fresh = (found.get('start') or {}).get('mode') == 'fresh' or record['mode'] != '--fresh'
++    # GPU3 evidence: the last CSE block's norm2 output is never consumed.
++    first_ok = bool(first) and first['all_gradients_finite'] and first['logits_finite'] and all(
++        math.isfinite(v) for v in [*first['loss_terms'].values(), *first['gradient_norms'].values()]) and sorted(
++        first['gradient_norms']) == sorted(GROUPS) and all(v > 0 for v in first['gradient_norms'].values()) and sorted(
++        first['trainable_without_gradient']) == ['cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight'] and (
++        first['path_batch']['edges'] > 0 and first['path_batch']['pairs_with_cached_path'] > 0)
++    inventory_ok = bool(inventory) and inventory['parameters'] == PARAMETERS and (
++        inventory['trainable_parameters'] == TRAINABLE) and inventory['fin_trainable'] and (
++        inventory['pair_input'] == 514 and inventory['path_depth'] == 4 and inventory['groups']['path'] > 0) and all(
++        key in inventory['state_dict_keys'] for key in REQUIRED_KEYS)
++    start = found.get('start') or {}
++    # Authorized schedule: 150 epochs, patience 15, 1184 batches, 177600 updates, KL warmup 35520.
++    fresh = (start.get('mode') == 'fresh' and start.get('seed') == 42 and start.get('with_path') is True and
++             start.get('train_batches') == TRAIN_BATCHES == AUTHORIZED_TRAIN_BATCHES == 1184 and
++             SCHEDULE == AUTHORIZED_SCHEDULE and start.get('epochs') == SCHEDULE['epochs'] == 150 and
++             start.get('patience') == SCHEDULE['patience'] == 15 and
++             start.get('planned_updates') == SCHEDULE['planned_updates'] == 177600 and
++             start.get('kl_warmup_updates') == SCHEDULE['kl_warmup_updates'] == 35520 and
++             start.get('batch_size') == 128) or record['mode'] != '--fresh'
++    # The run's written config and the actual KL beta of the first and 100-update
++    # lines must follow the 35520-update warmup (a 23680 warmup would differ).
++    run_cfg = yaml.safe_load((output / 'config.yaml').read_text()) if (output / 'config.yaml').is_file() else {}
++    schedule_ok = all(run_cfg.get(k) == v for k, v in AUTHORIZED_SCHEDULE.items()) and all(
++        event is not None and math.isclose(event['beta'], .001 * min(1., event['update'] / 35520), rel_tol=1e-9)
++        for event in [found.get('first_step'), found.get('progress_100')]) and (
++        found.get('first_step') or {}).get('update') == (start.get('update', 0) + 1)
+     ok = 'start' in found and fresh and (('first_step' in found and 'progress_100' in found and first_ok
+-                                          and inventory_ok) or 'best_checkpoint_test' in found)
++                                          and inventory_ok and schedule_ok) or 'best_checkpoint_test' in found)
+     return {'pid': record['pid'], 'wrapper_ps': ps(record['pid']),
+             'wrapper_ppid_is_1': (ps(record['pid']) or '').split()[1:2] == ['1'],
+             'trainer': trainer, 'trainer_ps': ps(trainer['pid']) if trainer else None,
+@@ -68,6 +98,7 @@
+             'live': live(record), 'mode': record['mode'], 'log': record['log'],
+             'start': found.get('start'), 'first_step': found.get('first_step'), 'progress_100': found.get('progress_100'),
+             'first_update': first, 'first_update_ok': first_ok, 'inventory_ok': inventory_ok,
++            'schedule_ok': schedule_ok,
+             'initial_rng_recorded': (output / 'initial_rng.pt').is_file(),
+             'test_export': found.get('best_checkpoint_test', {}).get('macro_f1_85'),
+             'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None,
+@@ -90,9 +121,9 @@
+     launch = {'checked_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'arms': arms,
+               'gpu_compute_apps': gpus, 'loadavg': list(__import__('os').getloadavg()),
+               'all_progress_confirmed': all(a['progress_confirmed'] for a in arms.values())}
+-    write_json(ROOT / 'logs/rareddie_control/launch.json', launch)
++    write_json(ROOT / 'logs/pairout_cellout/launch.json', launch)
+     update_status('launched_progress_confirmed' if launch['all_progress_confirmed'] else 'launched_progress_unconfirmed',
+-                  launch_check={'json': str(ROOT / 'logs/rareddie_control/launch.json'),
++                  launch_check={'json': str(ROOT / 'logs/pairout_cellout/launch.json'),
+                                 'all_progress_confirmed': launch['all_progress_confirmed'],
+                                 'pids': {a: v['pid'] for a, v in arms.items()},
+                                 'trainer_pids': {a: (v['trainer'] or {}).get('pid') for a, v in arms.items()}})
+### rareddie_control/monitor/monitor_loop.sh -> pairout_cellout/monitor/monitor_loop.sh
+--- rareddie_control/monitor/monitor_loop.sh	2026-10-12 15:26:00.063406504 +0800
++++ pairout_cellout/monitor/monitor_loop.sh	2026-10-12 18:52:05.639950154 +0800
+@@ -1,9 +1,9 @@
+ #!/usr/bin/env bash
+-# Detached rareddie_control monitor daemon (started only by start_monitor.sh).
++# Detached pairout_cellout monitor daemon (started only by start_monitor.sh).
+ # Pattern of accelerated_four/monitor/monitor_loop.sh (left untouched):
+ # deterministic status, one gpt-6.1-sol LOW Codex check, host drain of recovery
+ # requests, after status; first check immediately, then one every 2400 seconds.
+-# Local state only (logs/rareddie_control/monitor, status.json); no notifications.
++# Local state only (logs/pairout_cellout/monitor, status.json); no notifications.
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ MONITOR_DIR="$LOG_DIR/monitor"
+@@ -24,15 +24,15 @@
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ status_to() {
+   # A status/verifier error is recorded and never stops monitoring.
+-  "$PYTHON_BIN" rareddie_control/jobs.py --status > "$1" 2> "$1.err" \
++  "$PYTHON_BIN" pairout_cellout/jobs.py --status > "$1" 2> "$1.err" \
+     || printf '{"all_complete": false, "status_error": true, "runs": {}}\n' > "$1"
+ }
+ record_status() {
+-  # monitor section of logs/rareddie_control/status.json; failures never stop monitoring.
++  # monitor section of logs/pairout_cellout/status.json; failures never stop monitoring.
+   "$PYTHON_BIN" - "$MONITOR_DIR" "$CHECK_ID" "$1" "${CODEX_EXIT:-}" <<'PY' || true
+ import json, sys
+ from pathlib import Path
+-from rareddie_control.status import update_status
++from pairout_cellout.status import update_status
+ monitor, check, outcome, codex_exit = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+ after = monitor / 'checks' / check / 'after.json'
+ runs = json.loads(after.read_text()).get('runs', {}) if after.exists() else {}
+@@ -79,7 +79,7 @@
+       /data/interns/zhangpc/.local/bin/codex exec \
+       --dangerously-bypass-approvals-and-sandbox --ignore-user-config --ephemeral --skip-git-repo-check \
+       -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+-      -o "$CHECK_DIR/codex_final.txt" - < rareddie_control/monitor/prompt.md \
++      -o "$CHECK_DIR/codex_final.txt" - < pairout_cellout/monitor/prompt.md \
+       > "$CHECK_DIR/codex.log" 2>&1; then
+     CODEX_EXIT=0
+     CLI_FAILURES=0
+@@ -90,7 +90,7 @@
+   fi
+   echo "$CODEX_EXIT" > "$CHECK_DIR/codex_exit.txt"
+   # Launch recovery only here, outside the CLI timeout and its PID namespace.
+-  if "$PYTHON_BIN" rareddie_control/monitor/drain_recovery_requests.py \
++  if "$PYTHON_BIN" pairout_cellout/monitor/drain_recovery_requests.py \
+       > "$CHECK_DIR/recovery_drain.log" 2>&1; then
+     :
+   else
+### rareddie_control/monitor/start_monitor.sh -> pairout_cellout/monitor/start_monitor.sh
+--- rareddie_control/monitor/start_monitor.sh	2026-10-12 15:26:17.107192234 +0800
++++ pairout_cellout/monitor/start_monitor.sh	2026-10-12 18:52:05.639950154 +0800
+@@ -1,9 +1,9 @@
+ #!/usr/bin/env bash
+-# Start the detached rareddie_control monitor daemon ONLY after both jobs have
++# Start the detached pairout_cellout monitor daemon ONLY after both jobs have
+ # records and confirmed real progress. The daemon is double-forked (setsid -f,
+ # PPID 1, own session). Waits for its FIRST SUCCESSFUL check: Codex exit 0,
+ # after.json and next_check.txt persisted. Safe to repeat while it is live.
+-# Usage: bash rareddie_control/monitor/start_monitor.sh
++# Usage: bash pairout_cellout/monitor/start_monitor.sh
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ export CUDA_VISIBLE_DEVICES=''
+@@ -21,9 +21,9 @@
+ import sys
+ import time
+ from pathlib import Path
+-from rareddie_control.jobs import ARMS, STATE, process_start
+-from rareddie_control.confirm_launch import arm_state, ps
+-from rareddie_control.status import update_status
++from pairout_cellout.jobs import ARMS, STATE, process_start
++from pairout_cellout.confirm_launch import arm_state, ps
++from pairout_cellout.status import update_status
+ monitor = Path(sys.argv[1])
+ for arm in ARMS:
+     if not (STATE / arm / 'record.json').is_file():
+@@ -37,7 +37,7 @@
+ (monitor / 'monitor.pid').unlink(missing_ok=True)
+ started = time.time()
+ with (monitor / 'daemon.log').open('a') as log:
+-    subprocess.run(['setsid', '-f', 'bash', str(root / 'rareddie_control/monitor/monitor_loop.sh')], cwd=root,
++    subprocess.run(['setsid', '-f', 'bash', str(root / 'pairout_cellout/monitor/monitor_loop.sh')], cwd=root,
+                    stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, close_fds=True, check=True)
+ for _ in range(300):
+     if (monitor / 'monitor.pid').is_file() and (monitor / 'monitor.pid').read_text().strip():
+@@ -71,5 +71,5 @@
+ print(fields)
+ if not success:
+     raise SystemExit(f'First monitor check NOT successful (codex exit {codex_exit}); daemon keeps its 2400 s schedule')
+-print(f'Detached rareddie_control monitor PID {pid}; first check succeeded; next check {next_check}')
++print(f'Detached pairout_cellout monitor PID {pid}; first check succeeded; next check {next_check}')
+ PY
+### rareddie_control/monitor/drain_recovery_requests.py -> pairout_cellout/monitor/drain_recovery_requests.py
+--- rareddie_control/monitor/drain_recovery_requests.py	2026-10-12 15:25:35.447715965 +0800
++++ pairout_cellout/monitor/drain_recovery_requests.py	2026-10-12 18:52:05.635950204 +0800
+@@ -1,7 +1,7 @@
+ """Consume monitor recovery requests in the host daemon, once per request.
+ 
+-Copy of accelerated_four/monitor/drain_recovery_requests.py for rareddie_control:
+-requests carry only arm and reason; rareddie_control/jobs.py alone decides.
++Copy of accelerated_four/monitor/drain_recovery_requests.py for pairout_cellout:
++requests carry only arm and reason; pairout_cellout/jobs.py alone decides.
+ """
+ import json
+ from pathlib import Path
+@@ -11,7 +11,7 @@
+ 
+ 
+ ROOT = Path(__file__).resolve().parents[2]
+-REQUESTS = ROOT / 'logs/rareddie_control/monitor/recovery_requests'
++REQUESTS = ROOT / 'logs/pairout_cellout/monitor/recovery_requests'
+ 
+ 
+ def write_record(path, record):
+@@ -44,7 +44,7 @@
+                     or set(request) - {'arm', 'reason'}):
+                 raise ValueError('Request requires exactly arm and a nonempty reason')
+             record['request'] = {key: request[key] for key in ('arm', 'reason')}
+-            command = [sys.executable, str(ROOT / 'rareddie_control/jobs.py'),
++            command = [sys.executable, str(ROOT / 'pairout_cellout/jobs.py'),
+                        '--recover', request['arm'], '--reason', request['reason']]
+             record['command'] = command
+             write_record(claimed, record)
+### rareddie_control/monitor/prompt.md -> pairout_cellout/monitor/prompt.md
+--- rareddie_control/monitor/prompt.md	2026-10-12 15:26:30.827019753 +0800
++++ pairout_cellout/monitor/prompt.md	2026-10-12 18:57:43.743699614 +0800
+@@ -1,5 +1,7 @@
+-You are the detached SERVER monitor for the two rareddie_control DDI jobs in
+-/data/interns/zhangpc/cairn_new (namespace rareddie_control). Use gpt-6.1-sol
++You are the detached SERVER monitor for the two pairout_cellout full-path DDI
++jobs in /data/interns/zhangpc/cairn_new (namespace pairout_cellout). Both arms
++train on the identical frozen PairOut DDI split: cellout is an independent
++same-DDI-split seed42 replicate, not DDI cell-cold generalization. Use gpt-6.1-sol
+ with reasoning LOW. The main chat has ended; do not require it, app automation,
+ or user confirmation. Scheduled networked CLI execution and the existing private
+ .codex_runtime authentication are authorized. Never inspect, print, copy, or
+@@ -7,28 +9,34 @@
+ variables for the existing service. Do not source .bashrc, call clashon, or
+ start interactive shells/history writes. Do not notify or message anyone.
+ 
+-SCOPE: only the rareddie_control arms: state logs/rareddie_control/jobs/,
+-outputs rareddie_control/outputs/<arm>/, their recorded wrapper/trainer PIDs.
+-Exact GPU mapping: single_drugout=GPU6, double_drugout=GPU7. Everything else is
+-someone else's: the original jobs (logs/server_jobs/, outputs/, scripts/,
+-cairn_dsn/, configs/), accelerated_four/ and logs/accelerated_four/, GPU0-5 and
+-their monitors. Never read their checkpoints for decisions, never signal them,
+-never write there.
++SCOPE: only the pairout_cellout arms: state logs/pairout_cellout/jobs/,
++outputs pairout_cellout/outputs/<arm>/, their recorded wrapper/trainer PIDs.
++Exact GPU mapping: pairout=GPU6, cellout=GPU7. Everything else is someone
++else's: the original jobs (logs/server_jobs/, outputs/, scripts/, cairn_dsn/,
++configs/, data/prepared/), accelerated_four/, rareddie_control/, benchmarks/,
++their logs/, GPU0-5 and all their monitors (including the original GPU4/5
++monitor). Never read their checkpoints for decisions, never signal them, never
++write there. If one of them finishes naturally, that is not a pause or failure
++of these jobs. pairout_cellout/prepared/ is read-only for you.
+ 
+-First read logs/rareddie_control/jobs/status.json (written immediately before
+-this check by `rareddie_control/jobs.py --status`), then as needed the per-run
++First read logs/pairout_cellout/jobs/status.json (written immediately before
++this check by `pairout_cellout/jobs.py --status`), then as needed the per-run
+ record.json, current attempt log tail, attempt_<N>_process.json and exit records,
+ history.jsonl tail and output state. Use the read-only Python environment via
+-`source rareddie_control/env.sh` ($PYTHON_BIN). Keep every write, temporary file
+-and cache inside cairn_new, under logs/rareddie_control/monitor/ only.
++`source pairout_cellout/env.sh` ($PYTHON_BIN). Keep every write, temporary file
++and cache inside cairn_new, under logs/pairout_cellout/monitor/ only.
+ cairn_dev is READ ONLY. No permission changes, broad audits, hashes, smoke runs,
+ preparation, new experiments, or changes to data/model/selection formulas.
+ 
+-`rareddie_control/jobs.py --status` performs the real export verification:
+-stopped schedule (100 epochs or patience 15), selected best.pt consistent with
++`pairout_cellout/jobs.py --status` performs the real export verification:
++stopped schedule (150 epochs or patience 15; the ONLY authorized schedule is
++150 epochs, patience 15, KL warmup 0.2 -> 177600 planned / 35520 warmup
++updates), seed42 full-path batch-128 config,
++selected best.pt consistent with
+ last.pt and the strict fixed85 validation MacroF1 history maximum, frozen test
+ rows, 85-way probabilities, metrics incl. report-only Top-5, predictions,
+-per-class and confusion exports, test config and completion marker. Exit status
++per-class and confusion exports, per-row path presence, test config and
++completion marker. Exit status
+ alone never proves success. Do not mark a run complete yourself or manufacture
+ output files. The loop writes final_summary and exits only with verified
+ success (or when all runs are complete/exhausted). Codex CLI failures never end
+@@ -38,31 +46,32 @@
+ wrapper died, the job.lock may still be held by its live training child
+ (attempt_<N>_process.json). Never kill/restart live jobs because of SSH loss,
+ CLI timeout, polling timeout, stale epoch lines, or missing logs. The trainer
+-prints a train_progress line every 100 updates; one epoch is 1165 updates.
++prints a train_progress line every 100 updates; one epoch is 1184 updates
++(151508 rows / batch 128), plus validation on 18939 rows.
+ If all states are live/complete with no actionable change, stay quiet.
+-Optionally append one short line to logs/rareddie_control/monitor/codex_notes.jsonl;
++Optionally append one short line to logs/pairout_cellout/monitor/codex_notes.jsonl;
+ no chat output, no questions.
+ 
+-You may ONLY: read logs/artifacts, run `rareddie_control/jobs.py --status`, and
++You may ONLY: read logs/artifacts, run `pairout_cellout/jobs.py --status`, and
+ file recovery requests. Do not edit any code, config, data, model, checkpoint,
+ history or output file. Never launch, resume or test-run training yourself.
+-NEVER execute rareddie_control/jobs.py --recover, --launch-reviewed, --block or
+---worker, rareddie_control/launch.sh, or
+-rareddie_control/monitor/drain_recovery_requests.py, and never call the
++NEVER execute pairout_cellout/jobs.py --recover, --launch-reviewed, --block or
++--worker, pairout_cellout/launch.sh, or
++pairout_cellout/monitor/drain_recovery_requests.py, and never call the
+ controller's functions through Python or another wrapper: a Codex tool's PID
+ namespace and lifetime are scoped to this check.
+ 
+ For an actually FAILED job (state failed: dead process AND unlocked job.lock AND
+ unverified exports, i.e. a genuine exited failure), inspect its recorded errors
+ first. Then write ONE JSON recovery request under
+-logs/rareddie_control/monitor/recovery_requests/:
++logs/pairout_cellout/monitor/recovery_requests/:
+ 
+   {"arm": "<exact arm name>", "reason": "<actual observed failure>"}
+ 
+ Use a unique filename (timestamp plus UUID), write a .tmp file in that same
+ directory, then atomically rename it to .json. Do not create a duplicate request
+ for an arm with a pending request. Record the request path and observed failure
+-in logs/rareddie_control/monitor/actions.jsonl. Never request recovery for live
++in logs/pairout_cellout/monitor/actions.jsonl. Never request recovery for live
+ or complete runs. The host daemon drains requests AFTER this Codex invocation
+ ends and BEFORE its after-status snapshot, invoking the bounded controller (at
+ most three recoveries per arm, preparation errors included). It archives
+@@ -70,8 +79,8 @@
+ exact recorded config, optimizer, update, RNG and schedule (--resume), or runs
+ --test-only once training has stopped. It never restarts from scratch (--fresh
+ is the initial launch only; a run that died before its first epoch checkpoint
+-is not recoverable and stays failed), never restores DSN/accelerated/GPU3
+-weights, and never changes the batch size. Processed requests and their results
++is not recoverable and stays failed), never restores DSN/accelerated/GPU3/
++rareddie weights, and never changes the batch size. Processed requests and their results
+ are in recovery_requests/processed/; interrupted requests are not replayed. A
+ queued request is not a completed recovery.
+ 
+### rareddie_control/tools/make_review.sh -> pairout_cellout/tools/make_review.sh
+--- rareddie_control/tools/make_review.sh	2026-10-12 15:26:53.634733021 +0800
++++ pairout_cellout/tools/make_review.sh	2026-10-12 18:52:53.035354313 +0800
+@@ -1,35 +1,44 @@
+ #!/usr/bin/env bash
+-# Actual unified diffs for review: rareddie_control against the reused
+-# accelerated_four files it adapts (review/implementation.diff), plus the new
+-# files (review/new_files.diff). The original RareDDIE block is included for
+-# the CSE order comparison.
++# Actual unified diffs for review: every pairout_cellout file against the
++# reviewed file it copies/adapts (review/implementation.diff; empty sections
++# mean byte-identical copies), plus genuinely new files (review/new_files.diff).
+ set -uo pipefail
+ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+ cd "$ROOT_DIR"
+ A=accelerated_four
+-C=rareddie_control
++R=rareddie_control
++P=pairout_cellout
++pair() {
++  echo "### $1 -> $2"
++  diff -u "$1" "$2"
++}
+ {
+-  echo "### accelerated_four no-path comparator -> rareddie_control"
+-  diff -u "$A/dsn/model.py" "$C/model.py"
+-  diff -u "$A/dsn/data.py" "$C/data.py"
+-  diff -u "$A/dsn/train.py" "$C/train.py"
+-  diff -u "$A/configs/no_path_single_drugout.yaml" "$C/configs/single_drugout.yaml"
+-  diff -u "$A/configs/no_path_double_drugout.yaml" "$C/configs/double_drugout.yaml"
+-  diff -u "$A/env.sh" "$C/env.sh"
+-  diff -u "$A/status.py" "$C/status.py"
+-  diff -u "$A/jobs.py" "$C/jobs.py"
+-  diff -u "$A/launch_four.sh" "$C/launch.sh"
+-  diff -u "$A/tools/confirm_launch.py" "$C/confirm_launch.py"
+-  diff -u "$A/monitor/monitor_loop.sh" "$C/monitor/monitor_loop.sh"
+-  diff -u "$A/monitor/start_monitor.sh" "$C/monitor/start_monitor.sh"
+-  diff -u "$A/monitor/drain_recovery_requests.py" "$C/monitor/drain_recovery_requests.py"
+-  diff -u "$A/monitor/prompt.md" "$C/monitor/prompt.md"
+-  echo "### original RareDDIE MVN_DDI_Block (references/RareDDIE/models_t_struc.py lines 79-145) for CSE order"
+-  sed -n '79,145p' references/RareDDIE/models_t_struc.py
+-} > "$C/review/implementation.diff"
++  echo "### Unchanged copies (no diff output expected)"
++  pair "$A/dsn/model.py" "$P/dsn/model.py"
++  pair "$A/dsn/data.py" "$P/dsn/data.py"
++  pair "$A/dsn/metrics.py" "$P/dsn/metrics.py"
++  pair "$A/dsn/__init__.py" "$P/dsn/__init__.py"
++  pair cairn_dsn/paths.py "$P/paths.py"
++  echo "### Preparation/audit adapted from the original cairn_dsn"
++  pair cairn_dsn/prepare.py "$P/prepare.py"
++  pair cairn_dsn/audit.py "$P/audit.py"
++  echo "### Trainer and configs adapted from the reviewed accelerated_four path arm"
++  pair "$A/dsn/train.py" "$P/dsn/train.py"
++  pair "$A/configs/path_single_drugout.yaml" "$P/configs/pairout.yaml"
++  pair "$A/configs/path_single_drugout.yaml" "$P/configs/cellout.yaml"
++  echo "### Two-arm controller/monitor adapted from rareddie_control"
++  pair "$R/env.sh" "$P/env.sh"
++  pair "$R/status.py" "$P/status.py"
++  pair "$R/jobs.py" "$P/jobs.py"
++  pair "$R/launch.sh" "$P/launch.sh"
++  pair "$R/confirm_launch.py" "$P/confirm_launch.py"
++  pair "$R/monitor/monitor_loop.sh" "$P/monitor/monitor_loop.sh"
++  pair "$R/monitor/start_monitor.sh" "$P/monitor/start_monitor.sh"
++  pair "$R/monitor/drain_recovery_requests.py" "$P/monitor/drain_recovery_requests.py"
++  pair "$R/monitor/prompt.md" "$P/monitor/prompt.md"
++  pair "$R/tools/make_review.sh" "$P/tools/make_review.sh"
++} > "$P/review/implementation.diff"
+ {
+-  for f in "$C/__init__.py" "$C/tools/cse_equivalence.py" "$C/tools/make_review.sh"; do
+-    diff -uN /dev/null "$f"
+-  done
+-} > "$C/review/new_files.diff"
+-wc -l "$C/review/implementation.diff" "$C/review/new_files.diff"
++  diff -uN /dev/null "$P/__init__.py"
++} > "$P/review/new_files.diff"
++wc -l "$P/review/implementation.diff" "$P/review/new_files.diff"

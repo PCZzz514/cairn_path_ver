@@ -1,0 +1,30 @@
+The PairOut/CellOut package is written, real CPU preparation and the full audit have run, and it is ready for Codex review. Nothing has been launched: no training, no monitor, no model forward pass.
+
+**Schedule changed to 150 epochs.** While I was working, Codex added a direct human update: maximum 150 epochs for both jobs, overriding the 100 in my request. I applied it rather than leave a stale 100-epoch package marked ready. Patience stays 15 and KL warmup stays 20%. With 1,184 batches per epoch (151,508 / 128, confirmed with the real DataLoader), that is 177,600 planned updates and a 35,520-update KL warmup (30 epochs). The schedule is defined once in the trainer. The configs, audit, trainer, completion check, recovery and launch confirmation all refuse anything else, so a 100-epoch run can't launch or verify as complete. Codex planned a follow-up Claude for this change; it now only needs to verify, and the handoff and `status.json` say so.
+
+**Source data**
+- The CellOut `ddi.parquet` is a symlink to the PairOut source, so the two frames are byte-identical: train 151,508 / val 18,939 / test 18,938.
+- The two jobs are labelled as independent seed-42 replicates on the same DDI split, not as DDI cell-cold generalization. No cell features are used. With identical inputs and settings, results should be near-identical; GPU rounding can still make them differ.
+- No pair, reversed pair or `pair_group` appears in more than one split. Drugs are shared across splits, as expected for PairOut.
+- Class support: train has all 85 classes, val 82 (classes 11, 26 and 65 absent), test 83 (50 and 52 absent).
+
+**Preparation**
+- 189,385 unique ordered pairs. 188,105 reuse the old cache's audited topology, copied exactly. The other 1,280 were extracted with the unchanged original route extractor on the full 4,488,504-triple non-DDI DRKG, with caps 32/2.
+- 2,048 reused pairs were re-extracted as a check, and all matched the old cache exactly.
+- 696 pairs (0.37%) have no path of length ≤4, the same 696 as the old cache; all 1,280 new pairs have paths. Missing-path rate by split: train 0.37%, val 0.31%, test 0.38%.
+- All 1,666 molecule graphs come unchanged from the bundle and equal the old ones, so none had to be added. The FIN and NAI tables match the originals and drug IDs keep their global numbering.
+
+**Audit and checks**
+- The full audit passed after the final code change. It checks every pair for source facts, multiplicity, inverses, self edges and two-direction 4-hop reachability matching the cached mask. It also confirms every reused segment is an exact copy, rows, columns, events, IDs and splits are exact, and the old `data/prepared` is unchanged.
+- Static checks passed: Python parse, `bash -n`, CPU imports, the trainer's preparation gate for both configs, and controller status (both arms not launched).
+- The model, data and metrics files are byte-identical to the accelerated_four copies, and the path extractor is byte-identical to `cairn_dsn`.
+- The only launch-gate refusal now is the missing Codex approval. GPU6/7 are idle.
+
+Nothing outside `pairout_cellout/` and `logs/pairout_cellout/` was modified. The original GPU4/5 jobs and their monitor are still running and were not touched.
+
+**Commands for Codex (from `cairn_new`)**
+- Review: `pairout_cellout/review/REVIEW.md`, `implementation.diff`, `new_files.diff`, and `logs/pairout_cellout/implementation_handoff.md`.
+- Launch, after Codex writes `logs/pairout_cellout/review_approval.json`: `bash pairout_cellout/launch.sh --launch-reviewed`. It launches GPU6 PairOut and GPU7 CellOut fresh, then waits until each job shows a finite first update in every parameter group (including path) and a 100-update progress line.
+- Monitor: `bash pairout_cellout/monitor/start_monitor.sh`. It starts a detached gpt-6.1-sol LOW monitor that checks immediately, then every 2400 seconds until both best-checkpoint test exports verify.
+
+The approval has to be written after the code, the review diff and the audit report, because the launch gate compares timestamps. Any further code change means rerunning the audit and `make_review.sh` first.

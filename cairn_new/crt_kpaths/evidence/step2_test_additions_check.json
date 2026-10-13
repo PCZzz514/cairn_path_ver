@@ -1,0 +1,34 @@
+{
+  "single_drugout": {
+    "source": "accelerated_four/outputs/path_single_drugout",
+    "written_to_source": false,
+    "existing_fields_preserved": true,
+    "added_fields": [
+      "diagnostic_train_and_test_positive_classes",
+      "top5_accuracy"
+    ],
+    "top5_accuracy": 0.9219578277771233,
+    "top5_independent": 0.9219578277771233,
+    "diagnostic_class_count": 71,
+    "diagnostic_macro_f1": 0.6360171200209329,
+    "diagnostic_independent_macro_f1": 0.6360171200209329,
+    "fixed85_macro_f1_unchanged": 0.5312613590763087,
+    "class_counts_rows": 85
+  },
+  "double_drugout": {
+    "source": "accelerated_four/outputs/path_double_drugout",
+    "written_to_source": false,
+    "existing_fields_preserved": true,
+    "added_fields": [
+      "diagnostic_train_and_test_positive_classes",
+      "top5_accuracy"
+    ],
+    "top5_accuracy": 0.7827715355805244,
+    "top5_independent": 0.7827715355805244,
+    "diagnostic_class_count": 27,
+    "diagnostic_macro_f1": 0.3289652030614398,
+    "diagnostic_independent_macro_f1": 0.3289652030614398,
+    "fixed85_macro_f1_unchanged": 0.10449482920775145,
+    "class_counts_rows": 85
+  }
+}

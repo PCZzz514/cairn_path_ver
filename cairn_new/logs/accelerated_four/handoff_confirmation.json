@@ -1,0 +1,135 @@
+{
+  "checked_at": "2026-10-12T12:14:27+0800",
+  "runs": {
+    "path_single_drugout": {
+      "state_at_handoff": "live",
+      "gpu": 4,
+      "job_pid": 2968281,
+      "trainer_pid": 2968282,
+      "job_ppid_at_launch": 1,
+      "resume_checkpoint_epoch": 29,
+      "start_epoch": 30,
+      "best_snapshot_epoch": 20,
+      "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_single_drugout",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_single_drugout/attempt_1.log",
+      "first_step_update": 33786,
+      "confirmed_periodic_update": 34000,
+      "mode": "--resume",
+      "recoveries": 0,
+      "completion_evidence": {}
+    },
+    "path_double_drugout": {
+      "state_at_handoff": "live",
+      "gpu": 5,
+      "job_pid": 2968292,
+      "trainer_pid": 2968293,
+      "job_ppid_at_launch": 1,
+      "resume_checkpoint_epoch": 33,
+      "start_epoch": 34,
+      "best_snapshot_epoch": 28,
+      "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_double_drugout",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_double_drugout/attempt_1.log",
+      "first_step_update": 38446,
+      "confirmed_periodic_update": 38700,
+      "mode": "--resume",
+      "recoveries": 0,
+      "completion_evidence": {}
+    },
+    "no_path_single_drugout": {
+      "state_at_handoff": "complete",
+      "gpu": 6,
+      "job_pid": 2968296,
+      "trainer_pid": 2968297,
+      "job_ppid_at_launch": 1,
+      "resume_checkpoint_epoch": 30,
+      "start_epoch": 31,
+      "best_snapshot_epoch": 16,
+      "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_single_drugout",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_single_drugout/attempt_1.log",
+      "first_step_update": 34951,
+      "confirmed_periodic_update": 35200,
+      "mode": "--resume",
+      "recoveries": 0,
+      "completion_evidence": {
+        "selected_epoch": 16,
+        "last_epoch": 31,
+        "bad_epochs": 15,
+        "rows": 16978,
+        "metrics": {
+          "rows": 16978,
+          "accuracy": 0.7157497938508658,
+          "macro_f1_85": 0.5049692356187174,
+          "macro_precision_85": 0.534522344825512,
+          "macro_recall_85": 0.5449319343100237,
+          "weighted_f1": 0.7053535172684428,
+          "micro_f1": 0.7157497938508658,
+          "mcc": 0.662707574879349,
+          "kappa": 0.6615287230903442,
+          "classes_present": 72,
+          "macro_roc_auc_supported_classes": 0.9563113223564943,
+          "roc_auc_classes": 72,
+          "macro_ap_supported_classes": 0.6995263372118659,
+          "ap_classes": 72
+        }
+      }
+    },
+    "no_path_double_drugout": {
+      "state_at_handoff": "live",
+      "gpu": 7,
+      "job_pid": 2968307,
+      "trainer_pid": 2968308,
+      "job_ppid_at_launch": 1,
+      "resume_checkpoint_epoch": 32,
+      "start_epoch": 33,
+      "best_snapshot_epoch": 24,
+      "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_double_drugout",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_double_drugout/attempt_1.log",
+      "first_step_update": 37281,
+      "confirmed_periodic_update": 37400,
+      "mode": "--resume",
+      "recoveries": 0,
+      "completion_evidence": {}
+    }
+  },
+  "original_jobs": {
+    "path_single_drugout": {
+      "pid": 2560540,
+      "alive_same_process": true,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "pid": 2560541,
+      "alive_same_process": true,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "pid": 2560542,
+      "alive_same_process": false,
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791778400.3799424
+      }
+    },
+    "no_path_double_drugout": {
+      "pid": 2560543,
+      "alive_same_process": true,
+      "exit": null
+    }
+  },
+  "original_monitor_pid": 2568426,
+  "monitor": {
+    "pid": 2968961,
+    "ppid": 1,
+    "first_low_check_succeeded": true,
+    "last_check": "2026-10-12T04:12:01Z",
+    "next_check": "2026-10-12T04:52:01Z",
+    "model": "gpt-6.1-sol",
+    "reasoning": "low",
+    "interval_seconds": 2400,
+    "state_dir": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/monitor",
+    "state": "monitoring"
+  },
+  "final_exports": "no_path_single verified complete; remaining three monitored",
+  "original_source_config_stat_unchanged": true,
+  "final_report": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/codex_final.txt"
+}

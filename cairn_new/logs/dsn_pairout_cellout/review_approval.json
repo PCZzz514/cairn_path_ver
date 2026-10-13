@@ -1,0 +1,28 @@
+{
+  "approved": true,
+  "reviewer": "Codex gpt-6.1-sol MEDIUM",
+  "approved_at": "2026-10-12T21:32:41+0800",
+  "implementation_author": "claude-opus-5-5 DEFAULT effort; exact CLI exited 0",
+  "reviewed_diff": "dsn_pairout_cellout/review/implementation.diff",
+  "new_files_diff": "dsn_pairout_cellout/review/new_files.diff",
+  "evidence": "dsn_pairout_cellout/evidence/cohort_copy_evidence.json",
+  "independent_checks": "AST/shell syntax, unchanged model/data byte equality, frozen cohort counts/support/pair indices/config schedule; passed",
+  "review": {
+    "model": "Packed DSN GAT and projection retained unchanged, local selfloop semantics preserved; no path module/arrays; deterministic mu classifier and all non-DSN counts match pure control; FIN trainable same pretrained tables",
+    "trainer": "150 max/p15 strict fixed85 validation MacroF1,1184 batches,177600 planned,35520 KL warmup; loss/AdamW/RNG/exact-config resume/export flow preserved; no test selection or epoch test",
+    "controller": "Only isolated new namespace written; GPUs6/7 sharing explicitly allowed,8GiB headroom gate; no signals; detached wrappers inherited locks; bounded own-checkpoint-only recovery, no live restart",
+    "monitor": "Separate detached daemon immediate+2400sec gpt-6.1-sol LOW; own locks/logs/PIDs; existing CODEX_HOME/proxy; real selected-best export verifier and host recovery drain preserved"
+  },
+  "gpu_map": {
+    "pairout": 6,
+    "cellout": 7
+  },
+  "schedule": {
+    "train_batches": 1184,
+    "planned_updates": 177600,
+    "kl_warmup_updates": 35520,
+    "kl_warmup_epochs": 30.0
+  },
+  "ddi_split_note": "same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicates, NOT true cell-cold DDI generalization",
+  "contention_note": "Parallel with live pure controls on same cards; CPU/GPU contention expected; no timing promise"
+}

@@ -1,0 +1,4 @@
+{"time": 1791871870.2210035, "started": "step1_single_drugout", "pid": 3826575}
+{"time": 1791871870.2210417, "started": "step1_double_drugout", "pid": 3826576}
+{"time": 1791871870.221059, "started": "step2_kpaths_single_drugout", "pid": 3826577}
+{"time": 1791871870.2210739, "started": "step2_kpaths_double_drugout", "pid": 3826578}

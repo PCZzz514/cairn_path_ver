@@ -1,0 +1,23 @@
+{
+  "labels": 128,
+  "loss_terms": {
+    "ce": 4.515107154846191,
+    "rec": 1.034958839416504,
+    "kl": 0.027611594647169113,
+    "beta": 4.291845493562232e-08,
+    "loss": 4.618603229522705
+  },
+  "gradient_norms": {
+    "fin_entities": 0.1028563380241394,
+    "fin_relations": 0.3782261610031128,
+    "cse": 2.115690231323242,
+    "nai": 1.9296050071716309,
+    "pvr": 2.9502317905426025,
+    "classifier": 2.1110785007476807
+  },
+  "all_gradients_finite": true,
+  "trainable_without_gradient": [
+    "cse.blocks.1.norm2.weight",
+    "cse.blocks.1.norm2.bias"
+  ]
+}

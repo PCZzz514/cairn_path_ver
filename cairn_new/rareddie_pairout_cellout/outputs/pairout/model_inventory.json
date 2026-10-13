@@ -1,0 +1,933 @@
+{
+  "parameters": 13123801,
+  "trainable_parameters": 13123799,
+  "groups": {
+    "fin_entities": 12386048,
+    "fin_relations": 13440,
+    "cse": 340356,
+    "nai": 98432,
+    "pvr": 230400,
+    "classifier": 55125
+  },
+  "frozen": [
+    "cse.blocks.0.readout.select.weight",
+    "cse.blocks.1.readout.select.weight"
+  ],
+  "forbidden_name_matches": [],
+  "dsn_inter_attention_present": false,
+  "inter_projection_present": false,
+  "path_modules_present": false,
+  "molecular_transformer_convs": {
+    "blocks.0.feature_conv": "TransformerConv",
+    "blocks.0.feature_conv2": "TransformerConv",
+    "blocks.1.feature_conv": "TransformerConv",
+    "blocks.1.feature_conv2": "TransformerConv"
+  },
+  "fin_trainable": true,
+  "pair_input": 256,
+  "latent": 128,
+  "classifier": [
+    "LayerNorm((128,), eps=1e-05, elementwise_affine=True)",
+    "Linear(in_features=128, out_features=256, bias=True)",
+    "GELU(approximate='none')",
+    "Dropout(p=0.2, inplace=False)",
+    "Linear(in_features=256, out_features=85, bias=True)"
+  ],
+  "tensors": [
+    {
+      "name": "fin_entities.weight",
+      "shape": [
+        96766,
+        128
+      ],
+      "numel": 12386048,
+      "requires_grad": true,
+      "group": "fin_entities"
+    },
+    {
+      "name": "fin_relations.weight",
+      "shape": [
+        105,
+        128
+      ],
+      "numel": 13440,
+      "requires_grad": true,
+      "group": "fin_relations"
+    },
+    {
+      "name": "cse.initial_node_feature.weight",
+      "shape": [
+        128,
+        55
+      ],
+      "numel": 7040,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.initial_node_feature.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.initial_edge_feature.weight",
+      "shape": [
+        64,
+        17
+      ],
+      "numel": 1088,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.initial_edge_feature.bias",
+      "shape": [
+        64
+      ],
+      "numel": 64,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.initial_node_norm.weight",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.initial_node_norm.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_key.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_key.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_query.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_query.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_value.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_value.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_edge.weight",
+      "shape": [
+        128,
+        64
+      ],
+      "numel": 8192,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_skip.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv.lin_skip.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.lin_up.weight",
+      "shape": [
+        64,
+        64
+      ],
+      "numel": 4096,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.lin_up.bias",
+      "shape": [
+        64
+      ],
+      "numel": 64,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_key.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_key.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_query.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_query.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_value.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_value.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_edge.weight",
+      "shape": [
+        128,
+        64
+      ],
+      "numel": 8192,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_skip.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.feature_conv2.lin_skip.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.lin_up2.weight",
+      "shape": [
+        64,
+        64
+      ],
+      "numel": 4096,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.lin_up2.bias",
+      "shape": [
+        64
+      ],
+      "numel": 64,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.readout.gnn.lin_rel.weight",
+      "shape": [
+        1,
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.readout.gnn.lin_rel.bias",
+      "shape": [
+        1
+      ],
+      "numel": 1,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.readout.gnn.lin_root.weight",
+      "shape": [
+        1,
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.readout.select.weight",
+      "shape": [
+        1,
+        1
+      ],
+      "numel": 1,
+      "requires_grad": false,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.norm.weight",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.norm.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.norm2.weight",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.norm2.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.re_shape_e.weight",
+      "shape": [
+        128,
+        64
+      ],
+      "numel": 8192,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.0.re_shape_e.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_key.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_key.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_query.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_query.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_value.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_value.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_edge.weight",
+      "shape": [
+        128,
+        64
+      ],
+      "numel": 8192,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_skip.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv.lin_skip.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.lin_up.weight",
+      "shape": [
+        64,
+        64
+      ],
+      "numel": 4096,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.lin_up.bias",
+      "shape": [
+        64
+      ],
+      "numel": 64,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_key.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_key.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_query.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_query.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_value.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_value.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_edge.weight",
+      "shape": [
+        128,
+        64
+      ],
+      "numel": 8192,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_skip.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.feature_conv2.lin_skip.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.lin_up2.weight",
+      "shape": [
+        64,
+        64
+      ],
+      "numel": 4096,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.lin_up2.bias",
+      "shape": [
+        64
+      ],
+      "numel": 64,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.readout.gnn.lin_rel.weight",
+      "shape": [
+        1,
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.readout.gnn.lin_rel.bias",
+      "shape": [
+        1
+      ],
+      "numel": 1,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.readout.gnn.lin_root.weight",
+      "shape": [
+        1,
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.readout.select.weight",
+      "shape": [
+        1,
+        1
+      ],
+      "numel": 1,
+      "requires_grad": false,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.norm.weight",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.norm.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.norm2.weight",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.norm2.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.re_shape_e.weight",
+      "shape": [
+        128,
+        64
+      ],
+      "numel": 8192,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "cse.blocks.1.re_shape_e.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "cse"
+    },
+    {
+      "name": "nai.gcn_w.weight",
+      "shape": [
+        128,
+        256
+      ],
+      "numel": 32768,
+      "requires_grad": true,
+      "group": "nai"
+    },
+    {
+      "name": "nai.gcn_w.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "nai"
+    },
+    {
+      "name": "nai.Bilinear.weight",
+      "shape": [
+        1,
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "nai"
+    },
+    {
+      "name": "nai.Linear_self.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "nai"
+    },
+    {
+      "name": "nai.Linear_nei.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "nai"
+    },
+    {
+      "name": "nai.Linear_weak_rel.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "numel": 16384,
+      "requires_grad": true,
+      "group": "nai"
+    },
+    {
+      "name": "pvr.encoder.0.weight",
+      "shape": [
+        256,
+        256
+      ],
+      "numel": 65536,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.encoder.0.bias",
+      "shape": [
+        256
+      ],
+      "numel": 256,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.mu.weight",
+      "shape": [
+        128,
+        256
+      ],
+      "numel": 32768,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.mu.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.logvar.weight",
+      "shape": [
+        128,
+        256
+      ],
+      "numel": 32768,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.logvar.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.decoder.0.weight",
+      "shape": [
+        256,
+        128
+      ],
+      "numel": 32768,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.decoder.0.bias",
+      "shape": [
+        256
+      ],
+      "numel": 256,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.decoder.2.weight",
+      "shape": [
+        256,
+        256
+      ],
+      "numel": 65536,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "pvr.decoder.2.bias",
+      "shape": [
+        256
+      ],
+      "numel": 256,
+      "requires_grad": true,
+      "group": "pvr"
+    },
+    {
+      "name": "classifier.0.weight",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "classifier"
+    },
+    {
+      "name": "classifier.0.bias",
+      "shape": [
+        128
+      ],
+      "numel": 128,
+      "requires_grad": true,
+      "group": "classifier"
+    },
+    {
+      "name": "classifier.1.weight",
+      "shape": [
+        256,
+        128
+      ],
+      "numel": 32768,
+      "requires_grad": true,
+      "group": "classifier"
+    },
+    {
+      "name": "classifier.1.bias",
+      "shape": [
+        256
+      ],
+      "numel": 256,
+      "requires_grad": true,
+      "group": "classifier"
+    },
+    {
+      "name": "classifier.4.weight",
+      "shape": [
+        85,
+        256
+      ],
+      "numel": 21760,
+      "requires_grad": true,
+      "group": "classifier"
+    },
+    {
+      "name": "classifier.4.bias",
+      "shape": [
+        85
+      ],
+      "numel": 85,
+      "requires_grad": true,
+      "group": "classifier"
+    }
+  ]
+}

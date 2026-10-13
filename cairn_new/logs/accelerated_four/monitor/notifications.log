@@ -1,0 +1,9 @@
+2026-10-12T12:12:10+0800 path_single_drugout: None -> live (attempt 1, epoch 29, test macroF1 None)
+2026-10-12T12:12:10+0800 path_double_drugout: None -> live (attempt 1, epoch 33, test macroF1 None)
+2026-10-12T12:12:10+0800 no_path_single_drugout: None -> live (attempt 1, epoch 30, test macroF1 None)
+2026-10-12T12:12:10+0800 no_path_double_drugout: None -> live (attempt 1, epoch 32, test macroF1 None)
+2026-10-12T12:52:34+0800 path_single_drugout: live -> complete (attempt 1, epoch 47, test macroF1 0.5312613590763087)
+2026-10-12T12:52:34+0800 path_double_drugout: live -> complete (attempt 1, epoch 55, test macroF1 0.10449482920775145)
+2026-10-12T12:52:34+0800 no_path_single_drugout: live -> complete (attempt 1, epoch 31, test macroF1 0.5049692356187174)
+2026-10-12T12:52:34+0800 no_path_double_drugout: live -> complete (attempt 1, epoch 39, test macroF1 0.10994081065621558)
+2026-10-12T12:52:34+0800 monitor outcome: complete

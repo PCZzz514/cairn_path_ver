@@ -1,0 +1,9 @@
+model,accuracy,macro_f1_85,top5,macro_auroc_supported,auc_classes,epoch,source,saved_auroc,rows
+reference85,0.968000844862182,0.9271664329763428,0.9988383144999472,0.9961564130864052,83.0,76,/data/interns/zhangpc/cairn_dev/outputs/ddi_stage1_test_seed42/reference85/pairout,,
+DT_free,0.9673671982257894,0.9177269073981656,0.9988383144999472,0.9960504037913376,83.0,88,/data/interns/zhangpc/cairn_dev/outputs/ddi_stage1_test_seed42/DT_free/pairout,,
+no_gene_embeddings,0.9699017847713592,0.9290681270496832,0.9988911183863132,0.9970557869192568,83.0,93,/data/interns/zhangpc/cairn_dev/outputs/ddi_stage1_test_seed42/no_gene_embeddings/pairout,,
+GenePT3072,0.9572288520435104,0.9165859313009784,0.9989967261590452,0.9961651484306456,83.0,32,/data/interns/zhangpc/cairn_dev/outputs/experiments/GenePT3072/pairout/stage1_test,,
+DSN-DDI+EmerGNN+RareDDIE,0.9554863237934312,0.8837457611045174,0.9986270989544832,0.9973533962319764,83.0,24,/data/interns/zhangpc/cairn_new/pairout_cellout/outputs/pairout,,
+DeepDDI,0.9400147850881825,0.8816191383141736,0.9961981201816453,0.9889020770617197,,44,/data/interns/zhangpc/cairn_dev/outputs/experiments/DeepDDI_SSI_DDI/deepddi/pairout,0.9889020770617197,18938.0
+SSI-DDI,0.913296018586968,0.8449972611077189,0.9974654134544303,0.9961798102150451,,62,/data/interns/zhangpc/cairn_dev/outputs/experiments/DeepDDI_SSI_DDI/ssi_ddi/pairout,0.9961798102150451,18938.0
+KnowDDI,0.9356848664061675,0.8788381291016785,0.998468687295385,0.996689281030884,,43,/data/interns/zhangpc/cairn_dev/outputs/experiments/KnowDDI_HetDDI/knowddi/pairout,0.996689281030884,18938.0

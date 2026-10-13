@@ -1,0 +1,30 @@
+Review points 9 and 10 are done. Nothing has been launched: all GPUs are idle and no job records exist.
+
+**Point 9 – Step2 test metrics:**
+- A new helper, `crt.step2_test_additions`, runs right after the original `export_test`, which is unchanged.
+- It reads the exported `test_probabilities.npz` and uses the same `crt.evaluation` calculation as the cRT heads. It adds exactly two fields to `test_metrics.json`: `top5_accuracy` and `diagnostic_train_and_test_positive_classes`.
+- It refuses to overwrite any existing field, so `loss_terms`, `selected_epoch`, `selection` and the fixed85 metrics stay as they are. It also writes the 85-row `test_class_counts.csv`.
+- It runs only after the best checkpoint has been chosen, so it plays no part in selection.
+- The trainer diff against the original (`crt_kpaths/review/step2_train_vs_original.diff`) now shows only this 4-line addition after `export_test`.
+
+**Point 10 – docs:** `kpaths.py`, `README.md` and the summary now say that the official pipeline already merges parallel relations into composite relations before building the DiGraph (`merge_duplicate_relations`), and `get-subgraph.py` splits them back afterwards (`expand_relations`). Our relation tuples are described as an adaptation of that pipeline to DRKG's existing relation IDs, not a correction of it.
+
+**Checks:**
+- **Imports and syntax:** all modules compile and import, and no undefined names were found.
+- **Real baseline exports:** I ran the helper read-only on the saved test probabilities in `accelerated_four/outputs/path_*`; nothing there was modified.
+
+| | top-5 accuracy | classes in both train and test | macro-F1 on those classes | fixed85 macro-F1 |
+|---|---|---|---|---|
+| single drugout | 0.92196 | 71 | 0.63602 | 0.53126 (unchanged) |
+| double drugout | 0.78277 | 27 | 0.32897 | 0.10449 (unchanged) |
+
+  - Top-5 accuracy equals an independent recomputation.
+  - The macro-F1 on classes present in both train and test matches the saved per-class CSV.
+  - The class-count table sums to the split sizes.
+  - Evidence is in `crt_kpaths/evidence/step2_test_additions_check.json`.
+
+I did not rerun the cache or broaden any other checks. `implementation_summary.md` is updated. The launch command for desktop Codex is unchanged:
+```
+cd /data/interns/zhangpc/cairn_new
+setsid nohup bash crt_kpaths/launch.sh > logs/crt_kpaths/launch.log 2>&1 < /dev/null &
+```

@@ -1,0 +1,39 @@
+{
+  "labels": 128,
+  "loss_terms": {
+    "ce": 4.489078998565674,
+    "rec": 1.036708116531372,
+    "kl": 0.02722187712788582,
+    "beta": 2.8153153153153155e-08,
+    "loss": 4.59274959564209
+  },
+  "logits_finite": true,
+  "batch_keys": [
+    "drug_a",
+    "drug_b",
+    "graph_a",
+    "graph_b",
+    "label",
+    "row_index"
+  ],
+  "output_keys": [
+    "kl",
+    "logits",
+    "rec"
+  ],
+  "cross_edges_present": false,
+  "path_graph_present": false,
+  "gradient_norms": {
+    "fin_entities": 0.10204537212848663,
+    "fin_relations": 0.33840033411979675,
+    "cse": 1.9583797454833984,
+    "nai": 1.9386178255081177,
+    "pvr": 2.974332571029663,
+    "classifier": 2.229222297668457
+  },
+  "all_gradients_finite": true,
+  "trainable_without_gradient": [
+    "cse.blocks.1.norm2.weight",
+    "cse.blocks.1.norm2.bias"
+  ]
+}

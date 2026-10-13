@@ -1,0 +1,20 @@
+{
+  "job": "step1_single_drugout",
+  "gpu": 4,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791871870.2116778,
+  "mode": "fresh",
+  "reason": "dispatch: dependencies complete",
+  "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step1_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step1_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "crt_kpaths.crt",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/crt_kpaths/configs/step1_single_drugout.yaml"
+  ],
+  "pid": 3826575,
+  "process_start": "1278160514"
+}

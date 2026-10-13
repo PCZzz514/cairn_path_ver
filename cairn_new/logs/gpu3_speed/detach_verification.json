@@ -1,0 +1,36 @@
+{
+  "verified_at": "2026-10-12T11:37:11+0800",
+  "runner_pid": 2941955,
+  "runner_ppid": 1,
+  "runner_pgid": 2941955,
+  "runner_sid": 2941955,
+  "trainer_pid": 2941968,
+  "runner_uid": 1005,
+  "host_launch": true,
+  "launcher_completed_and_runner_survived": true,
+  "log_progress_seen": {
+    "phase": "train_progress",
+    "epoch": 1,
+    "update": 800,
+    "epoch_rows": 102400,
+    "epoch_seconds": 69.16539859771729,
+    "running_ce": 1.7733219683915378,
+    "running_loss": 1.8235758252441883
+  },
+  "log_bytes": 1871,
+  "startup": {
+    "phase": "start",
+    "train_rows": 149048,
+    "validation_rows": 20785,
+    "train_batches": 1165,
+    "epochs_schedule": 100,
+    "epoch_cap": 5,
+    "planned_updates": 116500,
+    "kl_warmup_updates": 23300,
+    "resume": false
+  },
+  "completion_summarizer": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/summarize.py",
+  "completion_summary_expected": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/five_epoch_summary.json",
+  "epoch_metrics_status": "No complete epoch metrics claimed; durable summarizer will record actual five-epoch results.",
+  "namespace_inspection_note": "Host init namespace symlink is permission-denied to this account; actual host ps/proc confirms PPID1, independent PGID/SID and uid1005."
+}

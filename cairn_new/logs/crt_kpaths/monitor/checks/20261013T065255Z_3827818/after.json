@@ -1,0 +1,97 @@
+{
+  "checked_at": 1791874418.2301579,
+  "runs": {
+    "step1_single_drugout": {
+      "state": "complete",
+      "gpu": 4,
+      "pid": 3826575,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step1_single_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "test_complete"
+      },
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791872027.335703
+      }
+    },
+    "step1_double_drugout": {
+      "state": "complete",
+      "gpu": 4,
+      "pid": 3826576,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step1_double_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "test_complete"
+      },
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791872007.567723
+      }
+    },
+    "step2_kpaths_single_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 3826577,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step2_kpaths_single_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 24,
+        "update": 27100,
+        "epoch_seconds": 31.69566512107849
+      },
+      "exit": null,
+      "history_last_epoch": 23,
+      "best_validation_macro_f1_85": 0.5974280696476671,
+      "bad_epochs": 1
+    },
+    "step2_kpaths_double_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 3826578,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step2_kpaths_double_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 26,
+        "update": 29300,
+        "epoch_seconds": 21.311437606811523
+      },
+      "exit": null,
+      "history_last_epoch": 25,
+      "best_validation_macro_f1_85": 0.15358743640874126,
+      "bad_epochs": 1
+    },
+    "step3_single_drugout": {
+      "state": "waiting",
+      "waiting_for": [
+        "step2_kpaths_single_drugout"
+      ],
+      "gpu": 7
+    },
+    "step3_double_drugout": {
+      "state": "waiting",
+      "waiting_for": [
+        "step2_kpaths_double_drugout"
+      ],
+      "gpu": 7
+    }
+  },
+  "dispatcher": {
+    "pid": 3826574,
+    "process_start": "1278160510",
+    "started_at": 1791871870.2089899,
+    "poll_seconds": 60,
+    "live": true
+  },
+  "all_complete": false
+}

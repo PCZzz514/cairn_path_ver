@@ -1,0 +1,247 @@
+{
+  "approved": true,
+  "reviewer": "Codex (planning and independent source/evidence review; all implementation authored by claude-opus-5-5 default effort)",
+  "approved_at": "2026-10-12T11:35:47+0800",
+  "reviewed_diff": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/review/implementation.diff",
+  "reviewed_new_files_diff": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/review/new_files.diff",
+  "reviewed_evidence": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/evidence/gpu3_evidence.json",
+  "direct_verification_command": "bash logs/gpu3_speed/run_evidence.sh",
+  "direct_verification_log": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/codex_verification.log",
+  "review": {
+    "optimization": "CPU applies local diagonal removal then min(nh,nt) loops before offsets; packed GAT disables automatic loops; 512 GAT calls become 4 per batch. Both direction order and parameters preserved. Remaining FIN/CSE/NAI/path/PVR/classifier/loss code unchanged.",
+    "data": "Same real row order, preprocessing, seed42 initialization and state dict are verified. No cross-pair edges or nonzero inter-pair input gradients. Valid global diagonal edges retained.",
+    "runner": "Fresh seed42/pretrained FIN; train149048/val20785; batch128, CPUthreads2, workers2, same AdamW and loss; epochs100 planned116500 warmup23300, separate cap5, no early stopping, no test loader/evaluation, isolated outputs.",
+    "numerical_acceptance": "Every parameter-gradient tensor in every batch: max_abs <= 1e-3 * tensor reference max + 1e-7 * largest parameter-gradient max for that batch. Full-model inputs 1e-3 relative and forward1e-4; attention forward1e-5, gradients1e-4, alpha1e-6 absolute, FP64 equivalence1e-10. Actual discrepancies much smaller. Raw relative maxima on analytically zero biases disclosed; cancellation residue ~1e-10 and original-repeat noise justify absolute floor. FP64 equivalence and FP32 original-vs-FP64 comparisons justify reduction roundoff.",
+    "durability": "Reviewed setsid/nohup orphan runner and wait->summarize sequence; summarizer requires successful actual exit and epochs1..5. PPID1 and progressing logfile still to verify after launch.",
+    "measurement_limits": "5 warmup +30 measured real batch128 steps per block, synchronized CUDA, copied fresh parameters/fresh AdamW/seed42 reset per block, pinned transfer included, CPU collation excluded and reported separately. Shared CPU contention from four original trainers. GPU3 A10040GB. Step speedup is not yet epoch speedup; evaluation timing varied and is reported without cherry-picking."
+  },
+  "measured_timing": {
+    "breakdown.transfer": {
+      "old_median_seconds": 0.0032864511013031006,
+      "new_median_seconds": 0.0008862856775522232,
+      "old_over_new": 3.708117128079677
+    },
+    "breakdown.forward": {
+      "old_median_seconds": 0.6458344561979175,
+      "new_median_seconds": 0.03791669104248285,
+      "old_over_new": 17.032985696834874
+    },
+    "breakdown.backward": {
+      "old_median_seconds": 0.47937628999352455,
+      "new_median_seconds": 0.03695846814662218,
+      "old_over_new": 12.97067530211847
+    },
+    "breakdown.optimizer": {
+      "old_median_seconds": 0.0051125213503837585,
+      "new_median_seconds": 0.002831784076988697,
+      "old_over_new": 1.80540648982686
+    },
+    "breakdown.fullstep": {
+      "old_median_seconds": 1.1342285135760903,
+      "new_median_seconds": 0.07863108348101377,
+      "old_over_new": 14.424683768346657
+    },
+    "fullstep.fullstep": {
+      "old_median_seconds": 1.1456242334097624,
+      "new_median_seconds": 0.07837099488824606,
+      "old_over_new": 14.61796210502849
+    },
+    "eval.transfer": {
+      "old_median_seconds": 0.0032499944791197777,
+      "new_median_seconds": 0.0016838042065501213,
+      "old_over_new": 1.9301498751915822
+    },
+    "eval.forward": {
+      "old_median_seconds": 0.5823710835538805,
+      "new_median_seconds": 0.08094241004437208,
+      "old_over_new": 7.194881931914661
+    },
+    "eval.fullstep": {
+      "old_median_seconds": 0.5857671163976192,
+      "new_median_seconds": 0.08282868284732103,
+      "old_over_new": 7.072032250921699
+    }
+  },
+  "numerical_worst": {
+    "fresh_seed42_init": {
+      "attention_fp32": {
+        "forward": {
+          "worst_rel": 8.163754655381092e-07,
+          "worst_rel_tensor": "batch0.block1.out.h_rep",
+          "worst_abs": 1.6689300537109375e-06,
+          "worst_abs_tensor": "batch0.block1.out.h_rep"
+        },
+        "gradients": {
+          "worst_rel": 3.752426947577653e-06,
+          "worst_rel_tensor": "batch1.block1.param.inter.lin_dst.weight",
+          "worst_abs": 0.000244140625,
+          "worst_abs_tensor": "batch2.block0.param.inter.lin_src.weight"
+        }
+      },
+      "attention_fp64": {
+        "forward": {
+          "worst_rel": 1.2239637240504566e-15,
+          "worst_rel_tensor": "batch1.block1.out.h_rep",
+          "worst_abs": 2.4424906541753444e-15,
+          "worst_abs_tensor": "batch0.block1.out.h_rep"
+        },
+        "gradients": {
+          "worst_rel": 3.891446277178585e-15,
+          "worst_rel_tensor": "batch0.block0.param.inter.att_dst",
+          "worst_abs": 5.115907697472721e-13,
+          "worst_abs_tensor": "batch2.block0.param.inter.lin_src.weight"
+        }
+      },
+      "model": {
+        "forward": {
+          "worst_rel": 5.419257781550957e-07,
+          "worst_rel_tensor": "batch0.logits",
+          "worst_abs": 4.76837158203125e-07,
+          "worst_abs_tensor": "batch2.loss"
+        },
+        "parameter": {
+          "worst_rel": 13.0,
+          "worst_rel_tensor": "batch0.cse.blocks.0.readout.gnn.lin_rel.bias",
+          "worst_abs": 5.960464477539063e-08,
+          "worst_abs_tensor": "batch0.classifier.4.weight"
+        },
+        "input": {
+          "worst_rel": 8.920057890417404e-07,
+          "worst_rel_tensor": "batch2.input.graph_a.edge_attr",
+          "worst_abs": 4.802132025361061e-10,
+          "worst_abs_tensor": "batch1.input.graph_b.x"
+        }
+      },
+      "model_gradients_above_absolute_floor": {
+        "worst_rel": 1.363690202833982e-06,
+        "worst_rel_tensor": "batch1.cse.blocks.0.interAtt.inter.att_dst",
+        "worst_abs": 5.960464477539063e-08,
+        "worst_abs_tensor": "batch0.classifier.4.weight"
+      },
+      "all_parameter_tensors_checked": 396
+    },
+    "trained_production_best": {
+      "attention_fp32": {
+        "forward": {
+          "worst_rel": 6.666288910295083e-07,
+          "worst_rel_tensor": "batch0.block1.out.h_rep",
+          "worst_abs": 2.384185791015625e-06,
+          "worst_abs_tensor": "batch0.block1.out.h_rep"
+        },
+        "gradients": {
+          "worst_rel": 1.9358852669302845e-06,
+          "worst_rel_tensor": "batch2.block1.param.inter.att_dst",
+          "worst_abs": 0.000213623046875,
+          "worst_abs_tensor": "batch2.block0.param.inter.att_src"
+        }
+      },
+      "attention_fp64": {
+        "forward": {
+          "worst_rel": 1.5772889917383278e-15,
+          "worst_rel_tensor": "batch0.block0.out.h_rep",
+          "worst_abs": 3.9968028886505635e-15,
+          "worst_abs_tensor": "batch0.block0.out.h_rep"
+        },
+        "gradients": {
+          "worst_rel": 4.122717125804341e-15,
+          "worst_rel_tensor": "batch2.block0.param.inter.lin_dst.weight",
+          "worst_abs": 4.831690603168681e-13,
+          "worst_abs_tensor": "batch1.block0.param.inter.lin_src.weight"
+        }
+      },
+      "model": {
+        "forward": {
+          "worst_rel": 7.276824639522278e-07,
+          "worst_rel_tensor": "batch2.ce",
+          "worst_abs": 9.5367431640625e-06,
+          "worst_abs_tensor": "batch2.logits"
+        },
+        "parameter": {
+          "worst_rel": 5.25,
+          "worst_rel_tensor": "batch0.cse.blocks.1.readout.gnn.lin_rel.bias",
+          "worst_abs": 6.433576345443726e-05,
+          "worst_abs_tensor": "batch1.path.linear.3.bias"
+        },
+        "input": {
+          "worst_rel": 1.8744487112451034e-06,
+          "worst_rel_tensor": "batch0.input.graph_b.edge_attr",
+          "worst_abs": 2.9802322387695312e-08,
+          "worst_abs_tensor": "batch2.input.graph_b.x"
+        }
+      },
+      "model_gradients_above_absolute_floor": {
+        "worst_rel": 0.0002269635302330667,
+        "worst_rel_tensor": "batch1.path.linear.3.bias",
+        "worst_abs": 6.433576345443726e-05,
+        "worst_abs_tensor": "batch1.path.linear.3.bias"
+      },
+      "all_parameter_tensors_checked": 396
+    }
+  },
+  "peak_memory_per_block": [
+    {
+      "model": "old",
+      "mode": "breakdown",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 1814.115234375,
+      "peak_activation_mib": 1433.5537109375,
+      "peak_reserved_mib": 2656.0
+    },
+    {
+      "model": "new",
+      "mode": "breakdown",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 1808.05615234375,
+      "peak_activation_mib": 1427.49462890625,
+      "peak_reserved_mib": 2670.0
+    },
+    {
+      "model": "new",
+      "mode": "fullstep",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 1808.05615234375,
+      "peak_activation_mib": 1427.49462890625,
+      "peak_reserved_mib": 2670.0
+    },
+    {
+      "model": "old",
+      "mode": "fullstep",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 1814.115234375,
+      "peak_activation_mib": 1433.5537109375,
+      "peak_reserved_mib": 2656.0
+    },
+    {
+      "model": "old",
+      "mode": "eval",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 501.703125,
+      "peak_activation_mib": 121.1416015625,
+      "peak_reserved_mib": 640.0
+    },
+    {
+      "model": "new",
+      "mode": "eval",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 502.07373046875,
+      "peak_activation_mib": 121.51220703125,
+      "peak_reserved_mib": 640.0
+    },
+    {
+      "model": "new",
+      "mode": "eval",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 502.07373046875,
+      "peak_activation_mib": 121.51220703125,
+      "peak_reserved_mib": 640.0
+    },
+    {
+      "model": "old",
+      "mode": "eval",
+      "baseline_allocated_mib": 380.5615234375,
+      "peak_allocated_mib": 501.703125,
+      "peak_activation_mib": 121.1416015625,
+      "peak_reserved_mib": 640.0
+    }
+  ]
+}

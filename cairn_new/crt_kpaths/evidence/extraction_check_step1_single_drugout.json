@@ -1,0 +1,21 @@
+{
+  "parent": {
+    "checkpoint": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_single_drugout/best.pt",
+    "epoch": 32,
+    "update": 37280,
+    "best_metric": 0.5842708175488728,
+    "prepared": "/data/interns/zhangpc/cairn_new/data/prepared",
+    "path_cache": "/data/interns/zhangpc/cairn_new/data/prepared"
+  },
+  "batches": 1000,
+  "rows": 16978,
+  "seconds": 9.074148654937744,
+  "last_linear_max_abs_error": 0.0,
+  "parent_test_check": {
+    "rows_checked": 16978,
+    "rows_equal": true,
+    "labels_equal": true,
+    "max_abs_probability_error": 3.546476364135742e-06,
+    "argmax_equal": 16978
+  }
+}

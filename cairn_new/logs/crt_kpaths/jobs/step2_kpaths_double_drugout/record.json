@@ -1,0 +1,20 @@
+{
+  "job": "step2_kpaths_double_drugout",
+  "gpu": 6,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791871870.2196116,
+  "mode": "fresh",
+  "reason": "dispatch: dependencies complete",
+  "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step2_kpaths_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step2_kpaths_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "crt_kpaths.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/crt_kpaths/configs/step2_kpaths_double_drugout.yaml"
+  ],
+  "pid": 3826578,
+  "process_start": "1278160515"
+}

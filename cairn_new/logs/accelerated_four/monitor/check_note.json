@@ -1,0 +1,50 @@
+{
+ "checked_at": "2026-10-12T12:52:34+0800",
+ "outcome": "complete",
+ "runs": {
+  "path_single_drugout": {
+   "state": "complete",
+   "attempt": 1,
+   "recoveries": 0,
+   "history_last_epoch": 47,
+   "bad_epochs": 15,
+   "best_validation_macro_f1_85": 0.5842708175488728,
+   "test": 0.5312613590763087
+  },
+  "path_double_drugout": {
+   "state": "complete",
+   "attempt": 1,
+   "recoveries": 0,
+   "history_last_epoch": 55,
+   "bad_epochs": 15,
+   "best_validation_macro_f1_85": 0.12708502407587072,
+   "test": 0.10449482920775145
+  },
+  "no_path_single_drugout": {
+   "state": "complete",
+   "attempt": 1,
+   "recoveries": 0,
+   "history_last_epoch": 31,
+   "bad_epochs": 15,
+   "best_validation_macro_f1_85": 0.5667568308804323,
+   "test": 0.5049692356187174
+  },
+  "no_path_double_drugout": {
+   "state": "complete",
+   "attempt": 1,
+   "recoveries": 0,
+   "history_last_epoch": 39,
+   "bad_epochs": 15,
+   "best_validation_macro_f1_85": 0.1259564026908654,
+   "test": 0.10994081065621558
+  }
+ },
+ "changed": true,
+ "events": [
+  "path_single_drugout: live -> complete (attempt 1, epoch 47, test macroF1 0.5312613590763087)",
+  "path_double_drugout: live -> complete (attempt 1, epoch 55, test macroF1 0.10449482920775145)",
+  "no_path_single_drugout: live -> complete (attempt 1, epoch 31, test macroF1 0.5049692356187174)",
+  "no_path_double_drugout: live -> complete (attempt 1, epoch 39, test macroF1 0.10994081065621558)",
+  "monitor outcome: complete"
+ ]
+}

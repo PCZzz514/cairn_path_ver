@@ -1,0 +1,390 @@
+--- cairn_dsn/model.py	2026-10-11 23:11:42.214321192 +0800
++++ benchmarks/gpu3_speed/dsn_gpu3/model.py	2026-10-12 11:05:08.912168121 +0800
+@@ -3,6 +3,10 @@
+ All pair-conditioned states are freshly computed with gradients. The optional
+ path branch ports EmerGNN's multiplicative sum propagation and shared ordered
+ pair gates; only real cached topology, never learned states, is reused.
++
++GPU3 speed copy: the inter-graph GAT runs once per direction on the packed
++disconnected bipartite batch. The collator already applied each pair's local
++default-GATConv self-loop rule, so automatic loops are disabled only here.
+ """
+ from types import SimpleNamespace
+ import torch
+@@ -12,11 +16,12 @@
+ 
+ 
+ class InterGraphAttention(nn.Module):
+-    # Exact original class, references/DSN-DDI/drugbank_test/layers.py.
++    # Original class, references/DSN-DDI/drugbank_test/layers.py. Same
++    # parameters; per-pair self loops arrive explicitly in the packed edges.
+     def __init__(self, input_dim):
+         super().__init__()
+         self.input_dim = input_dim
+-        self.inter = GATConv((input_dim, input_dim), 32, 2)
++        self.inter = GATConv((input_dim, input_dim), 32, 2, add_self_loops=False)
+ 
+     def forward(self, h_data, t_data, b_graph):
+         edge_index = b_graph.edge_index
+@@ -46,17 +51,10 @@
+         self.inter_projection = Linear(192, 128, bias=True, weight_initializer='glorot')
+ 
+     def inter_pair_batch(self, h, t, cross_edges):
+-        # Invoke the UNCHANGED layer separately per molecule pair. Default GAT
+-        # self loops on ragged bipartite batches otherwise connect distinct pairs.
+-        hs, ts = h.ptr.tolist(), t.ptr.tolist()
+-        h_out, t_out = [], []
+-        for i, edges in enumerate(cross_edges):
+-            hi, ti = h.x[hs[i]:hs[i + 1]], t.x[ts[i]:ts[i + 1]]
+-            ho, to = self.interAtt(SimpleNamespace(x=hi), SimpleNamespace(x=ti),
+-                                   SimpleNamespace(edge_index=edges))
+-            h_out.append(ho)
+-            t_out.append(to)
+-        return torch.cat(h_out), torch.cat(t_out)
++        # One call on the packed batch: cross_edges holds only within-pair
++        # edges (global offsets) with each pair's own min(n_h, n_t) local loops.
++        return self.interAtt(SimpleNamespace(x=h.x), SimpleNamespace(x=t.x),
++                             SimpleNamespace(edge_index=cross_edges))
+ 
+     def forward(self, h, t, cross_edges):
+         # Original ne_update order.
+--- cairn_dsn/data.py	2026-10-11 23:00:04.435093465 +0800
++++ benchmarks/gpu3_speed/dsn_gpu3/data.py	2026-10-12 11:05:08.912168121 +0800
+@@ -37,13 +37,24 @@
+         a, b, y, original_rows, pairs = zip(*rows)
+         ga = [self.graphs[i] for i in a]
+         gb = [self.graphs[i] for i in b]
+-        cross = []
++        cross, h_offset, t_offset = [], 0, 0
+         for h, t in zip(ga, gb):
+             # np.meshgrid(x1,x2) ordering in original DSN preprocessing.
+             hi, ti = torch.meshgrid(torch.arange(h.num_nodes), torch.arange(t.num_nodes), indexing='xy')
+-            cross.append(torch.stack([hi.flatten(), ti.flatten()]))
++            edges = torch.stack([hi.flatten(), ti.flatten()])
++            # Default GATConv per pair: drop the LOCAL diagonal, then append
++            # min(n_h, n_t) LOCAL loops. Offsetting afterwards keeps global
++            # row==col edges between different offsets as ordinary edges.
++            edges = edges[:, edges[0] != edges[1]]
++            loops = torch.arange(min(h.num_nodes, t.num_nodes)).repeat(2, 1)
++            edges = torch.cat([edges, loops], 1)
++            edges[0] += h_offset
++            edges[1] += t_offset
++            cross.append(edges)
++            h_offset += h.num_nodes
++            t_offset += t.num_nodes
+         result = {'graph_a': Batch.from_data_list(ga), 'graph_b': Batch.from_data_list(gb),
+-                  'cross_edges': cross, 'drug_a': torch.tensor(a), 'drug_b': torch.tensor(b),
++                  'cross_edges': torch.cat(cross, 1), 'drug_a': torch.tensor(a), 'drug_b': torch.tensor(b),
+                   'label': torch.tensor(y), 'row_index': torch.tensor(original_rows)}
+         if self.with_path:
+             edge_rows, edge_pairs, head_nodes, tail_nodes, masks = [], [], [], [], []
+--- cairn_dsn/train.py	2026-10-11 23:11:42.318319885 +0800
++++ benchmarks/gpu3_speed/dsn_gpu3/train.py	2026-10-12 11:22:52.078802306 +0800
+@@ -1,4 +1,5 @@
+-"""Full DDI training, fixed85 validation selection, selected-checkpoint test export."""
++"""GPU3 speed benchmark copy: original training, capped at epoch_cap full
++train+validation epochs of the ORIGINAL epochs-based KL schedule. No test."""
+ import argparse
+ import json
+ import math
+@@ -7,18 +8,19 @@
+ import random
+ import time
+ import numpy as np
+-import pandas as pd
+ import torch
+ import torch.nn.functional as F
+ from torch.utils.data import DataLoader
+ import yaml
+ from .data import DDIDataset, Collator, to_device
+-from .metrics import classification_metrics, validation_selection_metric
++from .metrics import validation_selection_metric
+ from .model import DSNRareDDI
++from .status import update_status
+ 
+-ROOT = Path(__file__).resolve().parents[1]
+-GPU = {(True, 'single_drugout'): 4, (True, 'double_drugout'): 5,
+-       (False, 'single_drugout'): 6, (False, 'double_drugout'): 7}
++ROOT = Path(__file__).resolve().parents[3]
++OUTPUTS = ROOT / 'benchmarks/gpu3_speed/outputs'
++GPU = 3
++HISTORICAL_ORIGINAL_EPOCH_SECONDS = (1498, 1534)
+ 
+ 
+ def workspace_path(value):
+@@ -79,50 +81,27 @@
+     totals = {k: v / n for k, v in totals.items()}
+     probs, y = np.concatenate(probabilities), np.concatenate(targets)
+     totals['macro_f1_85'] = validation_selection_metric(y, probs)
++    totals['accuracy'] = float((probs.argmax(1) == y).mean())
+     totals['kl_beta'] = beta
+     return totals, probs, y, np.concatenate(original_rows), np.concatenate(masks)
+ 
+ 
+-def export_test(model, dataset, loader, device, config, output, best):
+-    totals, probabilities, y, original_rows, masks = evaluate(model, loader, device, config, config['kl_weight'])
+-    metrics, per_class, confusion = classification_metrics(y, probabilities)
+-    metrics.update({'loss_terms': totals, 'checkpoint': 'best.pt', 'selected_epoch': best['epoch'],
+-                    'selected_validation_macro_f1_85': best['best_metric'], 'selection': 'validation only'})
+-    frame = dataset.frame.copy()
+-    assert np.array_equal(original_rows, dataset.rows)
+-    frame.insert(0, 'frozen_row_index', original_rows)
+-    frame['predicted_event_id'] = probabilities.argmax(1)
+-    frame['predicted_probability'] = probabilities.max(1)
+-    if config['with_path']:
+-        frame['path_v_to_u_present'] = masks[:, 0]
+-        frame['path_u_to_v_present'] = masks[:, 1]
+-    frame.to_parquet(output / 'test_predictions.parquet', index=False)
+-    np.savez_compressed(output / 'test_probabilities.npz', probabilities=probabilities,
+-                        event_ids=np.arange(85), labels=y, frozen_row_indices=original_rows, path_mask=masks)
+-    events = pd.read_csv(workspace_path(config['prepared']) / 'ddi_events.csv')
+-    per_class.merge(events, on='event_id', how='left').to_csv(output / 'test_per_class.csv', index=False)
+-    pd.DataFrame(confusion, index=np.arange(85), columns=np.arange(85)).rename_axis('true_event_id').to_csv(output / 'test_confusion.csv')
+-    save_json(output / 'test_metrics.json', metrics)
+-    print(json.dumps({'phase': 'best_checkpoint_test', **metrics}), flush=True)
+-
+-
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--config', required=True)
+     parser.add_argument('--batch-size', type=int)
+     parser.add_argument('--resume', action='store_true')
+-    parser.add_argument('--test-only', action='store_true')
+     args = parser.parse_args()
+-    if args.resume and args.test_only:
+-        parser.error('Use either --resume or --test-only')
+     config = yaml.safe_load(workspace_path(args.config).read_text())
+     if args.batch_size is not None:
+         config['batch_size'] = args.batch_size
+-    # This is checked before the first CUDA operation. Only the assigned one
+-    # physical device is visible, including RNG and allocator operations.
+-    assigned = GPU[config['with_path'], config['protocol']]
+-    if config['gpu'] != assigned or os.environ.get('CUDA_VISIBLE_DEVICES') != str(assigned):
+-        raise ValueError(f'This arm requires CUDA_VISIBLE_DEVICES={assigned} and config gpu={assigned}')
++    # This is checked before the first CUDA operation. Only physical GPU3 is
++    # visible, including RNG and allocator operations.
++    if config['gpu'] != GPU or os.environ.get('CUDA_VISIBLE_DEVICES') != str(GPU):
++        raise ValueError(f'This benchmark requires CUDA_VISIBLE_DEVICES={GPU} and config gpu={GPU}')
++    # The cap only stops the loop; the KL schedule still uses config epochs.
++    if not 1 <= config['epoch_cap'] <= config['epochs']:
++        raise ValueError('epoch_cap must be within the original epochs')
+     torch.set_num_threads(config['cpu_threads'])
+     random.seed(config['seed'])
+     np.random.seed(config['seed'])
+@@ -130,23 +109,19 @@
+     device = torch.device('cuda:0')
+     prepared = workspace_path(config['prepared'])
+     output_dir = workspace_path(config['output'])
++    # Independent benchmark output only; production outputs are never written.
++    if not output_dir.is_relative_to(OUTPUTS):
++        raise ValueError(f'Benchmark output must remain inside {OUTPUTS}')
+     output_dir.mkdir(parents=True, exist_ok=True)
+     saved = torch.load(output_dir / 'last.pt', map_location='cpu', weights_only=False) if args.resume else None
+-    if not args.resume and not args.test_only and (output_dir / 'last.pt').exists():
++    if not args.resume and (output_dir / 'last.pt').exists():
+         raise ValueError('Existing training output: use --resume or a new output directory')
+-    if args.test_only:
+-        selected = torch.load(output_dir / 'best.pt', map_location='cpu', weights_only=False)
+-        assert selected['config']['gpu'] == assigned and selected['config']['protocol'] == config['protocol']
+-        # Evaluation restores the authoritative training configuration and keeps
+-        # config.yaml intact, even when the evaluation batch is overridden.
+-        config = selected['config']
+-        del selected
+-    loader_batch = args.batch_size if args.test_only and args.batch_size else config['batch_size']
++    loader_batch = config['batch_size']
+     # Save the fully resolved settings (including memory-driven batch override).
+-    if not args.test_only:
+-        config.update({'prepared': str(prepared), 'output': str(output_dir), 'generator': 'gpt-6.1-sol high',
+-                       'selection_metric': 'fixed85 validation macroF1', 'test_selection': False,
+-                       'source_provenance': json.loads((ROOT / 'docs/source_provenance.json').read_text())})
++    config.update({'prepared': str(prepared), 'output': str(output_dir),
++                   'generator': 'gpt-6.1-sol high; GPU3 packed-attention copy by claude-opus-5-5',
++                   'selection_metric': 'fixed85 validation macroF1', 'test_selection': False,
++                   'source_provenance': json.loads((ROOT / 'docs/source_provenance.json').read_text())})
+     preparation = json.loads((prepared / 'preparation_report.json').read_text())
+     assert config['nai_cap'] == preparation['nai']['cap']
+     assert config['path_depth'] == preparation['paths']['depth']
+@@ -164,16 +139,19 @@
+                                  num_workers=config['num_workers'], collate_fn=collate, pin_memory=True,
+                                  persistent_workers=False)
+                for split, dataset in datasets.items()}
+-    planned_updates = config['planned_updates'] if args.test_only else config['epochs'] * len(loaders['train'])
+-    warmup_updates = config['kl_warmup_updates'] if args.test_only else max(1, math.ceil(config['kl_warmup_fraction'] * planned_updates))
++    planned_updates = config['epochs'] * len(loaders['train'])
++    warmup_updates = max(1, math.ceil(config['kl_warmup_fraction'] * planned_updates))
+     if saved is not None:
+         planned_updates = saved['config']['planned_updates']
+         warmup_updates = saved['config']['kl_warmup_updates']
+     config['planned_updates'], config['kl_warmup_updates'] = planned_updates, warmup_updates
+     if saved is not None and saved['config'] != config:
+         raise ValueError('Resume configuration differs from last.pt; preserve batch size and schedule')
+-    if not args.test_only:
+-        (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
++    (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
++    print(json.dumps({'phase': 'start', 'train_rows': len(datasets['train']), 'validation_rows': len(datasets['val']),
++                      'train_batches': len(loaders['train']), 'epochs_schedule': config['epochs'],
++                      'epoch_cap': config['epoch_cap'], 'planned_updates': planned_updates,
++                      'kl_warmup_updates': warmup_updates, 'resume': args.resume}), flush=True)
+     save_json(output_dir / 'model_inventory.json', {
+         'parameters': sum(p.numel() for p in model.parameters()),
+         'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad),
+@@ -196,73 +174,76 @@
+         best_metric, bad_epochs, update = saved['best_metric'], saved['bad_epochs'], saved['update']
+         start_epoch = saved['epoch'] + 1
+         del saved
+-    if not args.test_only and bad_epochs < config['patience']:
+-        for epoch in range(start_epoch, config['epochs'] + 1):
+-            started = time.time()
+-            model.train()
+-            totals = {name: 0. for name in ['ce', 'rec', 'kl', 'loss', 'kl_weighted']}
+-            count = 0
+-            for raw in loaders['train']:
+-                batch = to_device(raw, device)
+-                optimizer.zero_grad(set_to_none=True)
+-                result = model(batch)
+-                ce = F.cross_entropy(result['logits'], batch['label'])
+-                beta = config['kl_weight'] * min(1., (update + 1) / warmup_updates)
+-                loss = ce + config['reconstruction_weight'] * result['rec'] + beta * result['kl']
+-                loss.backward()
+-                # Capture actual full-training first-step gradient norms for
+-                # coordinator auditing, without a separate probe experiment.
+-                if update == 0:
+-                    groups = {'cse': model.cse, 'nai': model.nai, 'pvr': model.pvr,
+-                              'classifier': model.classifier, 'fin_entities': model.fin_entities,
+-                              'fin_relations': model.fin_relations}
+-                    if config['with_path']:
+-                        groups['path'] = model.path
+-                    save_json(output_dir / 'first_update_gradients.json', {
+-                        name: float(torch.stack([p.grad.detach().square().sum() for p in module.parameters()
+-                                                 if p.grad is not None]).sum().sqrt()) for name, module in groups.items()})
+-                optimizer.step()
+-                n = len(batch['label'])
+-                for name, value in [('ce', ce), ('rec', result['rec']), ('kl', result['kl']),
+-                                    ('loss', loss), ('kl_weighted', beta * result['kl'])]:
+-                    totals[name] += float(value.detach()) * n
+-                count += n
+-                update += 1
+-            train = {k: v / count for k, v in totals.items()}
+-            train['kl_beta_final'] = beta
+-            val, _, _, _, _ = evaluate(model, loaders['val'], device, config, beta)
+-            improved = val['macro_f1_85'] > best_metric
+-            if improved:
+-                best_metric, bad_epochs = val['macro_f1_85'], 0
+-            else:
+-                bad_epochs += 1
+-            record = {'epoch': epoch, 'update': update, 'train': train, 'validation': val,
+-                      'best_validation_macro_f1_85': best_metric, 'improved': improved,
+-                      'bad_epochs': bad_epochs, 'seconds': time.time() - started}
+-            with (output_dir / 'history.jsonl').open('a') as stream:
+-                stream.write(json.dumps(record, allow_nan=False) + '\n')
+-            print(json.dumps(record, allow_nan=False), flush=True)
+-            checkpoint = {'epoch': epoch, 'update': update, 'model': model.state_dict(),
+-                          'optimizer': optimizer.state_dict(), 'config': config, 'best_metric': best_metric,
+-                          'bad_epochs': bad_epochs, 'metrics': record, 'rng': rng_state()}
+-            if improved:
+-                save_checkpoint(output_dir / 'best.pt', checkpoint)
+-            save_checkpoint(output_dir / 'last.pt', checkpoint)
+-            if bad_epochs >= config['patience']:
+-                break
+-    # Test is constructed and read by the training process only after validation
+-    # selection has finished. Preprocessing used its endpoints, never labels.
+-    best = torch.load(output_dir / 'best.pt', map_location=device, weights_only=False)
+-    model.load_state_dict(best['model'])
+-    test_data = DDIDataset(prepared, config['protocol'], 'test')
+-    test_loader = DataLoader(test_data, batch_size=loader_batch, shuffle=False,
+-                             num_workers=config['num_workers'], collate_fn=collate, pin_memory=True)
+-    export_test(model, test_data, test_loader, device, config, output_dir, best)
+-    (output_dir / 'test_config.yaml').write_text(yaml.safe_dump(
+-        {**best['config'], 'evaluation_batch_size': loader_batch, 'evaluation_checkpoint': 'best.pt'}, sort_keys=False))
+-    save_json(output_dir / 'test_complete.json', {
+-        'checkpoint': 'best.pt', 'selected_epoch': best['epoch'], 'selected_update': best['update'],
+-        'rows': len(test_data), 'completed_at': time.time()})
++    # Exactly epoch_cap full epochs; no early stopping inside the cap.
++    for epoch in range(start_epoch, config['epoch_cap'] + 1):
++        started = time.time()
++        model.train()
++        totals = {name: 0. for name in ['ce', 'rec', 'kl', 'loss', 'kl_weighted']}
++        count = 0
++        for raw in loaders['train']:
++            batch = to_device(raw, device)
++            optimizer.zero_grad(set_to_none=True)
++            result = model(batch)
++            ce = F.cross_entropy(result['logits'], batch['label'])
++            beta = config['kl_weight'] * min(1., (update + 1) / warmup_updates)
++            loss = ce + config['reconstruction_weight'] * result['rec'] + beta * result['kl']
++            loss.backward()
++            # Capture actual full-training first-step gradient norms for
++            # coordinator auditing, without a separate probe experiment.
++            if update == 0:
++                groups = {'cse': model.cse, 'nai': model.nai, 'pvr': model.pvr,
++                          'classifier': model.classifier, 'fin_entities': model.fin_entities,
++                          'fin_relations': model.fin_relations}
++                if config['with_path']:
++                    groups['path'] = model.path
++                save_json(output_dir / 'first_update_gradients.json', {
++                    name: float(torch.stack([p.grad.detach().square().sum() for p in module.parameters()
++                                             if p.grad is not None]).sum().sqrt()) for name, module in groups.items()})
++            optimizer.step()
++            n = len(batch['label'])
++            for name, value in [('ce', ce), ('rec', result['rec']), ('kl', result['kl']),
++                                ('loss', loss), ('kl_weighted', beta * result['kl'])]:
++                totals[name] += float(value.detach()) * n
++            count += n
++            update += 1
++            if update % 100 == 0:
++                # Liveness from already-synchronized running totals; no RNG use.
++                progress = {'phase': 'train_progress', 'epoch': epoch, 'update': update, 'epoch_rows': count,
++                            'epoch_seconds': time.time() - started, 'running_ce': totals['ce'] / count,
++                            'running_loss': totals['loss'] / count}
++                print(json.dumps(progress), flush=True)
++                update_status('training', progress=progress)
++        train = {k: v / count for k, v in totals.items()}
++        train['kl_beta_final'] = beta
++        train_seconds = time.time() - started
++        progress = {'phase': 'validation', 'epoch': epoch, 'update': update, 'train_seconds': train_seconds}
++        print(json.dumps(progress), flush=True)
++        update_status('training', progress=progress)
++        val, _, _, _, _ = evaluate(model, loaders['val'], device, config, beta)
++        validation_seconds = time.time() - started - train_seconds
++        improved = val['macro_f1_85'] > best_metric
++        if improved:
++            best_metric, bad_epochs = val['macro_f1_85'], 0
++        else:
++            bad_epochs += 1
++        record = {'epoch': epoch, 'update': update, 'train': train, 'validation': val,
++                  'best_validation_macro_f1_85': best_metric, 'improved': improved,
++                  'bad_epochs': bad_epochs, 'train_seconds': train_seconds,
++                  'validation_seconds': validation_seconds, 'seconds': train_seconds + validation_seconds,
++                  'train_rows': count, 'validation_rows': len(datasets['val'])}
++        record['historical_original_epoch_seconds'] = list(HISTORICAL_ORIGINAL_EPOCH_SECONDS)
++        record['speed_ratio_vs_historical'] = [s / record['seconds'] for s in HISTORICAL_ORIGINAL_EPOCH_SECONDS]
++        with (output_dir / 'history.jsonl').open('a') as stream:
++            stream.write(json.dumps(record, allow_nan=False) + '\n')
++        print(json.dumps(record, allow_nan=False), flush=True)
++        checkpoint = {'epoch': epoch, 'update': update, 'model': model.state_dict(),
++                      'optimizer': optimizer.state_dict(), 'config': config, 'best_metric': best_metric,
++                      'bad_epochs': bad_epochs, 'metrics': record, 'rng': rng_state()}
++        if improved:
++            save_checkpoint(output_dir / 'best.pt', checkpoint)
++        save_checkpoint(output_dir / 'last.pt', checkpoint)
++        update_status('training', progress={'epochs_completed': epoch, 'epoch_cap': config['epoch_cap'],
++                                            'last_epoch_seconds': record['seconds']})
+ 
+ 
+ if __name__ == '__main__':
+--- configs/path_single_drugout.yaml	2026-10-11 23:01:00.078393934 +0800
++++ benchmarks/gpu3_speed/configs/path_single_drugout.yaml	2026-10-12 11:05:57.707554680 +0800
+@@ -1,10 +1,11 @@
+ protocol: single_drugout
+ with_path: true
+-gpu: 4
++gpu: 3
+ prepared: data/prepared
+-output: outputs/path_single_drugout
++output: benchmarks/gpu3_speed/outputs/path_single_drugout
+ seed: 42
+ epochs: 100
++epoch_cap: 5
+ patience: 15
+ batch_size: 128
+ learning_rate: 0.0001

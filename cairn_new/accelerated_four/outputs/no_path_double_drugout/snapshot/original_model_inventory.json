@@ -1,0 +1,22 @@
+{
+  "parameters": 13206361,
+  "trainable_parameters": 13206359,
+  "fin_trainable": true,
+  "fin_entity_table": [
+    96766,
+    128
+  ],
+  "fin_relation_table": [
+    105,
+    128
+  ],
+  "classes": 85,
+  "latent": 128,
+  "pair_input": 256,
+  "pvr_continuous_decoder": 256,
+  "pvr_branch_normalization": "affine-free layer_norm per 128; absent directions zero",
+  "pvr_reconstruction": "valid-branch mean per sample, then sample mean; detached continuous targets",
+  "path_depth": 0,
+  "topology_cache": "/data/interns/zhangpc/cairn_new/data/prepared",
+  "learned_state_cache": false
+}

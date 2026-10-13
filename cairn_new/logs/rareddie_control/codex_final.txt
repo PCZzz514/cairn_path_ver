@@ -1,0 +1,10 @@
+Launched and verified both fresh RareDDIE controls:
+
+- GPU6 single_drugout: trainer PID **3096029**
+- GPU7 double_drugout: trainer PID **3096030**
+
+CSE verification passed; both first updates have finite losses and gradients. Original GPU4/5 jobs remain untouched.
+
+Durable LOW monitor PID **3097388**, PPID1; immediate check succeeded. Next check: **16:11:42 Asia/Shanghai**, then every 40 minutes.
+
+Outputs: `rareddie_control/outputs/{single_drugout,double_drugout}`. [Handoff](/data/interns/zhangpc/cairn_new/logs/rareddie_control/handoff.md) records details. Training continues independently through selected-best test exports.

@@ -1,0 +1,3 @@
+/data/interns/zhangpc/cairn_dev/.conda/cairn/lib/python3.11/site-packages/torch/utils/data/dataloader.py:666: UserWarning: 'pin_memory' argument is set as true but no accelerator is found, then device pinned memory won't be used.
+  warnings.warn(warn_msg)
+{"arm": "path_single_drugout", "passed": true, "failed": [], "seconds": 9}

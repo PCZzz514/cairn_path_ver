@@ -1,0 +1,512 @@
+{
+ "phase": "training_with_independent_monitor",
+ "implementation_author": "claude-opus-5-5 DEFAULT effort",
+ "reviewer": "Server Codex gpt-6.1-sol MEDIUM",
+ "source_frames_exact": true,
+ "interpretation": "same-DDI-split replicate, not DDI cell-cold generalization",
+ "rows": {
+  "train": 151508,
+  "val": 18939,
+  "test": 18938
+ },
+ "class_support": {
+  "train": 85,
+  "val": 82,
+  "test": 83
+ },
+ "new_pairs_required": 1280,
+ "training_launched": true,
+ "originals_untouched": true,
+ "claude_initial_error": "Not logged in \u00b7 Please run /login",
+ "claude_retry": "existing read-only settings file; exact requested model",
+ "preparation": {
+  "command": "bash -c \"source pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES= $PYTHON_BIN -m pairout_cellout.prepare\"",
+  "log": "logs/pairout_cellout/prepare.log",
+  "author": "claude-opus-5-5 (default effort)",
+  "stage": "preparation_complete",
+  "updated_at": "2026-10-12T18:56:27+0800",
+  "report": "pairout_cellout/prepared/preparation_report.json",
+  "paths": {
+   "unique_ordered_pairs": 189385,
+   "depth": 4,
+   "meeting_cap": 32,
+   "arm_cap": 2,
+   "nodes": 13002358,
+   "edges_with_inverses_self": 77999236,
+   "max_nodes": 131,
+   "max_edges": 695,
+   "pairs_with_paths": 188689,
+   "missing": 696,
+   "missing_path_rate": 0.003675053462523392,
+   "reused_from_data_prepared": 188105,
+   "newly_extracted": 1280,
+   "newly_extracted_with_paths": 1280,
+   "newly_extracted_missing_path_rate": 0.0,
+   "data_prepared_pairs_not_in_cohort": 0,
+   "reused_reextracted_equal": {
+    "pairs": 2048,
+    "mismatches": 0,
+    "selection": "2048 evenly spaced reused cohort positions"
+   },
+   "reuse_rule": "ordered global (drug_a, drug_b) pair; topology depends only on its two FIN endpoints",
+   "source_pair_index": "source_pair_index.npy: data/prepared pair index or -1 (newly extracted)",
+   "coverage_test": "full unbounded two-hop-ball intersection before selecting real routes",
+   "label_free": "endpoints only; no labels, splits, learned states or NAI slots in extraction"
+  },
+  "graphs": {
+   "active_drugs": 1666,
+   "reused_identical_to_data_prepared": 1666,
+   "added_from_bundle": 0,
+   "atom_features": 55,
+   "bond_features": 17
+  },
+  "class_support": "pairout_cellout/prepared/class_support.csv",
+  "splits": {
+   "pairout": {
+    "train": {
+     "rows": 151508,
+     "classes_present": 85,
+     "zero_support_classes": [],
+     "min_support_present": 4,
+     "max_support": 48226,
+     "with_real_path_le4": 150942,
+     "path_fraction": 0.9962642236713573,
+     "missing_path_rate": 0.003735776328642748,
+     "rows_reusing_data_prepared_topology": 150482,
+     "rows_with_newly_extracted_topology": 1026,
+     "missing_path_rate_new_pairs": 0.0,
+     "mapped_drugs": 1647,
+     "drugs": 1651,
+     "nai_drugs_present": 1597
+    },
+    "val": {
+     "rows": 18939,
+     "classes_present": 82,
+     "zero_support_classes": [
+      11,
+      26,
+      65
+     ],
+     "min_support_present": 1,
+     "max_support": 6098,
+     "with_real_path_le4": 18881,
+     "path_fraction": 0.9969375363007551,
+     "missing_path_rate": 0.0030624636992448995,
+     "rows_reusing_data_prepared_topology": 18813,
+     "rows_with_newly_extracted_topology": 126,
+     "missing_path_rate_new_pairs": 0.0,
+     "mapped_drugs": 1513,
+     "drugs": 1517,
+     "nai_drugs_present": 1480
+    },
+    "test": {
+     "rows": 18938,
+     "classes_present": 83,
+     "zero_support_classes": [
+      50,
+      52
+     ],
+     "min_support_present": 1,
+     "max_support": 5987,
+     "with_real_path_le4": 18866,
+     "path_fraction": 0.9961981201816453,
+     "missing_path_rate": 0.00380187981835467,
+     "rows_reusing_data_prepared_topology": 18810,
+     "rows_with_newly_extracted_topology": 128,
+     "missing_path_rate_new_pairs": 0.0,
+     "mapped_drugs": 1512,
+     "drugs": 1515,
+     "nai_drugs_present": 1480
+    }
+   },
+   "cellout": {
+    "train": {
+     "rows": 151508,
+     "classes_present": 85,
+     "zero_support_classes": [],
+     "min_support_present": 4,
+     "max_support": 48226,
+     "with_real_path_le4": 150942,
+     "path_fraction": 0.9962642236713573,
+     "missing_path_rate": 0.003735776328642748,
+     "rows_reusing_data_prepared_topology": 150482,
+     "rows_with_newly_extracted_topology": 1026,
+     "missing_path_rate_new_pairs": 0.0,
+     "mapped_drugs": 1647,
+     "drugs": 1651,
+     "nai_drugs_present": 1597
+    },
+    "val": {
+     "rows": 18939,
+     "classes_present": 82,
+     "zero_support_classes": [
+      11,
+      26,
+      65
+     ],
+     "min_support_present": 1,
+     "max_support": 6098,
+     "with_real_path_le4": 18881,
+     "path_fraction": 0.9969375363007551,
+     "missing_path_rate": 0.0030624636992448995,
+     "rows_reusing_data_prepared_topology": 18813,
+     "rows_with_newly_extracted_topology": 126,
+     "missing_path_rate_new_pairs": 0.0,
+     "mapped_drugs": 1513,
+     "drugs": 1517,
+     "nai_drugs_present": 1480
+    },
+    "test": {
+     "rows": 18938,
+     "classes_present": 83,
+     "zero_support_classes": [
+      50,
+      52
+     ],
+     "min_support_present": 1,
+     "max_support": 5987,
+     "with_real_path_le4": 18866,
+     "path_fraction": 0.9961981201816453,
+     "missing_path_rate": 0.00380187981835467,
+     "rows_reusing_data_prepared_topology": 18810,
+     "rows_with_newly_extracted_topology": 128,
+     "missing_path_rate_new_pairs": 0.0,
+     "mapped_drugs": 1512,
+     "drugs": 1515,
+     "nai_drugs_present": 1480
+    }
+   }
+  }
+ },
+ "stage": "monitor_complete",
+ "audit": {
+  "log": "logs/pairout_cellout/audit.log",
+  "report": "pairout_cellout/prepared/audit_report.json",
+  "passed": true,
+  "checks": {
+   "pairout_cellout_frames_identical": true,
+   "all_cached_real_edges_found_in_source": true,
+   "source_fact_multiplicity_preserved": true,
+   "all_real_edges_have_inverse": true,
+   "endpoint_mapping_exact": true,
+   "all_pairs_depth4_reachability_equals_explicit_mask": true,
+   "missing_paths_have_no_edges": true,
+   "explicit_self_count_exact": true,
+   "no_compound_compound_background_facts": true,
+   "fin_tables_exact": true,
+   "nai_table_equal_to_data_prepared": true,
+   "original_data_prepared_unchanged": true,
+   "passed": true
+  },
+  "schedule": {
+   "epochs": 150,
+   "patience": 15,
+   "kl_warmup_fraction": 0.2,
+   "train_batches": 1184,
+   "planned_updates": 177600,
+   "kl_warmup_updates": 35520
+  },
+  "missing_path_rate": 0.003675053462523392,
+  "validation": "Full real-data and static checks only; no model forward, smoke experiment, or GPU training",
+  "stage": "audit_passed",
+  "updated_at": "2026-10-12T19:04:17+0800",
+  "rerun_after_150_update": true,
+  "rerun_after_150_followup": true
+ },
+ "source_identity": {
+  "pairout_cellout_dataframes_identical": true,
+  "byte_identical_sources": true,
+  "resolved_sources": {
+   "pairout": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet",
+   "cellout": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet"
+  },
+  "note": "CellOut DDI rows, order, labels and split are exactly the PairOut frame; the cell split only affects cell-level tasks. Both DDI-only jobs are independent fresh seed42 same-DDI-split replicates, NOT DDI cell-cold generalization. No synergy/LINCS/DepMap/cell features are used.",
+  "replicate_label": "pairout (GPU6) and cellout (GPU7): independent fresh seed42 same-DDI-split replicates",
+  "roundoff_note": "identical input/config except GPU/name/output; near-identical trajectories, GPU roundoff may differ",
+  "stage": "source_identity_recorded",
+  "updated_at": "2026-10-12T18:56:27+0800"
+ },
+ "plan": {
+  "file": "logs/pairout_cellout/plan.md",
+  "stage": "plan_recorded",
+  "updated_at": "2026-10-12T18:56:27+0800"
+ },
+ "review": {
+  "reviewer": "Server Codex gpt-6.1-sol MEDIUM",
+  "approved": true,
+  "at": "2026-10-12T19:05:59.870151+08:00",
+  "report": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/server_review.md",
+  "epochs": 150,
+  "patience": 15,
+  "kl_warmup_fraction": 0.2,
+  "train_batches": 1184,
+  "planned_updates": 177600,
+  "kl_warmup_updates": 35520,
+  "claude_followup_finished": true
+ },
+ "train": {
+  "launched": false,
+  "arms": {
+   "pairout": {
+    "gpu": 6,
+    "config": "pairout_cellout/configs/pairout.yaml",
+    "output": "pairout_cellout/outputs/pairout"
+   },
+   "cellout": {
+    "gpu": 7,
+    "config": "pairout_cellout/configs/cellout.yaml",
+    "output": "pairout_cellout/outputs/cellout"
+   }
+  },
+  "stage": "pending_review_approval",
+  "updated_at": "2026-10-12T19:04:17+0800",
+  "epochs": 150,
+  "planned_updates": 177600,
+  "kl_warmup_updates": 35520
+ },
+ "handoff": {
+  "state": "not started; after launch confirmation and first successful monitor check",
+  "stage": "pending",
+  "updated_at": "2026-10-12T18:56:27+0800"
+ },
+ "codex_final": {
+  "state": "not written",
+  "stage": "pending",
+  "updated_at": "2026-10-12T18:56:27+0800"
+ },
+ "implementation": {
+  "author": "claude --model claude-opus-5-5 -p (DEFAULT effort)",
+  "launched": false,
+  "package": "pairout_cellout",
+  "review_packet": "pairout_cellout/review/REVIEW.md",
+  "review_diff": "pairout_cellout/review/implementation.diff",
+  "new_files_diff": "pairout_cellout/review/new_files.diff",
+  "handoff": "logs/pairout_cellout/implementation_handoff.md",
+  "unchanged_copies": {
+   "pairout_cellout/dsn/model.py": "accelerated_four/dsn/model.py",
+   "pairout_cellout/dsn/data.py": "accelerated_four/dsn/data.py",
+   "pairout_cellout/dsn/metrics.py": "accelerated_four/dsn/metrics.py",
+   "pairout_cellout/paths.py": "cairn_dsn/paths.py"
+  },
+  "static_checks": {
+   "ast_all_python": true,
+   "bash_n_all_shell": true,
+   "cpu_imports": true,
+   "preparation_gate_both_configs": true,
+   "dataset_rows_and_1184_train_batches": true,
+   "jobs_status_not_launched": true,
+   "gpu6_gpu7_idle_at_check": true,
+   "no_writes_outside_namespace": true
+  },
+  "launch_gate_refusals": [
+   "missing Codex review approval /data/interns/zhangpc/cairn_new/logs/pairout_cellout/review_approval.json"
+  ],
+  "commands": {
+   "prepare": "bash -c 'source pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES= \"$PYTHON_BIN\" -m pairout_cellout.prepare'",
+   "audit": "bash -c 'source pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES= \"$PYTHON_BIN\" -m pairout_cellout.audit'",
+   "review_diff": "bash pairout_cellout/tools/make_review.sh",
+   "launch": "bash pairout_cellout/launch.sh --launch-reviewed",
+   "confirm": "bash -c 'source pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES= \"$PYTHON_BIN\" pairout_cellout/confirm_launch.py'",
+   "monitor": "bash pairout_cellout/monitor/start_monitor.sh",
+   "status": "bash -c 'source pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES= \"$PYTHON_BIN\" pairout_cellout/jobs.py --status'"
+  },
+  "stage": "launched_progress_confirmed",
+  "updated_at": "2026-10-12T19:06:21+0800",
+  "schedule_150_applied": true,
+  "static_checks_after_150": {
+   "ast_all_python": true,
+   "bash_n_all_shell": true,
+   "cpu_imports": true,
+   "full_real_audit_rerun_passed": true,
+   "preparation_gate_both_configs": true,
+   "review_diffs_regenerated": true,
+   "no_stale_100_schedule_in_code_configs_prompt": true
+  },
+  "followup_150": {
+   "author": "claude-opus-5-5 DEFAULT effort (authorized 150-epoch follow-up, after PID 3230783 finished)",
+   "verified_prior_150_change": true,
+   "strengthened": {
+    "jobs.py": "literal AUTHORIZED_SCHEDULE 150/15/0.2/177600/35520 + 1184 batches (asserted == trainer SCHEDULE) for completion verification and recovery; best/last/test/run config.yaml schedule; every history/last/best update == epoch*1184",
+    "confirm_launch.py": "schedule_ok: run config.yaml schedule and ACTUAL KL beta of first and 100-update progress lines == .001*update/35520",
+    "audit.py": "configs must have the exact reviewed key set (no planned/warmup override keys)"
+   },
+   "unchanged": "architecture, model/data/metrics/paths byte-identical copies, train.py, configs, preparation (not rerun), losses, metrics, monitor scripts",
+   "full_real_audit_rerun": {
+    "passed": true,
+    "seconds": 50,
+    "log": "logs/pairout_cellout/audit.log",
+    "after_all_python_changes": true
+   },
+   "real_dataloader_batches": {
+    "pairout": 1184,
+    "cellout": 1184,
+    "final_batch_rows": 84,
+    "train_rows": 151508
+   },
+   "derived_from_configs": {
+    "planned_updates": 177600,
+    "kl_warmup_updates": 35520,
+    "kl_warmup_epochs": 30.0
+   },
+   "preparation_gate_both_configs": true,
+   "old_100_schedule_rejected": true,
+   "byte_identical_copies": [
+    "dsn/model.py",
+    "dsn/data.py",
+    "dsn/metrics.py",
+    "paths.py"
+   ],
+   "ast_all_python": true,
+   "bash_n_all_shell": true,
+   "cpu_imports": true,
+   "review_diffs_regenerated": true,
+   "followup_delta_diff": "pairout_cellout/review/followup_150_delta.diff",
+   "launch_gate_refusals": [
+    "missing Codex review approval logs/pairout_cellout/review_approval.json"
+   ],
+   "jobs_status": {
+    "pairout": "not_launched",
+    "cellout": "not_launched"
+   },
+   "stale_100_review": "remaining 100s in current code are only PROGRESS_EVERY/progress_100; 118400/23680 only as explicitly superseded history; preparation_report fin.completed_epoch 100 is FIN pretraining",
+   "source_identity_note": "appended SUPERSEDED SCHEDULE note (original Codex text unchanged)",
+   "launched": false,
+   "updated_at": "2026-10-12T19:04:17+0800"
+  },
+  "launch": {
+   "pairout": {
+    "pid": 3253530,
+    "process_start": "1271289520",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/pairout/attempt_1.log",
+    "gpu": 6,
+    "started_at": 1791803160.2685444
+   },
+   "cellout": {
+    "pid": 3253531,
+    "process_start": "1271289520",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/cellout/attempt_1.log",
+    "gpu": 7,
+    "started_at": 1791803160.2714667
+   }
+  },
+  "launch_check": {
+   "json": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/launch.json",
+   "all_progress_confirmed": true,
+   "pids": {
+    "pairout": 3253530,
+    "cellout": 3253531
+   },
+   "trainer_pids": {
+    "pairout": 3253533,
+    "cellout": 3253534
+   }
+  }
+ },
+ "schedule": {
+  "epochs": 150,
+  "patience": 15,
+  "kl_warmup_fraction": 0.2,
+  "planned_updates": 177600,
+  "kl_warmup_updates": 35520,
+  "train_batches": 1184,
+  "final_batch_rows": 84,
+  "kl_warmup_epochs": 30.0,
+  "source": "logs/pairout_cellout/user_update_150.md (latest human update; overrides 100)",
+  "superseded_historical": {
+   "epochs": 100,
+   "planned_updates": 118400,
+   "kl_warmup_updates": 23680
+  },
+  "applied_by": "claude-opus-5-5 PID 3230783 before review",
+  "enforced_in": [
+   "audit.py",
+   "audit.py exact config keys",
+   "configs/cellout.yaml",
+   "configs/pairout.yaml",
+   "confirm_launch.py",
+   "confirm_launch.py schedule_ok (actual KL beta)",
+   "dsn/train.py SCHEDULE (all modes)",
+   "jobs.py AUTHORIZED_SCHEDULE (literal)",
+   "jobs.py verify_exports + resume_point",
+   "monitor/prompt.md"
+  ],
+  "stage": "schedule_150_applied",
+  "updated_at": "2026-10-12T19:04:17+0800"
+ },
+ "monitor": {
+  "pid": 3254270,
+  "last_check": "20261012T130644Z_3254270",
+  "last_codex_exit": null,
+  "last_successful_check": "20261012T122644Z_3254270",
+  "next_check": null,
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "outcome": "complete",
+  "runs": {
+   "pairout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 39,
+    "history_best_validation_macro_f1_85": 0.9005239724768849,
+    "history_bad_epochs": 15
+   },
+   "cellout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 52,
+    "history_best_validation_macro_f1_85": 0.9024906088139462,
+    "history_bad_epochs": 15
+   }
+  },
+  "stage": "monitor_complete",
+  "updated_at": "2026-10-12T21:06:55+0800"
+ },
+ "monitor_start": {
+  "pid": 3254270,
+  "ps": "3254270       1 3254270 3254270       00:15 bash /data/interns/zhangpc/cairn_new/pairout_cellout/monitor/monitor_loop.sh",
+  "ppid_is_1": true,
+  "state_dir": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/monitor",
+  "first_check": "20261012T110644Z_3254270",
+  "first_check_codex_exit": 0,
+  "first_check_after_json": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/monitor/checks/20261012T110644Z_3254270/after.json",
+  "next_check": "2026-10-12T11:46:44Z",
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "stage": "monitor_first_check_succeeded",
+  "updated_at": "2026-10-12T19:06:59+0800"
+ },
+ "final_handoff": {
+  "at": "2026-10-12T19:07:59.752896+08:00",
+  "trainers": {
+   "pairout": 3253533,
+   "cellout": 3253534
+  },
+  "wrappers": {
+   "pairout": 3253530,
+   "cellout": 3253531
+  },
+  "runs_live": true,
+  "monitor_pid": 3254270,
+  "monitor_ppid": 1,
+  "first_check": "20261012T110644Z_3254270",
+  "first_check_codex_exit": 0,
+  "next_check_utc": "2026-10-12T11:46:44Z",
+  "next_check_local": "2026-10-12T19:46:44+08:00",
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol LOW",
+  "schedule": {
+   "epochs": 150,
+   "patience": 15,
+   "kl_warmup_fraction": 0.2,
+   "train_batches": 1184,
+   "planned_updates": 177600,
+   "kl_warmup_updates": 35520
+  },
+  "original_gpu4_gpu5_and_monitor_ps": "2560540 2560536 Rl   /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python -m cairn_dsn.train --config /data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml\n2560541 2560537 Rl   /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python -m cairn_dsn.train --config /data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml\n2568426       1 Ss   bash /data/interns/zhangpc/cairn_new/scripts/monitor_loop.sh",
+  "previous_coordinator_3227562": "terminated only after original Claude finished; never resumed"
+ }
+}

@@ -1,0 +1,970 @@
+### GPU3-reviewed model/data -> accelerated copy (expected: no differences)
+### original production -> accelerated copy
+--- cairn_dsn/model.py	2026-10-11 23:11:42.214321192 +0800
++++ accelerated_four/dsn/model.py	2026-10-12 11:57:03.149016862 +0800
+@@ -3,6 +3,10 @@
+ All pair-conditioned states are freshly computed with gradients. The optional
+ path branch ports EmerGNN's multiplicative sum propagation and shared ordered
+ pair gates; only real cached topology, never learned states, is reused.
++
++GPU3 speed copy: the inter-graph GAT runs once per direction on the packed
++disconnected bipartite batch. The collator already applied each pair's local
++default-GATConv self-loop rule, so automatic loops are disabled only here.
+ """
+ from types import SimpleNamespace
+ import torch
+@@ -12,11 +16,12 @@
+ 
+ 
+ class InterGraphAttention(nn.Module):
+-    # Exact original class, references/DSN-DDI/drugbank_test/layers.py.
++    # Original class, references/DSN-DDI/drugbank_test/layers.py. Same
++    # parameters; per-pair self loops arrive explicitly in the packed edges.
+     def __init__(self, input_dim):
+         super().__init__()
+         self.input_dim = input_dim
+-        self.inter = GATConv((input_dim, input_dim), 32, 2)
++        self.inter = GATConv((input_dim, input_dim), 32, 2, add_self_loops=False)
+ 
+     def forward(self, h_data, t_data, b_graph):
+         edge_index = b_graph.edge_index
+@@ -46,17 +51,10 @@
+         self.inter_projection = Linear(192, 128, bias=True, weight_initializer='glorot')
+ 
+     def inter_pair_batch(self, h, t, cross_edges):
+-        # Invoke the UNCHANGED layer separately per molecule pair. Default GAT
+-        # self loops on ragged bipartite batches otherwise connect distinct pairs.
+-        hs, ts = h.ptr.tolist(), t.ptr.tolist()
+-        h_out, t_out = [], []
+-        for i, edges in enumerate(cross_edges):
+-            hi, ti = h.x[hs[i]:hs[i + 1]], t.x[ts[i]:ts[i + 1]]
+-            ho, to = self.interAtt(SimpleNamespace(x=hi), SimpleNamespace(x=ti),
+-                                   SimpleNamespace(edge_index=edges))
+-            h_out.append(ho)
+-            t_out.append(to)
+-        return torch.cat(h_out), torch.cat(t_out)
++        # One call on the packed batch: cross_edges holds only within-pair
++        # edges (global offsets) with each pair's own min(n_h, n_t) local loops.
++        return self.interAtt(SimpleNamespace(x=h.x), SimpleNamespace(x=t.x),
++                             SimpleNamespace(edge_index=cross_edges))
+ 
+     def forward(self, h, t, cross_edges):
+         # Original ne_update order.
+--- cairn_dsn/data.py	2026-10-11 23:00:04.435093465 +0800
++++ accelerated_four/dsn/data.py	2026-10-12 11:57:03.149016862 +0800
+@@ -37,13 +37,24 @@
+         a, b, y, original_rows, pairs = zip(*rows)
+         ga = [self.graphs[i] for i in a]
+         gb = [self.graphs[i] for i in b]
+-        cross = []
++        cross, h_offset, t_offset = [], 0, 0
+         for h, t in zip(ga, gb):
+             # np.meshgrid(x1,x2) ordering in original DSN preprocessing.
+             hi, ti = torch.meshgrid(torch.arange(h.num_nodes), torch.arange(t.num_nodes), indexing='xy')
+-            cross.append(torch.stack([hi.flatten(), ti.flatten()]))
++            edges = torch.stack([hi.flatten(), ti.flatten()])
++            # Default GATConv per pair: drop the LOCAL diagonal, then append
++            # min(n_h, n_t) LOCAL loops. Offsetting afterwards keeps global
++            # row==col edges between different offsets as ordinary edges.
++            edges = edges[:, edges[0] != edges[1]]
++            loops = torch.arange(min(h.num_nodes, t.num_nodes)).repeat(2, 1)
++            edges = torch.cat([edges, loops], 1)
++            edges[0] += h_offset
++            edges[1] += t_offset
++            cross.append(edges)
++            h_offset += h.num_nodes
++            t_offset += t.num_nodes
+         result = {'graph_a': Batch.from_data_list(ga), 'graph_b': Batch.from_data_list(gb),
+-                  'cross_edges': cross, 'drug_a': torch.tensor(a), 'drug_b': torch.tensor(b),
++                  'cross_edges': torch.cat(cross, 1), 'drug_a': torch.tensor(a), 'drug_b': torch.tensor(b),
+                   'label': torch.tensor(y), 'row_index': torch.tensor(original_rows)}
+         if self.with_path:
+             edge_rows, edge_pairs, head_nodes, tail_nodes, masks = [], [], [], [], []
+--- cairn_dsn/train.py	2026-10-11 23:11:42.318319885 +0800
++++ accelerated_four/dsn/train.py	2026-10-12 11:57:46.000478146 +0800
+@@ -1,4 +1,9 @@
+-"""Full DDI training, fixed85 validation selection, selected-checkpoint test export."""
++"""Full DDI training, fixed85 validation selection, selected-checkpoint test export.
++
++accelerated_four copy of the production trainer: reviewed GPU3 packed
++inter-graph attention (model.py/data.py), outputs only under
++accelerated_four/outputs, validation accuracy and flushed progress lines.
++"""
+ import argparse
+ import json
+ import math
+@@ -16,9 +21,17 @@
+ from .metrics import classification_metrics, validation_selection_metric
+ from .model import DSNRareDDI
+ 
+-ROOT = Path(__file__).resolve().parents[1]
++ROOT = Path(__file__).resolve().parents[2]
++OUTPUTS = ROOT / 'accelerated_four/outputs'
+ GPU = {(True, 'single_drugout'): 4, (True, 'double_drugout'): 5,
+        (False, 'single_drugout'): 6, (False, 'double_drugout'): 7}
++# The ONLY configuration entries that differ from the original production
++# checkpoints (besides output); tools/snapshot.py migrates exactly these.
++GENERATOR = 'gpt-6.1-sol high; accelerated_four packed-attention copy by claude-opus-5-5'
++NAMESPACE = 'accelerated_four'
++OPTIMIZATION = ('GPU3-reviewed packed cross-pair inter-graph attention: one GATConv call per direction, '
++                'per-pair local self loops built by the collator, add_self_loops=False')
++PROGRESS_EVERY = 100
+ 
+ 
+ def workspace_path(value):
+@@ -130,6 +143,9 @@
+     device = torch.device('cuda:0')
+     prepared = workspace_path(config['prepared'])
+     output_dir = workspace_path(config['output'])
++    # Independent replica output only; production outputs are never written.
++    if not output_dir.is_relative_to(OUTPUTS):
++        raise ValueError(f'Output must remain inside {OUTPUTS}')
+     output_dir.mkdir(parents=True, exist_ok=True)
+     saved = torch.load(output_dir / 'last.pt', map_location='cpu', weights_only=False) if args.resume else None
+     if not args.resume and not args.test_only and (output_dir / 'last.pt').exists():
+@@ -144,7 +160,8 @@
+     loader_batch = args.batch_size if args.test_only and args.batch_size else config['batch_size']
+     # Save the fully resolved settings (including memory-driven batch override).
+     if not args.test_only:
+-        config.update({'prepared': str(prepared), 'output': str(output_dir), 'generator': 'gpt-6.1-sol high',
++        config.update({'prepared': str(prepared), 'output': str(output_dir), 'generator': GENERATOR,
++                       'namespace': NAMESPACE, 'optimization': OPTIMIZATION,
+                        'selection_metric': 'fixed85 validation macroF1', 'test_selection': False,
+                        'source_provenance': json.loads((ROOT / 'docs/source_provenance.json').read_text())})
+     preparation = json.loads((prepared / 'preparation_report.json').read_text())
+@@ -196,6 +213,19 @@
+         best_metric, bad_epochs, update = saved['best_metric'], saved['bad_epochs'], saved['update']
+         start_epoch = saved['epoch'] + 1
+         del saved
++    will_train = not args.test_only and bad_epochs < config['patience'] and start_epoch <= config['epochs']
++    # Liveness/start line only (device query and print; no RNG use).
++    print(json.dumps({'phase': 'start', 'mode': 'test-only' if args.test_only else 'resume' if args.resume else 'fresh',
++                      'start_epoch': start_epoch, 'update': update, 'best_metric': best_metric,
++                      'bad_epochs': bad_epochs, 'epochs': config['epochs'], 'patience': config['patience'],
++                      'will_train': will_train, 'planned_updates': planned_updates,
++                      'kl_warmup_updates': warmup_updates, 'train_batches': len(loaders['train']),
++                      'train_rows': len(datasets['train']), 'validation_rows': len(datasets['val']),
++                      'batch_size': loader_batch, 'output': str(output_dir),
++                      'cuda_visible_devices': os.environ.get('CUDA_VISIBLE_DEVICES'),
++                      'device_uuid': str(torch.cuda.get_device_properties(device).uuid), 'pid': os.getpid(),
++                      'started_at': time.time()}), flush=True)
++    start_update = update
+     if not args.test_only and bad_epochs < config['patience']:
+         for epoch in range(start_epoch, config['epochs'] + 1):
+             started = time.time()
+@@ -228,9 +258,17 @@
+                     totals[name] += float(value.detach()) * n
+                 count += n
+                 update += 1
++                if update == start_update + 1 or update % PROGRESS_EVERY == 0:
++                    # From already-synchronized running totals; no RNG use.
++                    print(json.dumps({'phase': 'train_progress', 'epoch': epoch, 'update': update,
++                                      'epoch_rows': count, 'epoch_seconds': time.time() - started,
++                                      'beta': beta, 'running_ce': totals['ce'] / count,
++                                      'running_loss': totals['loss'] / count}), flush=True)
+             train = {k: v / count for k, v in totals.items()}
+             train['kl_beta_final'] = beta
+-            val, _, _, _, _ = evaluate(model, loaders['val'], device, config, beta)
++            val, val_probabilities, val_y, _, _ = evaluate(model, loaders['val'], device, config, beta)
++            val['accuracy'] = float((val_probabilities.argmax(1) == val_y).mean())
++            del val_probabilities, val_y
+             improved = val['macro_f1_85'] > best_metric
+             if improved:
+                 best_metric, bad_epochs = val['macro_f1_85'], 0
+--- configs/path_single_drugout.yaml	2026-10-11 23:01:00.078393934 +0800
++++ accelerated_four/configs/path_single_drugout.yaml	2026-10-12 11:57:03.153016812 +0800
+@@ -2,7 +2,7 @@
+ with_path: true
+ gpu: 4
+ prepared: data/prepared
+-output: outputs/path_single_drugout
++output: accelerated_four/outputs/path_single_drugout
+ seed: 42
+ epochs: 100
+ patience: 15
+--- configs/path_double_drugout.yaml	2026-10-11 23:01:00.186392576 +0800
++++ accelerated_four/configs/path_double_drugout.yaml	2026-10-12 11:57:03.157016761 +0800
+@@ -2,7 +2,7 @@
+ with_path: true
+ gpu: 5
+ prepared: data/prepared
+-output: outputs/path_double_drugout
++output: accelerated_four/outputs/path_double_drugout
+ seed: 42
+ epochs: 100
+ patience: 15
+--- configs/no_path_single_drugout.yaml	2026-10-11 23:01:00.282391369 +0800
++++ accelerated_four/configs/no_path_single_drugout.yaml	2026-10-12 11:57:03.161016711 +0800
+@@ -2,7 +2,7 @@
+ with_path: false
+ gpu: 6
+ prepared: data/prepared
+-output: outputs/no_path_single_drugout
++output: accelerated_four/outputs/no_path_single_drugout
+ seed: 42
+ epochs: 100
+ patience: 15
+--- configs/no_path_double_drugout.yaml	2026-10-11 23:01:00.406389810 +0800
++++ accelerated_four/configs/no_path_double_drugout.yaml	2026-10-12 11:57:03.165016661 +0800
+@@ -2,7 +2,7 @@
+ with_path: false
+ gpu: 7
+ prepared: data/prepared
+-output: outputs/no_path_double_drugout
++output: accelerated_four/outputs/no_path_double_drugout
+ seed: 42
+ epochs: 100
+ patience: 15
+--- scripts/server_jobs.py	2026-10-11 23:21:54.490623836 +0800
++++ accelerated_four/jobs.py	2026-10-12 12:06:11.562122375 +0800
+@@ -1,5 +1,11 @@
+ """Durable four-arm job records, real export verification, bounded recovery.
+ 
++accelerated_four copy of scripts/server_jobs.py: isolated ROOT-relative state
++(logs/accelerated_four/jobs), outputs (accelerated_four/outputs) and trainer
++(accelerated_four.dsn.train). Every run continues its snapshot with --resume
++(or --test-only once its schedule is finished); nothing restarts from scratch
++and the batch size is never changed.
++
+ CPU controller only. Training children receive exactly their assigned GPU.
+ No model forward, preparation, smoke run, or credential access here.
+ """
+@@ -15,7 +21,13 @@
+ import time
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-STATE = ROOT / 'logs/server_jobs'
++ACCEL = ROOT / 'accelerated_four'
++STATE = ROOT / 'logs/accelerated_four/jobs'
++OUTPUTS = ACCEL / 'outputs'
++CONFIGS = ACCEL / 'configs'
++APPROVAL = ROOT / 'logs/accelerated_four/review_approval.json'
++EVIDENCE = ACCEL / 'evidence/summary.json'
++REVIEW_DIFF = ACCEL / 'review/implementation.diff'
+ ARMS = {'path_single_drugout': 4, 'path_double_drugout': 5,
+         'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
+ MAX_RECOVERIES = 3
+@@ -70,14 +82,20 @@
+     return torch.load(output / name, map_location='cpu', weights_only=False)
+ 
+ 
++def history(output):
++    path = output / 'history.jsonl'
++    # Newline-terminated records only; a torn final append is not a record.
++    return [json.loads(line) for line in path.read_text().split('\n')[:-1]] if path.exists() else []
++
++
+ def verify_exports(arm):
+     """Completion means selected-best metrics AND all frozen test rows exported."""
+     import numpy as np
+     import pandas as pd
+     import yaml
+-    from cairn_dsn.metrics import classification_metrics
++    from accelerated_four.dsn.metrics import classification_metrics
+ 
+-    output = ROOT / 'outputs' / arm
++    output = OUTPUTS / arm
+     required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+                 'test_probabilities.npz', 'test_per_class.csv', 'test_confusion.csv',
+                 'test_config.yaml', 'test_complete.json']
+@@ -88,9 +106,18 @@
+         best = checkpoint(output, 'best.pt')
+         last = checkpoint(output, 'last.pt')
+         cfg = best['config']
+-        assert cfg['gpu'] == ARMS[arm]
++        assert cfg['gpu'] == ARMS[arm] and cfg['namespace'] == 'accelerated_four'
++        assert Path(cfg['output']) == output
+         assert last['config'] == cfg
+         assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
++        # Selected best is the strict fixed85 maximum of the full history.
++        assert best['epoch'] <= last['epoch'] and best['best_metric'] == last['best_metric']
++        records = history(output)
++        assert [r['epoch'] for r in records] == list(range(1, last['epoch'] + 1))
++        assert records[-1] == last['metrics'] and records[best['epoch'] - 1] == best['metrics']
++        assert best['best_metric'] == records[best['epoch'] - 1]['validation']['macro_f1_85']
++        assert all(r['validation']['macro_f1_85'] <= best['best_metric'] for r in records)
++        assert all(r['validation']['macro_f1_85'] < best['best_metric'] for r in records[:best['epoch'] - 1])
+         marker = read_json(output / 'test_complete.json')
+         metrics = read_json(output / 'test_metrics.json')
+         assert marker['checkpoint'] == metrics['checkpoint'] == 'best.pt'
+@@ -101,7 +128,7 @@
+         eval_cfg = yaml.safe_load((output / 'test_config.yaml').read_text())
+         assert all(eval_cfg.get(k) == v for k, v in cfg.items())
+         assert eval_cfg['evaluation_checkpoint'] == 'best.pt'
+-        frozen = pd.read_parquet(ROOT / 'data/prepared' / cfg['protocol'] / 'ddi.parquet')
++        frozen = pd.read_parquet(Path(cfg['prepared']) / cfg['protocol'] / 'ddi.parquet')
+         rows = np.flatnonzero(frozen.split.eq('test').to_numpy())
+         expected = frozen.iloc[rows]
+         prediction = pd.read_parquet(output / 'test_predictions.parquet')
+@@ -134,11 +161,31 @@
+         assert np.array_equal(exported_confusion.index.to_numpy(), np.arange(85))
+         assert np.array_equal(exported_confusion.columns.astype(int), np.arange(85))
+         assert np.array_equal(exported_confusion.to_numpy(), confusion)
+-        return True, {'selected_epoch': best['epoch'], 'rows': len(rows), 'metrics': actual}
++        return True, {'selected_epoch': best['epoch'], 'last_epoch': last['epoch'], 'bad_epochs': last['bad_epochs'],
++                      'rows': len(rows), 'metrics': actual}
+     except Exception as exc:
+         return False, {'verification_error': f'{type(exc).__name__}: {exc}'}
+ 
+ 
++def last_log_event(path):
++    """Most recent JSON phase line of an attempt log (progress/epoch/test)."""
++    try:
++        with open(path, 'rb') as stream:
++            stream.seek(max(0, stream.seek(0, 2) - 65536))
++            lines = stream.read().decode(errors='replace').splitlines()
++    except FileNotFoundError:
++        return None
++    for line in reversed(lines):
++        if line.startswith('{'):
++            try:
++                event = json.loads(line)
++            except ValueError:
++                continue
++            return {k: event[k] for k in ['phase', 'epoch', 'update', 'epoch_rows', 'epoch_seconds', 'seconds',
++                                          'bad_epochs', 'best_validation_macro_f1_85', 'start_epoch'] if k in event}
++    return None
++
++
+ def status():
+     result = {}
+     for arm, gpu in ARMS.items():
+@@ -151,11 +198,18 @@
+         # Avoid reading checkpoints while the trainer is atomically publishing
+         # its final files. A live process is always left alone.
+         complete, evidence = (False, {}) if running else verify_exports(arm)
++        records = history(OUTPUTS / arm)
++        process_file = Path(record['log']).with_name(f'attempt_{record["attempt"]}_process.json')
+         result[arm] = {'state': 'live' if running else 'complete' if complete else
+                       'exhausted' if record['recoveries'] >= MAX_RECOVERIES else 'failed',
+                       'gpu': gpu, 'pid': record['pid'], 'attempt': record['attempt'],
+-                      'recoveries': record['recoveries'], 'log': record['log'],
++                      'recoveries': record['recoveries'], 'mode': record['mode'], 'log': record['log'],
+                       'config': record['config'], 'evidence': evidence,
++                      'train_process': read_json(process_file) if process_file.exists() else None,
++                      'history_last_epoch': records[-1]['epoch'] if records else None,
++                      'history_best_validation_macro_f1_85': records[-1]['best_validation_macro_f1_85'] if records else None,
++                      'history_bad_epochs': records[-1]['bad_epochs'] if records else None,
++                      'last_log_event': last_log_event(record['log']),
+                       'blocked_reason': record.get('blocked_reason'),
+                       'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+     snapshot = {'checked_at': time.time(), 'runs': result,
+@@ -173,6 +227,8 @@
+     old = read_json(old_path) if old_path.exists() else None
+     if old and live(old):
+         raise RuntimeError(f'{arm} is live; cannot relaunch')
++    if mode not in ('--resume', '--test-only'):
++        raise ValueError('accelerated_four runs only continue snapshots: --resume or --test-only')
+     attempt = old['attempt'] + 1 if old else 1
+     log = directory / f'attempt_{attempt}.log'
+     if log.exists():
+@@ -181,9 +237,7 @@
+     if not config_path.is_relative_to(ROOT):
+         raise ValueError('Config must remain in workspace')
+     exit_file = directory / f'attempt_{attempt}_exit.json'
+-    command = [sys.executable, '-m', 'cairn_dsn.train', '--config', str(config_path)]
+-    if mode:
+-        command.append(mode)
++    command = [sys.executable, '-m', 'accelerated_four.dsn.train', '--config', str(config_path), mode]
+     launch_file = directory / f'attempt_{attempt}.json'
+     record = {'arm': arm, 'gpu': ARMS[arm], 'attempt': attempt, 'recoveries': recoveries,
+               'started_at': time.time(), 'config': str(config_path), 'mode': mode,
+@@ -204,7 +258,8 @@
+     record = read_json(launch_file)
+     with (STATE / record['arm'] / 'job.lock').open('a') as lock:
+         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+-        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(record['gpu']), PYTHONUNBUFFERED='1')
++        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(record['gpu']), CUDA_DEVICE_ORDER='PCI_BUS_ID',
++                   PYTHONUNBUFFERED='1', PYTHONPATH=str(ROOT))
+         child = subprocess.Popen(record['command'], cwd=ROOT, env=env, pass_fds=(lock.fileno(),))
+         write_json(launch_file.with_name(launch_file.stem + '_process.json'),
+                    {'pid': child.pid, 'process_start': process_start(child.pid), 'command': record['command']})
+@@ -213,7 +268,24 @@
+         return code if code >= 0 else 128 - code
+ 
+ 
+-def recover(arm, reason, reduce_batch):
++def resume_point(output):
++    """(mode, checkpoint name to resume from) for an incomplete run; never resets."""
++    last = checkpoint(output, 'last.pt') if (output / 'last.pt').exists() else None
++    best = checkpoint(output, 'best.pt') if (output / 'best.pt').exists() else None
++    if last is None and best is None:
++        raise RuntimeError('No checkpoint: the snapshot is missing; never restart from scratch')
++    # Crash between best and last publication: best.pt is the complete newer
++    # epoch (model, AdamW, RNG, update; its history line precedes it).
++    source = 'best.pt' if best is not None and (last is None or best['epoch'] > last['epoch']) else 'last.pt'
++    state = best if source == 'best.pt' else last
++    cfg = state['config']
++    done = state['epoch'] >= cfg['epochs'] or state['bad_epochs'] >= cfg['patience']
++    if done and best is None:
++        raise RuntimeError('Training is done but best.pt is missing; do not reset training')
++    return ('--test-only' if done else '--resume'), source, state
++
++
++def recover(arm, reason):
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -232,47 +304,78 @@
+     if complete:
+         raise RuntimeError('Verified complete: no recovery needed')
+     import yaml
+-    output = ROOT / 'outputs' / arm
+-    cfg = yaml.safe_load(Path(record['config']).read_text())
+-    mode = ''
+-    config_path = Path(record['config'])
+-    last = checkpoint(output, 'last.pt') if (output / 'last.pt').exists() else None
+-    best_exists = (output / 'best.pt').exists()
+-    if last is not None:
+-        cfg = last['config']
+-        done = last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+-        mode = '--test-only' if done else '--resume'
+-        if done and not best_exists:
+-            raise RuntimeError('Training is done but best.pt is missing; do not reset training')
+-    elif best_exists:
+-        # Crash between best and last publication: recover that exact epoch,
+-        # including optimizer and RNG, rather than reset its schedule.
+-        cfg = checkpoint(output, 'best.pt')['config']
+-        mode = '--resume'
+-    if reduce_batch:
+-        log_text = Path(record['log']).read_text(errors='replace')[-30000:]
+-        if last is not None or best_exists or 'out of memory' not in log_text.lower():
+-            raise RuntimeError('Batch reduction allowed only for recorded OOM before ANY checkpoint')
+-        cfg['batch_size'] = max(1, cfg['batch_size'] // 2)
+-        if cfg['batch_size'] == 1 and yaml.safe_load(config_path.read_text())['batch_size'] == 1:
+-            raise RuntimeError('Cannot reduce batch below one')
+-    # Retain preceding checkpoint inodes and all attempt logs. Trainer saves
+-    # via atomic replacement, so later epochs cannot alter these archives.
++    output = OUTPUTS / arm
++    mode, source, state = resume_point(output)
++    cfg = state['config']
++    # Retain preceding checkpoint inodes, history and all attempt logs. Trainer
++    # saves via atomic replacement, so later epochs cannot alter these archives.
+     archive = output / 'recovery_archive' / str(record['recoveries'])
+     archive.mkdir(parents=True, exist_ok=False)
+-    for name in ['last.pt', 'best.pt', 'config.yaml', 'test_metrics.json', 'test_complete.json']:
++    for name in ['last.pt', 'best.pt', 'history.jsonl', 'config.yaml', 'test_metrics.json', 'test_complete.json']:
+         if (output / name).exists():
+             if name.endswith('.pt'):
+                 os.link(output / name, archive / name)
+             else:
+                 shutil.copyfile(output / name, archive / name)
+-    if last is None and best_exists:
+-        os.link(output / 'best.pt', output / 'last.pt')
++    if source == 'best.pt':
++        temporary = output / 'last.pt.recovery'
++        os.link(output / 'best.pt', temporary)
++        temporary.replace(output / 'last.pt')
++    # Coherent history for the resumed checkpoint: a crash after the history
++    # append but before publication must not leave a duplicate epoch line.
++    records = [r for r in history(output) if r['epoch'] <= state['epoch']]
++    if [r['epoch'] for r in records] != list(range(1, state['epoch'] + 1)) or records[-1] != state['metrics']:
++        raise RuntimeError('History is incoherent with the resume checkpoint; archived, not relaunched')
++    temporary = output / 'history.jsonl.recovery'
++    temporary.write_text(''.join(json.dumps(r, allow_nan=False) + '\n' for r in records))
++    temporary.replace(output / 'history.jsonl')
+     config_path = directory / f'recovery_{record["recoveries"]}_config.yaml'
+     config_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
++    write_json(archive / 'recovery.json', {'reason': reason, 'mode': mode, 'resume_from': source,
++                                           'resume_epoch': state['epoch'], 'resume_update': state['update'],
++                                           'history_records_kept': len(records), 'at': time.time()})
+     return start(arm, config_path, mode, record['recoveries'], reason)
+ 
+ 
++def launch_refusals():
++    """Initial launch gate: Codex approval newer than code/diff/evidence, passing
++    evidence, and every arm still exactly at its immutable snapshot."""
++    code = [p for p in ACCEL.rglob('*') if p.is_file() and p.suffix in ('.py', '.sh', '.yaml', '.md')
++            and 'outputs' not in p.parts and 'evidence' not in p.parts and '.cache' not in p.parts]
++    if not APPROVAL.exists():
++        yield f'missing Codex review approval {APPROVAL}'
++    else:
++        approval = read_json(APPROVAL)
++        if approval.get('approved') is not True:
++            yield 'review_approval.json: approved is not true'
++        if 'codex' not in str(approval.get('reviewer', '')).lower():
++            yield 'review_approval.json: reviewer must be Codex'
++        newest = max(code + [EVIDENCE, REVIEW_DIFF], key=lambda p: p.stat().st_mtime if p.exists() else 0)
++        if newest.exists() and APPROVAL.stat().st_mtime < newest.stat().st_mtime:
++            yield f'approval is older than {newest}'
++    if not EVIDENCE.exists() or read_json(EVIDENCE).get('all_passed') is not True:
++        yield f'evidence {EVIDENCE} missing or not all passed'
++    elif EVIDENCE.stat().st_mtime < max(p.stat().st_mtime for p in (ACCEL / 'dsn').glob('*.py')):
++        yield 'evidence is older than accelerated_four/dsn code'
++    if not REVIEW_DIFF.exists():
++        yield f'missing {REVIEW_DIFF} (run accelerated_four/tools/make_review.sh)'
++    for arm in ARMS:
++        output = OUTPUTS / arm
++        if (STATE / arm / 'record.json').exists():
++            yield f'{arm}: existing job record; use --status and bounded --recover'
++        provenance = output / 'snapshot/provenance.json'
++        if not provenance.exists() or read_json(provenance).get('passed') is not True:
++            yield f'{arm}: missing or failed snapshot provenance'
++            continue
++        for name in ['last.pt', 'best.pt']:
++            if not (output / name).exists() or (output / name).stat().st_ino != (output / 'snapshot' / name).stat().st_ino:
++                yield f'{arm}: {name} is not the immutable snapshot'
++        if (output / 'history.jsonl').read_bytes() != (output / 'snapshot/history.jsonl').read_bytes():
++            yield f'{arm}: history.jsonl differs from the snapshot'
++        if any((output / n).exists() for n in ['test_complete.json', 'test_metrics.json']):
++            yield f'{arm}: test exports already exist'
++
++
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     action = parser.add_mutually_exclusive_group(required=True)
+@@ -282,7 +385,6 @@
+     action.add_argument('--block', choices=ARMS)
+     action.add_argument('--worker', type=Path)
+     parser.add_argument('--reason')
+-    parser.add_argument('--reduce-batch', action='store_true')
+     args = parser.parse_args()
+     os.chdir(ROOT)
+     # Direct script invocation needs this for metrics import, not only -m.
+@@ -305,7 +407,7 @@
+             if not args.reason:
+                 parser.error('--recover requires an observed failure --reason')
+             try:
+-                result = recover(args.recover, args.reason, args.reduce_batch)
++                result = recover(args.recover, args.reason)
+             except Exception as exc:
+                 recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+@@ -314,13 +416,20 @@
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+-            # Initial launch is intentionally distinct from recovery. Refuse
+-            # any existing record/checkpoint before starting the first job.
++            # Initial launch is intentionally distinct from recovery: only after
++            # Codex approval, from untouched snapshots, without existing records.
++            refusals = list(launch_refusals())
++            if refusals:
++                raise RuntimeError('LAUNCH REFUSED:\n  ' + '\n  '.join(refusals))
++            result = {}
+             for arm in ARMS:
+-                if (STATE / arm / 'record.json').exists() or any((ROOT / 'outputs' / arm / n).exists()
+-                                                               for n in ['last.pt', 'best.pt']):
+-                    raise RuntimeError('Existing run found: use --status and bounded --recover')
+-            result = {arm: start(arm, ROOT / 'configs' / f'{arm}.yaml', '') for arm in ARMS}
++                mode, source, _ = resume_point(OUTPUTS / arm)
++                assert source == 'last.pt'
++                result[arm] = start(arm, CONFIGS / f'{arm}.yaml', mode)
++            from accelerated_four.status import update_status
++            update_status('launched_awaiting_progress_confirmation',
++                          launch={arm: {k: r[k] for k in ['pid', 'process_start', 'mode', 'log', 'gpu', 'started_at']}
++                                  for arm, r in result.items()})
+         print(json.dumps(result, indent=2, allow_nan=False), flush=True)
+     return 0
+ 
+--- scripts/monitor_loop.sh	2026-10-11 23:25:06.568209094 +0800
++++ accelerated_four/monitor/monitor_loop.sh	2026-10-12 12:07:21.593241965 +0800
+@@ -1,7 +1,11 @@
+ #!/usr/bin/env bash
++# Detached accelerated_four monitor daemon (started only by start_monitor.sh).
++# Pattern of scripts/monitor_loop.sh (left untouched): deterministic status,
++# one gpt-6.1-sol LOW Codex check, host drain of recovery requests, after
++# status, local note/notifications; a check starts every 2400 seconds.
+ set -euo pipefail
+-source "$(dirname -- "${BASH_SOURCE[0]}")/runtime.sh"
+-MONITOR_DIR="$ROOT_DIR/logs/server_monitor"
++source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
++MONITOR_DIR="$LOG_DIR/monitor"
+ mkdir -p "$MONITOR_DIR"
+ exec 9>"$MONITOR_DIR/daemon.lock"
+ flock -n 9 || exit 0
+@@ -16,16 +20,21 @@
+ cd "$ROOT_DIR"
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
++status_to() {
++  # A status/verifier error is recorded and never stops monitoring.
++  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/jobs.py --status > "$1" 2> "$1.err" \
++    || printf '{"all_complete": false, "status_error": true, "runs": {}}\n' > "$1"
++}
+ while true; do
+   CHECK_ID="$(date -u +%Y%m%dT%H%M%SZ)_$$"
+-  CHECK_DIR="$MONITOR_DIR/$CHECK_ID"
++  CHECK_DIR="$MONITOR_DIR/checks/$CHECK_ID"
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+   # Check lock covers both state reads, Codex, and the host recovery drain.
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  status_to "$CHECK_DIR/before.json"
+   cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+@@ -33,6 +42,7 @@
+ PY
+   then
+     cp "$CHECK_DIR/before.json" "$MONITOR_DIR/final_summary.json"
++    "$PYTHON_BIN" accelerated_four/monitor/notify.py "$CHECK_DIR/before.json" complete || true
+     echo 'complete' > "$MONITOR_DIR/state.txt"
+     echo 'All four selected-best checkpoint tests and complete exports verified.'
+     rm -f "$MONITOR_DIR/next_check.txt"
+@@ -40,13 +50,13 @@
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
+   printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+-  # A CLI timeout affects ONLY this check, never a project training process.
++  # A CLI timeout affects ONLY this check, never a training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+       --skip-git-repo-check --ephemeral --ignore-user-config \
+       -s workspace-write -c 'sandbox_workspace_write.network_access=true' \
+       -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+-      -o "$CHECK_DIR/codex_final.txt" - < docs/server_monitor_prompt.md \
++      -o "$CHECK_DIR/codex_final.txt" - < accelerated_four/monitor/prompt.md \
+       > "$CHECK_DIR/codex.log" 2>&1; then
+     CLI_FAILURES=0
+   else
+@@ -55,27 +65,29 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   # Launch recovery only here, outside the CLI timeout and its PID namespace.
+-  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
++  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/monitor/drain_recovery_requests.py \
+       > "$CHECK_DIR/recovery_drain.log" 2>&1; then
+     :
+   else
+     DRAIN_EXIT=$?
+     printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
+   fi
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
++  status_to "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY' || echo monitoring
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+-elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
++elif state['runs'] and all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+ else:
+     print('monitoring')
+ PY
+   )"
+   echo "$OUTCOME" > "$MONITOR_DIR/state.txt"
++  "$PYTHON_BIN" accelerated_four/monitor/notify.py "$CHECK_DIR/after.json" "$OUTCOME" \
++    > "$CHECK_DIR/notify.log" 2>&1 || true
+   if [[ "$OUTCOME" != monitoring ]]; then
+     cp "$CHECK_DIR/after.json" "$MONITOR_DIR/final_summary.json"
+     rm -f "$MONITOR_DIR/next_check.txt"
+--- scripts/start_monitor.sh	2026-10-11 23:23:15.217608961 +0800
++++ accelerated_four/monitor/start_monitor.sh	2026-10-12 12:07:42.728976253 +0800
+@@ -1,41 +1,53 @@
+ #!/usr/bin/env bash
++# Start the detached accelerated_four monitor daemon ONLY after all four jobs
++# have records and confirmed real progress. Safe to repeat while it is live.
++# Usage: bash accelerated_four/monitor/start_monitor.sh
+ set -euo pipefail
+-source "$(dirname -- "${BASH_SOURCE[0]}")/runtime.sh"
++source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ export CUDA_VISIBLE_DEVICES=''
+-mkdir -p logs/server_monitor
++MONITOR_DIR="$LOG_DIR/monitor"
++mkdir -p "$MONITOR_DIR"
+ # Serialize monitor launches separately from its long-lived daemon lock.
+-exec 8>logs/server_monitor/launcher.lock
++exec 8>"$MONITOR_DIR/launcher.lock"
+ flock -n 8 || { echo 'Another monitor launch is in progress' >&2; exit 1; }
+-if ! flock -n logs/server_monitor/daemon.lock true; then
+-  echo 'Monitor is already running; see logs/server_monitor/monitor.pid'
++if ! flock -n "$MONITOR_DIR/daemon.lock" true; then
++  echo "Monitor is already running; see $MONITOR_DIR/monitor.pid"
+   exit 0
+ fi
+-"$PYTHON_BIN" - <<'PY'
+-import os
+-from pathlib import Path
++"$PYTHON_BIN" - "$MONITOR_DIR" <<'PY'
+ import subprocess
++import sys
+ import time
+-from scripts.server_jobs import ARMS, STATE
++from pathlib import Path
++from accelerated_four.jobs import ARMS, STATE
++from accelerated_four.tools.confirm_launch import arm_state
++from accelerated_four.status import update_status
++monitor = Path(sys.argv[1])
+ for arm in ARMS:
+     if not (STATE / arm / 'record.json').is_file():
+         raise SystemExit('Launch and confirm all four jobs before starting the monitor')
++    state = arm_state(arm)
++    if not (state['progress_confirmed'] or state['exit'] is not None):
++        raise SystemExit(f'{arm}: no confirmed real progress yet (start line, first step and 100-update line)')
+ if not Path('/data/interns/zhangpc/.local/bin/codex').is_file():
+     raise SystemExit('Existing Codex CLI is unavailable')
+ root = Path.cwd()
+-with (root / 'logs/server_monitor/daemon.log').open('a') as log:
+-    process = subprocess.Popen(['bash', str(root / 'scripts/monitor_loop.sh')],
++with (monitor / 'daemon.log').open('a') as log:
++    process = subprocess.Popen(['bash', str(root / 'accelerated_four/monitor/monitor_loop.sh')],
+                                cwd=root, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                                start_new_session=True, close_fds=True)
+-(root / 'logs/server_monitor/monitor.pid').write_text(str(process.pid) + '\n')
++(monitor / 'monitor.pid').write_text(str(process.pid) + '\n')
+ # Confirm initialization before reporting a successful detached launch.
+-for _ in range(50):
++for _ in range(600):
+     if process.poll() is not None:
+-        raise SystemExit('Monitor exited during startup; see logs/server_monitor/daemon.log')
+-    checks = root / 'logs/server_monitor'
+-    if (checks / 'next_check.txt').is_file() and any(checks.glob(f'*_{process.pid}/before.json')):
++        raise SystemExit(f'Monitor exited during startup; see {monitor}/daemon.log')
++    if (monitor / 'next_check.txt').is_file() and any((monitor / 'checks').glob(f'*_{process.pid}/before.json')):
+         break
+     time.sleep(0.1)
+ else:
+     raise SystemExit('Monitor startup not confirmed; inspect daemon.log and daemon.lock before retrying')
+-print(f'Detached server monitor PID {process.pid}; checks every 2400 seconds')
++update_status('monitor_started', monitor={'pid': process.pid, 'state_dir': str(monitor),
++                                          'next_check': (monitor / 'next_check.txt').read_text().strip(),
++                                          'interval_seconds': 2400, 'model': 'gpt-6.1-sol low'})
++print(f'Detached accelerated_four monitor PID {process.pid}; checks every 2400 seconds')
+ PY
+--- scripts/drain_recovery_requests.py	2026-10-11 23:25:40.159786791 +0800
++++ accelerated_four/monitor/drain_recovery_requests.py	2026-10-12 12:07:42.724976303 +0800
+@@ -1,4 +1,8 @@
+-"""Consume monitor recovery requests in the host daemon, once per request."""
++"""Consume monitor recovery requests in the host daemon, once per request.
++
++Copy of scripts/drain_recovery_requests.py for accelerated_four: requests carry
++only arm and reason (no batch changes); accelerated_four/jobs.py alone decides.
++"""
+ import json
+ from pathlib import Path
+ import subprocess
+@@ -6,8 +10,8 @@
+ import time
+ 
+ 
+-ROOT = Path(__file__).resolve().parents[1]
+-REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
++ROOT = Path(__file__).resolve().parents[2]
++REQUESTS = ROOT / 'logs/accelerated_four/monitor/recovery_requests'
+ 
+ 
+ def write_record(path, record):
+@@ -37,17 +41,15 @@
+                     or not isinstance(request.get('arm'), str)
+                     or not isinstance(request.get('reason'), str)
+                     or not request['reason'].strip()
+-                    or type(request.get('reduce_batch')) is not bool):
+-                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
+-            record['request'] = {key: request[key] for key in ('arm', 'reason', 'reduce_batch')}
+-            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
++                    or set(request) - {'arm', 'reason'}):
++                raise ValueError('Request requires exactly arm and a nonempty reason')
++            record['request'] = {key: request[key] for key in ('arm', 'reason')}
++            command = [sys.executable, str(ROOT / 'accelerated_four/jobs.py'),
+                        '--recover', request['arm'], '--reason', request['reason']]
+-            if request['reduce_batch']:
+-                command.append('--reduce-batch')
+             record['command'] = command
+             write_record(claimed, record)
+-            # Inherit the host daemon's interpreter/runtime. The existing
+-            # controller alone decides whether recovery is allowed.
++            # Inherit the host daemon's interpreter/runtime. The controller
++            # alone decides whether recovery is allowed.
+             result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
+                                     capture_output=True, text=True, errors='replace')
+             record.update(result='succeeded' if result.returncode == 0 else 'rejected',
+--- docs/server_monitor_prompt.md	2026-10-11 23:25:40.259785534 +0800
++++ accelerated_four/monitor/prompt.md	2026-10-12 12:08:03.276717933 +0800
+@@ -1,93 +1,81 @@
+-You are the detached SERVER monitor for the four reviewed full-data DDI jobs in
+-/data/interns/zhangpc/cairn_new. Use gpt-6.1-sol with reasoning LOW. The main chat
+-has ended; do not require it, app automation, or user confirmation. Scheduled
+-networked CLI execution and the existing private .codex_runtime authentication
+-are authorized. Never inspect, print, copy, or commit authentication credentials.
+-The daemon supplies process-local proxy variables for the existing service.
+-Do not source .bashrc, call clashon, or start interactive shells/history writes.
+-
+-First read logs/server_jobs/status.json (written immediately before this check),
+-then read actual per-run record.json, current attempt log tail, process identity
+-and exit records, history tail, checkpoint/output state as needed. Use the
+-existing read-only Python environment via scripts/runtime.sh. Keep every write,
+-temporary file and cache inside cairn_new. cairn_dev is READ ONLY. GPUs 0-3 are
+-forbidden. Exact mapping: path single=4, path double=5, no_path single=6,
+-no_path double=7. No permission changes, broad audits, hashes, smoke runs,
++You are the detached SERVER monitor for the four ACCELERATED replica DDI jobs in
++/data/interns/zhangpc/cairn_new (namespace accelerated_four). Use gpt-6.1-sol
++with reasoning LOW. The main chat has ended; do not require it, app automation,
++or user confirmation. Scheduled networked CLI execution and the existing private
++.codex_runtime authentication are authorized. Never inspect, print, copy, or
++commit authentication credentials. The daemon supplies process-local proxy
++variables for the existing service. Do not source .bashrc, call clashon, or
++start interactive shells/history writes.
++
++SCOPE: only the accelerated replicas: state logs/accelerated_four/jobs/, outputs
++accelerated_four/outputs/<arm>/, their recorded wrapper/trainer PIDs. The
++ORIGINAL jobs (logs/server_jobs/, outputs/, scripts/, cairn_dsn/, configs/) and
++the original monitor (logs/server_monitor/) are someone else's: never read their
++checkpoints for decisions, never signal them, never write there. Exact GPU
++mapping: path single=4, path double=5, no_path single=6, no_path double=7
++(shared with the original jobs by design). GPUs 0-3 are forbidden.
++
++First read logs/accelerated_four/jobs/status.json (written immediately before
++this check by `accelerated_four/jobs.py --status`), then as needed the per-run
++record.json, current attempt log tail, attempt_<N>_process.json and exit records,
++history.jsonl tail and output state. Use the read-only Python environment via
++`source accelerated_four/env.sh` ($PYTHON_BIN). Keep every write, temporary file
++and cache inside cairn_new, under logs/accelerated_four/monitor/ only.
++cairn_dev is READ ONLY. No permission changes, broad audits, hashes, smoke runs,
+ preparation, new experiments, or changes to data/model/selection formulas.
+ 
+-Use scripts/server_jobs.py --status for real export verification. It checks the
+-selected best checkpoint, stopping state, frozen test rows, 85 probabilities,
+-metrics consistency, predictions, per-class and confusion exports, test config
+-and completion marker. Exit alone never proves success. Do not mark a run
+-complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or when all runs are complete/exhausted).
+-Codex CLI failures never end monitoring while any job remains live; deterministic
+-status and LOW Codex checks continue every 2400 seconds regardless of their count.
+-Per-check before/after snapshots and snapshot_summary.json remain under
+-logs/server_monitor; final_summary.json records the terminal result.
+-
+-Leave every LIVE job alone even if its epoch log has not changed for hours.
+-Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+-the job.lock may still be held by its live training child. Never kill/restart
+-live jobs because of SSH loss, CLI timeout, polling timeout, or missing logs.
+-If all states are live/complete and there is no actionable change, stay quiet:
+-write a short local check note under logs/server_monitor/check_note.json with
+-checked_at, per-run state, and changed=false, then return without chat output.
+-Do not emit repeated unchanged summaries or ask the user questions.
+-
+-For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+-verified exports), inspect its recorded errors first. If a narrowly justified
+-monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
+-cairn_new, document the observed error
+-and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+-only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+-configs/, data/, or checkpoint files. Do not run extra training
+-commands directly. NEVER launch or recover jobs from a Codex tool: its PID
+-namespace and lifetime are scoped to the tool/check. Never execute
+-scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
+-scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
+-or recovery functions through Python or another wrapper.
++`accelerated_four/jobs.py --status` performs the real export verification:
++stopped schedule (epoch limit or patience), selected best.pt consistent with
++last.pt and the strict fixed85 history maximum, frozen test rows, 85-way
++probabilities, metrics, predictions, per-class and confusion exports, test config
++and completion marker. Exit status alone never proves success. Do not mark a run
++complete yourself or manufacture output files. The loop writes final_summary and
++exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring.
++
++Leave every LIVE job alone even if its log has not changed for hours. If the
++wrapper died, the job.lock may still be held by its live training child
++(attempt_<N>_process.json). Never kill/restart live jobs because of SSH loss,
++CLI timeout, polling timeout, stale epoch lines, or missing logs. The trainer
++prints a train_progress line every 100 updates; one epoch is 1165 updates.
++If all states are live/complete with no actionable change, stay quiet: the
++daemon already writes logs/accelerated_four/monitor/check_note.json and
++notifications. Optionally append one short line to
++logs/accelerated_four/monitor/codex_notes.jsonl; no chat output, no questions.
++
++You may ONLY: read logs/artifacts, run `accelerated_four/jobs.py --status`, and
++file recovery requests. Do not edit any code, config, data, model, checkpoint,
++history or output file. Never launch, resume or test-run training yourself.
++NEVER execute accelerated_four/jobs.py --recover, --launch-reviewed, --block or
++--worker, accelerated_four/launch_four.sh, or
++accelerated_four/monitor/drain_recovery_requests.py, and never call the
++controller's functions through Python or another wrapper: a Codex tool's PID
++namespace and lifetime are scoped to this check.
++
++For an actually FAILED job (state failed: dead process AND unlocked job.lock AND
++unverified exports), inspect its recorded errors first. Then write ONE JSON
++recovery request under logs/accelerated_four/monitor/recovery_requests/:
+ 
+-For an eligible failed job, write one JSON recovery request under
+-logs/server_monitor/recovery_requests/ with these fields:
++  {"arm": "<exact arm name>", "reason": "<actual observed failure>"}
+ 
+-  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+-
+-Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
++Use a unique filename (timestamp plus UUID), write a .tmp file in that same
+ directory, then atomically rename it to .json. Do not create a duplicate request
+ for an arm with a pending request. Record the request path and observed failure
+-in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
+-complete runs. The host daemon drains requests AFTER this Codex invocation ends
+-and BEFORE its after-status snapshot, invoking the existing bounded recovery
+-controller with the inherited host runtime. It moves each request into
+-recovery_requests/processed/ before invocation and records the request, result,
+-stdout and stderr there. Interrupted requests remain as evidence and are not
+-automatically replayed; inspect the processed record and real job status before
+-considering any new request. Leave processed records intact. Invalid arm names,
+-live jobs and completed jobs are rejected by the existing controller.
+-
+-The host controller archives checkpoints/configs, resumes last.pt with the exact
+-recorded config, optimizer/update/RNG and schedule, or runs --test-only after
+-completed training.
+-If a crash occurred between best/last publication it resumes the retained best
+-epoch, never resets the schedule. Without any checkpoint, it retries the same
+-full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+-best.pt, set reduce_batch=true in the request; this halves that run's batch and
+-records its actual config. Never change batch size after a checkpoint. Never overwrite
+-past attempt logs/archives. At most three recovery attempts per run; attempted
+-recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+-Do not bypass this bound, erase records, or create replacement output directories.
+-
+-After any action re-read --status and save a local check note plus action record.
+-A queued request is not a completed recovery: the host processes it after you
+-return. Never wait for or drain it from this check.
+-If a failure cannot be repaired within these constraints, retry only when a
+-legitimate retry can help. Otherwise record the observed irreparable failure:
+-
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --block <arm> --reason '<observed irreparable failure>'
+-
+-This closes that run's recovery budget without altering checkpoints. Never
+-claim completion without the verifier. The daemon handles the next 2400-second
+-check, next-check timestamp, PID, overlap lock, summary and exit. Do not start
+-another daemon, sleep for the interval, or create a new automation.
++in logs/accelerated_four/monitor/actions.jsonl. Never request recovery for live
++or complete runs. The host daemon drains requests AFTER this Codex invocation
++ends and BEFORE its after-status snapshot, invoking the bounded controller
++(at most three recoveries per arm, preparation errors included). It archives
++checkpoints/history/configs, resumes the exact recorded config with
++optimizer/update/RNG/schedule (--resume), or runs --test-only once training has
++stopped; a crash between best/last publication resumes the complete newer
++best.pt epoch and the history is trimmed to the resumed epoch. It never
++restarts from scratch and never changes the batch size. Processed requests and
++their results are in recovery_requests/processed/; interrupted requests are not
++replayed. A queued request is not a completed recovery.
++
++If a failure cannot be repaired within these constraints (e.g. the same
++deterministic error after recovery), do not request recovery again; record the
++observation in actions.jsonl so the exhausted/failed state stays explicit.
++Never claim completion without the verifier. The daemon handles the next
++2400-second check, next-check timestamp, PID, overlap lock, summary and exit.
++Do not start another daemon, sleep for the interval, or create a new automation.
+--- scripts/launch_four.sh	2026-10-11 23:15:36.543375277 +0800
++++ accelerated_four/launch_four.sh	2026-10-12 12:06:37.973790336 +0800
+@@ -1,9 +1,14 @@
+ #!/usr/bin/env bash
+-set -euo pipefail
+-source "$(dirname -- "${BASH_SOURCE[0]}")/runtime.sh"
++# Host launch of all four accelerated replicas. Codex runs this ONLY after
++# writing logs/accelerated_four/review_approval.json; the controller refuses
++# otherwise. Each arm: detached session (wrapper orphaned -> PPID 1) holding
++# its job.lock, inherited by the training child. Then waits (bounded) for real
++# progress of every arm and records logs/accelerated_four/launch.json.
++# Usage: bash accelerated_four/launch_four.sh --launch-reviewed
++source "$(dirname -- "${BASH_SOURCE[0]}")/env.sh"
+ if [[ "${1:-}" != --launch-reviewed || $# != 1 ]]; then
+-  echo 'Usage: bash scripts/launch_four.sh --launch-reviewed (only after coordinator review)' >&2
++  echo 'Usage: bash accelerated_four/launch_four.sh --launch-reviewed (only after Codex review approval)' >&2
+   exit 2
+ fi
+-export CUDA_VISIBLE_DEVICES=''
+-exec "$PYTHON_BIN" scripts/server_jobs.py --launch-reviewed
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/jobs.py --launch-reviewed
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/tools/confirm_launch.py --wait 1800

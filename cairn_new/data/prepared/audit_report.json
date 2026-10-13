@@ -1,0 +1,52 @@
+{
+  "syntax": [
+    "cairn_dsn/__init__.py",
+    "cairn_dsn/audit.py",
+    "cairn_dsn/data.py",
+    "cairn_dsn/metrics.py",
+    "cairn_dsn/model.py",
+    "cairn_dsn/paths.py",
+    "cairn_dsn/prepare.py",
+    "cairn_dsn/train.py"
+  ],
+  "protocols": {
+    "single_drugout": {
+      "all_rows_exact": true,
+      "pair_index_exact": true,
+      "counts": {
+        "test": 16978,
+        "train": 149048,
+        "val": 20785
+      }
+    },
+    "double_drugout": {
+      "all_rows_exact": true,
+      "pair_index_exact": true,
+      "counts": {
+        "test": 534,
+        "train": 149048,
+        "val": 760
+      }
+    }
+  },
+  "all_cached_real_edges_found_in_source": true,
+  "source_fact_multiplicity_preserved": true,
+  "all_real_edges_have_inverse": true,
+  "endpoint_mapping_exact": true,
+  "all_pairs_depth4_reachability_equals_explicit_mask": true,
+  "missing_paths_have_no_edges": true,
+  "explicit_self_count_exact": true,
+  "real_edges": 64533910,
+  "explicit_self_edges": 12904161,
+  "cached_gene_gene_edges_both_directions": 5819562,
+  "cached_gene_pathway_edges_both_directions": 3567454,
+  "max_nodes": 130,
+  "max_edges": 695,
+  "gpu_config": {
+    "path_single_drugout": 4,
+    "path_double_drugout": 5,
+    "no_path_single_drugout": 6,
+    "no_path_double_drugout": 7
+  },
+  "validation": "Full real-data and static checks only; no model forward, smoke experiment, or GPU training"
+}

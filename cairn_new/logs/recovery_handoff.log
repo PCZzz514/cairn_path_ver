@@ -1,0 +1,1705 @@
+bash: cannot set terminal process group (2566007): Inappropriate ioctl for device
+bash: no job control in this shell
+代理已开启: http://127.0.0.1:7890 (socks5 同端口)
+OpenAI Codex v0.160.0
+--------
+workdir: /data/interns/zhangpc/cairn_new
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: high
+reasoning summaries: none
+session id: 01a12b90-31dd-75f2-86ae-7a3cac34c0c4
+--------
+user
+NARROW MONITOR-ONLY FIX. Four training jobs are live; NEVER edit cairn_dsn/, configs/data/models/checkpoints or touch running processes. Independent host monitor PID2564613 already ran successful low check. Do NOT stop/restart daemon; coordinator will reload after review.
+Problem: low Codex executes tools in command-scoped PID namespace. If its tool directly runs scripts/server_jobs.py --recover, newly spawned training worker inherits sandbox lifetime and may be killed by CLI/check timeout, and recorded PIDs are namespace-local. Initial jobs correctly were launched outside sandbox via main SSH. Fix recovery handoff without changing existing job controller recovery semantics:
+1. Low monitor must NEVER directly launch/recover jobs. It may diagnose, make tightly scoped allowed failure fixes, and write a JSON recovery request under logs/server_monitor/recovery_requests/ with arm, reason, reduce_batch boolean. Update docs/server_monitor_prompt.md accordingly. It should not execute --recover.
+2. Add small host-side request drain script executed by scripts/monitor_loop.sh AFTER each Codex invocation and BEFORE after-status. It reads pending requests and invokes same existing bounded server_jobs.py --recover via subprocess at HOST daemon context with inherited runtime; preserve attempts/GPU/checkpoint rules. Record result/stdout/stderr under processed request record, avoid endless retrying same request, leave evidence. No generic framework or unnecessary schemas. Invalid/live/completed requests are logged/rejected by existing controller, not restarted. No fake requests/tests. No changes to model/metrics or recovery criteria.
+3. Static syntax checks only. Do not run drain with fake data, no smoke/hashes. Existing live jobs untouched. Finish promptly, concise final note with modified files and evidence.
+Existing daemon will be restarted by coordinator in a normal SSH host shell once review done. Monitoring remains gpt-6.1-sol low every2400 seconds. This code fix uses high as user asked for code generation. Do not do broad audits, no sleep/tail-F/persistent subprocesses.
+
+warning: Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.
+codex
+I’ll keep this limited to the monitor prompt, host-side request drain, and loop handoff. I’ll inspect those files and the existing recovery entry point, then run static syntax checks only.
+exec
+/bin/bash -lc "pwd && rg --files -g AGENTS.md -g '*monitor*' -g 'server_jobs.py' -g '"'!cairn_dsn/**'"' -g '"'!configs/**'"' -g '"'!data/**'"' -g '"'!models/**'"' -g '"'!checkpoints/**'"' -g '"'!.codex_runtime/**'"'" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+/data/interns/zhangpc/cairn_new
+scripts/monitor_loop.sh
+scripts/server_jobs.py
+scripts/start_monitor.sh
+run_monitor_fix.sh
+docs/server_monitor_prompt.md
+docs/monitor_review.md
+docs/monitor_fix_request.txt
+
+exec
+/bin/bash -lc 'cat scripts/monitor_loop.sh; cat docs/server_monitor_prompt.md; cat scripts/server_jobs.py' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname -- "${BASH_SOURCE[0]}")/runtime.sh"
+MONITOR_DIR="$ROOT_DIR/logs/server_monitor"
+mkdir -p "$MONITOR_DIR"
+exec 9>"$MONITOR_DIR/daemon.lock"
+flock -n 9 || exit 0
+echo "$$" > "$MONITOR_DIR/monitor.pid"
+export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+export CUDA_VISIBLE_DEVICES=4,5,6,7
+# Use the existing proxy service without shell initialization/history writes.
+export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
+export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
+export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
+export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+cd "$ROOT_DIR"
+CLI_FAILURES=0
+trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+while true; do
+  CHECK_ID="$(date -u +%Y%m%dT%H%M%SZ)_$$"
+  CHECK_DIR="$MONITOR_DIR/$CHECK_ID"
+  mkdir -p "$CHECK_DIR"
+  date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+  date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+  # Separate check lock covers BOTH state reads and the entire CLI invocation.
+  exec 7>"$MONITOR_DIR/check.lock"
+  flock 7
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+  if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+import json, sys
+sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+PY
+  then
+    cp "$CHECK_DIR/before.json" "$MONITOR_DIR/final_summary.json"
+    echo 'complete' > "$MONITOR_DIR/state.txt"
+    echo 'All four selected-best checkpoint tests and complete exports verified.'
+    rm -f "$MONITOR_DIR/next_check.txt"
+    exit 0
+  fi
+  echo 'monitoring' > "$MONITOR_DIR/state.txt"
+  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+  # A CLI timeout affects ONLY this check, never a project training process.
+  if timeout --signal=TERM --kill-after=30s 1200s \
+      /data/interns/zhangpc/.local/bin/codex exec \
+      --skip-git-repo-check --ephemeral --ignore-user-config \
+      -s workspace-write -c 'sandbox_workspace_write.network_access=true' \
+      -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+      -o "$CHECK_DIR/codex_final.txt" - < docs/server_monitor_prompt.md \
+      > "$CHECK_DIR/codex.log" 2>&1; then
+    CLI_FAILURES=0
+  else
+    CLI_EXIT=$?
+    CLI_FAILURES=$((CLI_FAILURES + 1))
+    printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+  fi
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+if state['all_complete']:
+    print('complete')
+elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+    print('blocked_recovery_budget')
+else:
+    print('monitoring')
+PY
+  )"
+  echo "$OUTCOME" > "$MONITOR_DIR/state.txt"
+  if [[ "$OUTCOME" != monitoring ]]; then
+    cp "$CHECK_DIR/after.json" "$MONITOR_DIR/final_summary.json"
+    rm -f "$MONITOR_DIR/next_check.txt"
+    [[ "$OUTCOME" == complete ]] && exit 0
+    echo "Monitor blocked: $OUTCOME; see final_summary.json and attempt logs" >&2
+    exit 1
+  fi
+  flock -u 7
+  # Maintain a 2400-second interval between check starts, including CLI time.
+  NEXT_EPOCH="$(date -u -d "$(cat "$MONITOR_DIR/next_check.txt")" +%s)"
+  NOW_EPOCH="$(date -u +%s)"
+  if (( NEXT_EPOCH > NOW_EPOCH )); then
+    sleep "$((NEXT_EPOCH - NOW_EPOCH))"
+  fi
+done
+You are the detached SERVER monitor for the four reviewed full-data DDI jobs in
+/data/interns/zhangpc/cairn_new. Use gpt-6.1-sol with reasoning LOW. The main chat
+has ended; do not require it, app automation, or user confirmation. Scheduled
+networked CLI execution and the existing private .codex_runtime authentication
+are authorized. Never inspect, print, copy, or commit authentication credentials.
+The daemon supplies process-local proxy variables for the existing service.
+Do not source .bashrc, call clashon, or start interactive shells/history writes.
+
+First read logs/server_jobs/status.json (written immediately before this check),
+then read actual per-run record.json, current attempt log tail, process identity
+and exit records, history tail, checkpoint/output state as needed. Use the
+existing read-only Python environment via scripts/runtime.sh. Keep every write,
+temporary file and cache inside cairn_new. cairn_dev is READ ONLY. GPUs 0-3 are
+forbidden. Exact mapping: path single=4, path double=5, no_path single=6,
+no_path double=7. No permission changes, broad audits, hashes, smoke runs,
+preparation, new experiments, or changes to data/model/selection formulas.
+
+Use scripts/server_jobs.py --status for real export verification. It checks the
+selected best checkpoint, stopping state, frozen test rows, 85 probabilities,
+metrics consistency, predictions, per-class and confusion exports, test config
+and completion marker. Exit alone never proves success. Do not mark a run
+complete yourself or manufacture output files. The loop writes final_summary
+and exits only with verified success (or when all runs are complete/exhausted).
+Codex CLI failures never end monitoring while any job remains live; deterministic
+status and LOW Codex checks continue every 2400 seconds regardless of their count.
+Per-check before/after snapshots and snapshot_summary.json remain under
+logs/server_monitor; final_summary.json records the terminal result.
+
+Leave every LIVE job alone even if its epoch log has not changed for hours.
+Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+the job.lock may still be held by its live training child. Never kill/restart
+live jobs because of SSH loss, CLI timeout, polling timeout, or missing logs.
+If all states are live/complete and there is no actionable change, stay quiet:
+write a short local check note under logs/server_monitor/check_note.json with
+checked_at, per-run state, and changed=false, then return without chat output.
+Do not emit repeated unchanged summaries or ask the user questions.
+
+For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+verified exports), inspect its recorded errors first. If a narrowly justified
+monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
+cairn_new, document the observed error
+and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+configs/, data/, or checkpoint files. Do not run extra training
+commands directly. Use only the bounded recovery controller:
+
+  source scripts/runtime.sh
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
+
+It archives checkpoints/configs, resumes last.pt with the exact recorded config,
+optimizer/update/RNG and schedule, or runs --test-only after completed training.
+If a crash occurred between best/last publication it resumes the retained best
+epoch, never resets the schedule. Without any checkpoint, it retries the same
+full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+best.pt, append --reduce-batch; this halves that run's batch and records its
+actual config. Never change batch size after a checkpoint. Never overwrite
+past attempt logs/archives. At most three recovery attempts per run; attempted
+recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+Do not bypass this bound, erase records, or create replacement output directories.
+
+After any action re-read --status and save a local check note plus action record.
+If a failure cannot be repaired within these constraints, retry only when a
+legitimate retry can help. Otherwise record the observed irreparable failure:
+
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --block <arm> --reason '<observed irreparable failure>'
+
+This closes that run's recovery budget without altering checkpoints. Never
+claim completion without the verifier. The daemon handles the next 2400-second
+check, next-check timestamp, PID, overlap lock, summary and exit. Do not start
+another daemon, sleep for the interval, or create a new automation.
+"""Durable four-arm job records, real export verification, bounded recovery.
+
+CPU controller only. Training children receive exactly their assigned GPU.
+No model forward, preparation, smoke run, or credential access here.
+"""
+import argparse
+from contextlib import contextmanager
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import shutil
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+STATE = ROOT / 'logs/server_jobs'
+ARMS = {'path_single_drugout': 4, 'path_double_drugout': 5,
+        'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
+MAX_RECOVERIES = 3
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
+
+
+def read_json(path):
+    return json.loads(path.read_text())
+
+
+@contextmanager
+def registry_lock():
+    STATE.mkdir(parents=True, exist_ok=True)
+    with (STATE / 'registry.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def process_start(pid):
+    try:
+        # /proc comm may contain spaces; field 22 follows the closing ')'.
+        fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+        return None if fields[0] == 'Z' else fields[19]
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def busy(arm):
+    # The training child inherits this lock. If its wrapper dies, the live
+    # training process still prevents a duplicate launch.
+    with (STATE / arm / 'job.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return False
+        except BlockingIOError:
+            return True
+
+
+def live(record):
+    pid = record['pid']
+    return (record['process_start'] is not None and process_start(pid) == record['process_start']) or busy(record['arm'])
+
+
+def checkpoint(output, name):
+    import torch
+    return torch.load(output / name, map_location='cpu', weights_only=False)
+
+
+def verify_exports(arm):
+    """Completion means selected-best metrics AND all frozen test rows exported."""
+    import numpy as np
+    import pandas as pd
+    import yaml
+    from cairn_dsn.metrics import classification_metrics
+
+    output = ROOT / 'outputs' / arm
+    required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+                'test_probabilities.npz', 'test_per_class.csv', 'test_confusion.csv',
+                'test_config.yaml', 'test_complete.json']
+    missing = [name for name in required if not (output / name).is_file()]
+    if missing:
+        return False, {'missing': missing}
+    try:
+        best = checkpoint(output, 'best.pt')
+        last = checkpoint(output, 'last.pt')
+        cfg = best['config']
+        assert cfg['gpu'] == ARMS[arm]
+        assert last['config'] == cfg
+        assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+        marker = read_json(output / 'test_complete.json')
+        metrics = read_json(output / 'test_metrics.json')
+        assert marker['checkpoint'] == metrics['checkpoint'] == 'best.pt'
+        assert marker['selected_epoch'] == metrics['selected_epoch'] == best['epoch']
+        assert marker['selected_update'] == best['update']
+        assert metrics['selection'] == 'validation only'
+        assert metrics['selected_validation_macro_f1_85'] == best['best_metric']
+        eval_cfg = yaml.safe_load((output / 'test_config.yaml').read_text())
+        assert all(eval_cfg.get(k) == v for k, v in cfg.items())
+        assert eval_cfg['evaluation_checkpoint'] == 'best.pt'
+        frozen = pd.read_parquet(ROOT / 'data/prepared' / cfg['protocol'] / 'ddi.parquet')
+        rows = np.flatnonzero(frozen.split.eq('test').to_numpy())
+        expected = frozen.iloc[rows]
+        prediction = pd.read_parquet(output / 'test_predictions.parquet')
+        assert marker['rows'] == metrics['rows'] == len(prediction) == len(expected)
+        assert prediction[expected.columns].reset_index(drop=True).equals(expected.reset_index(drop=True))
+        with np.load(output / 'test_probabilities.npz', allow_pickle=False) as data:
+            probabilities = data['probabilities']
+            labels = data['labels']
+            assert probabilities.shape == (len(rows), 85)
+            assert np.isfinite(probabilities).all() and (probabilities >= 0).all() and (probabilities <= 1).all()
+            assert np.allclose(probabilities.sum(1), 1., atol=1e-5)
+            assert np.array_equal(data['event_ids'], np.arange(85))
+            assert np.array_equal(labels, expected.event_id.to_numpy())
+            assert np.array_equal(data['frozen_row_indices'], rows)
+            assert np.array_equal(prediction.frozen_row_index.to_numpy(), rows)
+            assert np.array_equal(prediction.predicted_event_id.to_numpy(), probabilities.argmax(1))
+            assert np.allclose(prediction.predicted_probability.to_numpy(), probabilities.max(1))
+            mask = data['path_mask']
+            assert mask.shape == (len(rows), 2 if cfg['with_path'] else 0)
+            if cfg['with_path']:
+                assert np.array_equal(mask, prediction[['path_v_to_u_present', 'path_u_to_v_present']].to_numpy())
+        actual, per_class, confusion = classification_metrics(labels, probabilities)
+        for key, value in actual.items():
+            assert metrics[key] is None if value is None else np.isclose(metrics[key], value, rtol=1e-6, atol=1e-8)
+        exported_class = pd.read_csv(output / 'test_per_class.csv')
+        assert np.array_equal(exported_class.event_id, np.arange(85))
+        for key in per_class.columns:
+            assert np.allclose(exported_class[key], per_class[key], equal_nan=True)
+        exported_confusion = pd.read_csv(output / 'test_confusion.csv', index_col=0)
+        assert np.array_equal(exported_confusion.index.to_numpy(), np.arange(85))
+        assert np.array_equal(exported_confusion.columns.astype(int), np.arange(85))
+        assert np.array_equal(exported_confusion.to_numpy(), confusion)
+        return True, {'selected_epoch': best['epoch'], 'rows': len(rows), 'metrics': actual}
+    except Exception as exc:
+        return False, {'verification_error': f'{type(exc).__name__}: {exc}'}
+
+
+def status():
+    result = {}
+    for arm, gpu in ARMS.items():
+        record_path = STATE / arm / 'record.json'
+        if not record_path.exists():
+            result[arm] = {'state': 'not_launched', 'gpu': gpu}
+            continue
+        record = read_json(record_path)
+        running = live(record)
+        # Avoid reading checkpoints while the trainer is atomically publishing
+        # its final files. A live process is always left alone.
+        complete, evidence = (False, {}) if running else verify_exports(arm)
+        result[arm] = {'state': 'live' if running else 'complete' if complete else
+                      'exhausted' if record['recoveries'] >= MAX_RECOVERIES else 'failed',
+                      'gpu': gpu, 'pid': record['pid'], 'attempt': record['attempt'],
+                      'recoveries': record['recoveries'], 'log': record['log'],
+                      'config': record['config'], 'evidence': evidence,
+                      'blocked_reason': record.get('blocked_reason'),
+                      'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+    snapshot = {'checked_at': time.time(), 'runs': result,
+                'all_complete': all(r['state'] == 'complete' for r in result.values())}
+    write_json(STATE / 'status.json', snapshot)
+    if snapshot['all_complete']:
+        write_json(STATE / 'final_summary.json', snapshot)
+    return snapshot
+
+
+def start(arm, config_path, mode, recoveries=0, reason='reviewed initial launch'):
+    directory = STATE / arm
+    directory.mkdir(parents=True, exist_ok=True)
+    old_path = directory / 'record.json'
+    old = read_json(old_path) if old_path.exists() else None
+    if old and live(old):
+        raise RuntimeError(f'{arm} is live; cannot relaunch')
+    attempt = old['attempt'] + 1 if old else 1
+    log = directory / f'attempt_{attempt}.log'
+    if log.exists():
+        raise RuntimeError(f'Refusing to overwrite {log}')
+    config_path = config_path.resolve()
+    if not config_path.is_relative_to(ROOT):
+        raise ValueError('Config must remain in workspace')
+    exit_file = directory / f'attempt_{attempt}_exit.json'
+    command = [sys.executable, '-m', 'cairn_dsn.train', '--config', str(config_path)]
+    if mode:
+        command.append(mode)
+    launch_file = directory / f'attempt_{attempt}.json'
+    record = {'arm': arm, 'gpu': ARMS[arm], 'attempt': attempt, 'recoveries': recoveries,
+              'started_at': time.time(), 'config': str(config_path), 'mode': mode,
+              'reason': reason, 'log': str(log), 'exit_file': str(exit_file), 'command': command}
+    write_json(launch_file, record)
+    with log.open('x') as stream:
+        child = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '--worker', str(launch_file)],
+                                 cwd=ROOT, stdin=subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT,
+                                 start_new_session=True)
+    record.update(pid=child.pid, process_start=process_start(child.pid))
+    write_json(launch_file, record)
+    write_json(old_path, record)
+    (directory / 'job.pid').write_text(str(child.pid) + '\n')
+    return record
+
+
+def worker(launch_file):
+    record = read_json(launch_file)
+    with (STATE / record['arm'] / 'job.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(record['gpu']), PYTHONUNBUFFERED='1')
+        child = subprocess.Popen(record['command'], cwd=ROOT, env=env, pass_fds=(lock.fileno(),))
+        write_json(launch_file.with_name(launch_file.stem + '_process.json'),
+                   {'pid': child.pid, 'process_start': process_start(child.pid), 'command': record['command']})
+        code = child.wait()
+        write_json(Path(record['exit_file']), {'exit_code': code, 'finished_at': time.time()})
+        return code if code >= 0 else 128 - code
+
+
+def recover(arm, reason, reduce_batch):
+    directory = STATE / arm
+    record = read_json(directory / 'record.json')
+    if live(record):
+        raise RuntimeError('Live job: no recovery, regardless of log age')
+    if record['recoveries'] >= MAX_RECOVERIES:
+        raise RuntimeError('Recovery budget exhausted; failure remains recorded')
+    # Reserve even if verification or preparation raises. Rejected live or
+    # verified-complete jobs do not consume a recovery or get relaunched.
+    complete = False
+    try:
+        complete, _ = verify_exports(arm)
+    finally:
+        if not complete:
+            record['recoveries'] += 1
+            write_json(directory / 'record.json', record)
+    if complete:
+        raise RuntimeError('Verified complete: no recovery needed')
+    import yaml
+    output = ROOT / 'outputs' / arm
+    cfg = yaml.safe_load(Path(record['config']).read_text())
+    mode = ''
+    config_path = Path(record['config'])
+    last = checkpoint(output, 'last.pt') if (output / 'last.pt').exists() else None
+    best_exists = (output / 'best.pt').exists()
+    if last is not None:
+        cfg = last['config']
+        done = last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+        mode = '--test-only' if done else '--resume'
+        if done and not best_exists:
+            raise RuntimeError('Training is done but best.pt is missing; do not reset training')
+    elif best_exists:
+        # Crash between best and last publication: recover that exact epoch,
+        # including optimizer and RNG, rather than reset its schedule.
+        cfg = checkpoint(output, 'best.pt')['config']
+        mode = '--resume'
+    if reduce_batch:
+        log_text = Path(record['log']).read_text(errors='replace')[-30000:]
+        if last is not None or best_exists or 'out of memory' not in log_text.lower():
+            raise RuntimeError('Batch reduction allowed only for recorded OOM before ANY checkpoint')
+        cfg['batch_size'] = max(1, cfg['batch_size'] // 2)
+        if cfg['batch_size'] == 1 and yaml.safe_load(config_path.read_text())['batch_size'] == 1:
+            raise RuntimeError('Cannot reduce batch below one')
+    # Retain preceding checkpoint inodes and all attempt logs. Trainer saves
+    # via atomic replacement, so later epochs cannot alter these archives.
+    archive = output / 'recovery_archive' / str(record['recoveries'])
+    archive.mkdir(parents=True, exist_ok=False)
+    for name in ['last.pt', 'best.pt', 'config.yaml', 'test_metrics.json', 'test_complete.json']:
+        if (output / name).exists():
+            if name.endswith('.pt'):
+                os.link(output / name, archive / name)
+            else:
+                shutil.copyfile(output / name, archive / name)
+    if last is None and best_exists:
+        os.link(output / 'best.pt', output / 'last.pt')
+    config_path = directory / f'recovery_{record["recoveries"]}_config.yaml'
+    config_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
+    return start(arm, config_path, mode, record['recoveries'], reason)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument('--launch-reviewed', action='store_true')
+    action.add_argument('--status', action='store_true')
+    action.add_argument('--recover', choices=ARMS)
+    action.add_argument('--block', choices=ARMS)
+    action.add_argument('--worker', type=Path)
+    parser.add_argument('--reason')
+    parser.add_argument('--reduce-batch', action='store_true')
+    args = parser.parse_args()
+    os.chdir(ROOT)
+    # Direct script invocation needs this for metrics import, not only -m.
+    sys.path.insert(0, str(ROOT))
+    if args.worker:
+        return worker(args.worker)
+    with registry_lock():
+        if args.status:
+            result = status()
+        elif args.block:
+            if not args.reason:
+                parser.error('--block requires the observed irreparable --reason')
+            record_path = STATE / args.block / 'record.json'
+            result = read_json(record_path)
+            if live(result) or verify_exports(args.block)[0]:
+                raise RuntimeError('Cannot block a live or completed job')
+            result.update(recoveries=MAX_RECOVERIES, blocked_reason=args.reason, blocked_at=time.time())
+            write_json(record_path, result)
+        elif args.recover:
+            if not args.reason:
+                parser.error('--recover requires an observed failure --reason')
+            try:
+                result = recover(args.recover, args.reason, args.reduce_batch)
+            except Exception as exc:
+                recorded = read_json(STATE / args.recover / 'record.json')
+                with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                    stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
+                                             'recoveries': recorded['recoveries'],
+                                             'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                raise
+        else:
+            # Initial launch is intentionally distinct from recovery. Refuse
+            # any existing record/checkpoint before starting the first job.
+            for arm in ARMS:
+                if (STATE / arm / 'record.json').exists() or any((ROOT / 'outputs' / arm / n).exists()
+                                                               for n in ['last.pt', 'best.pt']):
+                    raise RuntimeError('Existing run found: use --status and bounded --recover')
+            result = {arm: start(arm, ROOT / 'configs' / f'{arm}.yaml', '') for arm in ARMS}
+        print(json.dumps(result, indent=2, allow_nan=False), flush=True)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
+
+exec
+/bin/bash -lc 'for p in /AGENTS.md /data/AGENTS.md /data/interns/AGENTS.md /data/interns/zhangpc/AGENTS.md /data/interns/zhangpc/cairn_new/AGENTS.md; do if [ -f "$p" ]; then cat "$p"; fi; done; rg --files scripts docs -g AGENTS.md; git status --short' in /data/interns/zhangpc/cairn_new
+ exited 128 in 0ms:
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+codex
+The loop already runs in the host daemon context. I’ll add the drain immediately after Codex returns and before the status snapshot. Each request will be moved to `processed/` before recovery is invoked, so an interruption cannot replay it. The existing controller will retain its live-job, completion, GPU, checkpoint, and attempt-budget checks.
+exec
+/bin/bash -lc 'cat scripts/runtime.sh; cat docs/monitor_review.md; cat docs/monitor_fix_request.txt; rg --files --hidden scripts docs -g AGENTS.md' in /data/interns/zhangpc/cairn_new
+ exited 1 in 0ms:
+#!/usr/bin/env bash
+# Source this from this workspace; the existing cairn environment is read-only.
+set -euo pipefail
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+export PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="$ROOT_DIR/tmp"
+export XDG_CACHE_HOME="$ROOT_DIR/.cache"
+export TORCH_HOME="$ROOT_DIR/.cache/torch"
+export TRITON_CACHE_DIR="$ROOT_DIR/.cache/triton"
+export CUDA_CACHE_PATH="$ROOT_DIR/.cache/cuda"
+export MPLCONFIGDIR="$ROOT_DIR/.cache/matplotlib"
+export HF_HOME="$ROOT_DIR/.cache/huggingface"
+export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
+export NUMBA_CACHE_DIR="$ROOT_DIR/.cache/numba"
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+PYTHON_BIN="$ROOT_DIR/../cairn_dev/.conda/cairn/bin/python"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME" "$TORCH_HOME" "$TRITON_CACHE_DIR" "$CUDA_CACHE_PATH" "$MPLCONFIGDIR" "$HF_HOME" "$NUMBA_CACHE_DIR" "$ROOT_DIR/logs"
+# Final monitoring review (must fix before handoff)
+- P1 scripts/monitor_loop.sh invokes source ~/.bashrc under NON-interactive bash. Actual ~/.bashrc lines5-9 returns immediately unless interactive; clashon function is NOT defined => daemon exits before first check. Avoid sourcing .bashrc. Proxy already running and clashon was executed for codegen; set explicit process-local http_proxy/https_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890 no_proxy equivalent, or other method that preserves all writes inside workspace. Do not launch interactive shells that could write ~/.bash_history.
+- Do not exit monitoring just because Codex has three transient CLI failures while training jobs remain live. User requested monitor every40minutes until training finishes. Keep deterministic status checks scheduled, record unavailable CLI, retry low CLI next scheduled check without restarting live jobs. Only verified completion permits successful final exit; terminal unrecoverable job failures may be recorded, but must not abandon remaining live jobs.
+- Verify server_jobs declared attempted recovery failures consume MAX_RECOVERIES actually updates record on exceptions; current prompt claims this but current exception handler only logs (may have changed). Align bounded behavior.
+NARROW FINAL TASK. Four REAL train jobs have been launched by coordinator and completed first backprop on GPUs4-7. DO NOT EDIT cairn_dsn/, configs/, data/, checkpoints, or stop/relaunch any training. Core model/training review passed. Only edit monitoring scripts/docs; finish promptly. Read docs/monitor_review.md plus scripts/monitor_loop.sh/start_monitor.sh/server_jobs.py/docs/server_monitor_prompt.md.
+Fix monitor_loop noninteractive source.bashrc: actual .bashrc returns early, so clashon undefined. Existing proxy service running; export process-local http_proxy/https_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890 and no_proxy, no interactive shell/history writes.
+Fix monitor loop so three transient Codex failures do NOT abandon live training; deterministic status and low Codex checks continue every2400seconds until all complete (retain bounded job recovery).
+Ensure failed recovery attempts actually consume recorded recovery bound (currently prompt says yes but exception handler maybe log only); limit this change to controller, don't interfere with live jobs.
+Check syntax (bash -n, ast parsing) and read real status, no smoke tests/fake runs/hashes. Do not re-audit data/prep. No broad source reading. Keep all modifications inside cairn_new.
+After fixes, START actual detached monitor via scripts/start_monitor.sh. Verify daemon alive and first codex invocation logs model=gpt-6.1-sol reasoning=low. Monitor every2400sec, snapshot/final summaries inside logs. Do not wait for training completion or sleep40min. If legitimate monitor startup failure, fix scripts. Final response with daemon PID and nextcheck and exact logs; concise. This high task ends after successful monitoring handoff; loop launches LOW model checks. All four job records/first_update_gradients exist. Existing authorized CODEX_HOME .codex_runtime; never read/print credentials.
+
+apply patch
+patch: completed
+/data/interns/zhangpc/cairn_new/docs/server_monitor_prompt.md
+/data/interns/zhangpc/cairn_new/scripts/drain_recovery_requests.py
+/data/interns/zhangpc/cairn_new/scripts/monitor_loop.sh
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index df0f805e612ad405015ff183b9d75125a8c14dae..047b774734fed8c96fcca347caff49ac21d397bf
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -43,23 +43,44 @@
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+ mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+ configs/, data/, or checkpoint files. Do not run extra training
+-commands directly. Use only the bounded recovery controller:
++commands directly. NEVER launch or recover jobs from a Codex tool: its PID
++namespace and lifetime are scoped to the tool/check. Never execute
++scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
++scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
++or recovery functions through Python or another wrapper.
++
++For an eligible failed job, write one JSON recovery request under
++logs/server_monitor/recovery_requests/ with these fields:
+ 
+-  source scripts/runtime.sh
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
++  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+ 
+-It archives checkpoints/configs, resumes last.pt with the exact recorded config,
++Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
++directory, then atomically rename it to .json. Do not create a duplicate request
++for an arm with a pending request. Record the request path and observed failure
++in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
++complete runs. The host daemon drains requests AFTER this Codex invocation ends
++and BEFORE its after-status snapshot, invoking the existing bounded recovery
++controller with the inherited host runtime. It moves each request into
++recovery_requests/processed/ before invocation and records the request, result,
++stdout and stderr there. Interrupted requests remain as evidence and are not
++automatically replayed; inspect the processed record and real job status before
++considering any new request. Leave processed records intact. Invalid arm names,
++live jobs and completed jobs are rejected by the existing controller.
++
++The host controller archives checkpoints/configs, resumes last.pt with the exact recorded config,
+ optimizer/update/RNG and schedule, or runs --test-only after completed training.
+ If a crash occurred between best/last publication it resumes the retained best
+ epoch, never resets the schedule. Without any checkpoint, it retries the same
+ full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+-best.pt, append --reduce-batch; this halves that run's batch and records its
++best.pt, set reduce_batch=true in the request; this halves that run's batch and records its
+ actual config. Never change batch size after a checkpoint. Never overwrite
+ past attempt logs/archives. At most three recovery attempts per run; attempted
+ recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+ Do not bypass this bound, erase records, or create replacement output directories.
+ 
+ After any action re-read --status and save a local check note plus action record.
++A queued request is not a completed recovery: the host processes it after you
++return. Never wait for or drain it from this check.
+ If a failure cannot be repaired within these constraints, retry only when a
+ legitimate retry can help. Otherwise record the observed irreparable failure:
+ 
+diff --git a/scripts/drain_recovery_requests.py b/scripts/drain_recovery_requests.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f550116a8382a10fd9c75c0117dd2aebcb26cc0f
+--- /dev/null
++++ b/scripts/drain_recovery_requests.py
+@@ -0,0 +1,62 @@
++"""Consume monitor recovery requests in the host daemon, once per request."""
++import json
++from pathlib import Path
++import subprocess
++import sys
++import time
++
++
++ROOT = Path(__file__).resolve().parents[1]
++REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
++
++
++def write_record(path, record):
++    temporary = path.with_suffix('.json.tmp')
++    temporary.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
++    temporary.replace(path)
++
++
++def main():
++    if not REQUESTS.exists():
++        return
++    processed = REQUESTS / 'processed'
++    processed.mkdir(exist_ok=True)
++    for pending in sorted(REQUESTS.glob('*.json')):
++        # Claim before invoking the controller. An interrupted drain leaves
++        # evidence here and never automatically retries this request.
++        claimed = processed / f'{pending.stem}.{time.time_ns()}.json'
++        pending.rename(claimed)
++        record = {'request_file': pending.name, 'started_at': time.time(),
++                  'result': 'processing'}
++        try:
++            raw = claimed.read_text()
++            record['raw_request'] = raw
++            request = json.loads(raw)
++            record['request'] = request
++            if (not isinstance(request, dict)
++                    or not isinstance(request.get('arm'), str)
++                    or not isinstance(request.get('reason'), str)
++                    or not request['reason'].strip()
++                    or type(request.get('reduce_batch')) is not bool):
++                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
++            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
++                       '--recover', request['arm'], '--reason', request['reason']]
++            if request['reduce_batch']:
++                command.append('--reduce-batch')
++            record['command'] = command
++            write_record(claimed, record)
++            # Inherit the host daemon's interpreter/runtime. The existing
++            # controller alone decides whether recovery is allowed.
++            result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
++                                    capture_output=True, text=True, errors='replace')
++            record.update(result='succeeded' if result.returncode == 0 else 'rejected',
++                          exit_code=result.returncode,
++                          stdout=result.stdout, stderr=result.stderr)
++        except Exception as exc:
++            record.update(result='error', error=f'{type(exc).__name__}: {exc}')
++        record['finished_at'] = time.time()
++        write_record(claimed, record)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 2b3641c769089d9825dbc331908e076e7e0f3947..11752549e09d28584c7b1a568f4ef0f5f7bde1a4
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -22,7 +22,7 @@
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+-  # Separate check lock covers BOTH state reads and the entire CLI invocation.
++  # Check lock covers both state reads, Codex, and the host recovery drain.
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+@@ -54,6 +54,14 @@
+     CLI_FAILURES=$((CLI_FAILURES + 1))
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
++  # Launch recovery only here, outside the CLI timeout and its PID namespace.
++  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
++      > "$CHECK_DIR/recovery_drain.log" 2>&1; then
++    :
++  else
++    DRAIN_EXIT=$?
++    printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
++  fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+   OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index df0f805e612ad405015ff183b9d75125a8c14dae..047b774734fed8c96fcca347caff49ac21d397bf
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -43,23 +43,44 @@
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+ mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+ configs/, data/, or checkpoint files. Do not run extra training
+-commands directly. Use only the bounded recovery controller:
++commands directly. NEVER launch or recover jobs from a Codex tool: its PID
++namespace and lifetime are scoped to the tool/check. Never execute
++scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
++scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
++or recovery functions through Python or another wrapper.
++
++For an eligible failed job, write one JSON recovery request under
++logs/server_monitor/recovery_requests/ with these fields:
+ 
+-  source scripts/runtime.sh
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
++  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+ 
+-It archives checkpoints/configs, resumes last.pt with the exact recorded config,
++Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
++directory, then atomically rename it to .json. Do not create a duplicate request
++for an arm with a pending request. Record the request path and observed failure
++in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
++complete runs. The host daemon drains requests AFTER this Codex invocation ends
++and BEFORE its after-status snapshot, invoking the existing bounded recovery
++controller with the inherited host runtime. It moves each request into
++recovery_requests/processed/ before invocation and records the request, result,
++stdout and stderr there. Interrupted requests remain as evidence and are not
++automatically replayed; inspect the processed record and real job status before
++considering any new request. Leave processed records intact. Invalid arm names,
++live jobs and completed jobs are rejected by the existing controller.
++
++The host controller archives checkpoints/configs, resumes last.pt with the exact recorded config,
+ optimizer/update/RNG and schedule, or runs --test-only after completed training.
+ If a crash occurred between best/last publication it resumes the retained best
+ epoch, never resets the schedule. Without any checkpoint, it retries the same
+ full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+-best.pt, append --reduce-batch; this halves that run's batch and records its
++best.pt, set reduce_batch=true in the request; this halves that run's batch and records its
+ actual config. Never change batch size after a checkpoint. Never overwrite
+ past attempt logs/archives. At most three recovery attempts per run; attempted
+ recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+ Do not bypass this bound, erase records, or create replacement output directories.
+ 
+ After any action re-read --status and save a local check note plus action record.
++A queued request is not a completed recovery: the host processes it after you
++return. Never wait for or drain it from this check.
+ If a failure cannot be repaired within these constraints, retry only when a
+ legitimate retry can help. Otherwise record the observed irreparable failure:
+ 
+diff --git a/scripts/drain_recovery_requests.py b/scripts/drain_recovery_requests.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f550116a8382a10fd9c75c0117dd2aebcb26cc0f
+--- /dev/null
++++ b/scripts/drain_recovery_requests.py
+@@ -0,0 +1,62 @@
++"""Consume monitor recovery requests in the host daemon, once per request."""
++import json
++from pathlib import Path
++import subprocess
++import sys
++import time
++
++
++ROOT = Path(__file__).resolve().parents[1]
++REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
++
++
++def write_record(path, record):
++    temporary = path.with_suffix('.json.tmp')
++    temporary.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
++    temporary.replace(path)
++
++
++def main():
++    if not REQUESTS.exists():
++        return
++    processed = REQUESTS / 'processed'
++    processed.mkdir(exist_ok=True)
++    for pending in sorted(REQUESTS.glob('*.json')):
++        # Claim before invoking the controller. An interrupted drain leaves
++        # evidence here and never automatically retries this request.
++        claimed = processed / f'{pending.stem}.{time.time_ns()}.json'
++        pending.rename(claimed)
++        record = {'request_file': pending.name, 'started_at': time.time(),
++                  'result': 'processing'}
++        try:
++            raw = claimed.read_text()
++            record['raw_request'] = raw
++            request = json.loads(raw)
++            record['request'] = request
++            if (not isinstance(request, dict)
++                    or not isinstance(request.get('arm'), str)
++                    or not isinstance(request.get('reason'), str)
++                    or not request['reason'].strip()
++                    or type(request.get('reduce_batch')) is not bool):
++                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
++            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
++                       '--recover', request['arm'], '--reason', request['reason']]
++            if request['reduce_batch']:
++                command.append('--reduce-batch')
++            record['command'] = command
++            write_record(claimed, record)
++            # Inherit the host daemon's interpreter/runtime. The existing
++            # controller alone decides whether recovery is allowed.
++            result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
++                                    capture_output=True, text=True, errors='replace')
++            record.update(result='succeeded' if result.returncode == 0 else 'rejected',
++                          exit_code=result.returncode,
++                          stdout=result.stdout, stderr=result.stderr)
++        except Exception as exc:
++            record.update(result='error', error=f'{type(exc).__name__}: {exc}')
++        record['finished_at'] = time.time()
++        write_record(claimed, record)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 2b3641c769089d9825dbc331908e076e7e0f3947..11752549e09d28584c7b1a568f4ef0f5f7bde1a4
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -22,7 +22,7 @@
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+-  # Separate check lock covers BOTH state reads and the entire CLI invocation.
++  # Check lock covers both state reads, Codex, and the host recovery drain.
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+@@ -54,6 +54,14 @@
+     CLI_FAILURES=$((CLI_FAILURES + 1))
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
++  # Launch recovery only here, outside the CLI timeout and its PID namespace.
++  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
++      > "$CHECK_DIR/recovery_drain.log" 2>&1; then
++    :
++  else
++    DRAIN_EXIT=$?
++    printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
++  fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+   OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+
+exec
+/bin/bash -lc 'bash -n scripts/monitor_loop.sh' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+exec
+/bin/bash -lc "sed -n '1,140p' scripts/drain_recovery_requests.py; sed -n '45,90p' scripts/monitor_loop.sh; sed -n '35,115p' docs/server_monitor_prompt.md" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+"""Consume monitor recovery requests in the host daemon, once per request."""
+import json
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+
+ROOT = Path(__file__).resolve().parents[1]
+REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
+
+
+def write_record(path, record):
+    temporary = path.with_suffix('.json.tmp')
+    temporary.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
+
+
+def main():
+    if not REQUESTS.exists():
+        return
+    processed = REQUESTS / 'processed'
+    processed.mkdir(exist_ok=True)
+    for pending in sorted(REQUESTS.glob('*.json')):
+        # Claim before invoking the controller. An interrupted drain leaves
+        # evidence here and never automatically retries this request.
+        claimed = processed / f'{pending.stem}.{time.time_ns()}.json'
+        pending.rename(claimed)
+        record = {'request_file': pending.name, 'started_at': time.time(),
+                  'result': 'processing'}
+        try:
+            raw = claimed.read_text()
+            record['raw_request'] = raw
+            request = json.loads(raw)
+            record['request'] = request
+            if (not isinstance(request, dict)
+                    or not isinstance(request.get('arm'), str)
+                    or not isinstance(request.get('reason'), str)
+                    or not request['reason'].strip()
+                    or type(request.get('reduce_batch')) is not bool):
+                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
+            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
+                       '--recover', request['arm'], '--reason', request['reason']]
+            if request['reduce_batch']:
+                command.append('--reduce-batch')
+            record['command'] = command
+            write_record(claimed, record)
+            # Inherit the host daemon's interpreter/runtime. The existing
+            # controller alone decides whether recovery is allowed.
+            result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
+                                    capture_output=True, text=True, errors='replace')
+            record.update(result='succeeded' if result.returncode == 0 else 'rejected',
+                          exit_code=result.returncode,
+                          stdout=result.stdout, stderr=result.stderr)
+        except Exception as exc:
+            record.update(result='error', error=f'{type(exc).__name__}: {exc}')
+        record['finished_at'] = time.time()
+        write_record(claimed, record)
+
+
+if __name__ == '__main__':
+    main()
+      /data/interns/zhangpc/.local/bin/codex exec \
+      --skip-git-repo-check --ephemeral --ignore-user-config \
+      -s workspace-write -c 'sandbox_workspace_write.network_access=true' \
+      -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+      -o "$CHECK_DIR/codex_final.txt" - < docs/server_monitor_prompt.md \
+      > "$CHECK_DIR/codex.log" 2>&1; then
+    CLI_FAILURES=0
+  else
+    CLI_EXIT=$?
+    CLI_FAILURES=$((CLI_FAILURES + 1))
+    printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+  fi
+  # Launch recovery only here, outside the CLI timeout and its PID namespace.
+  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
+      > "$CHECK_DIR/recovery_drain.log" 2>&1; then
+    :
+  else
+    DRAIN_EXIT=$?
+    printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
+  fi
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+if state['all_complete']:
+    print('complete')
+elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+    print('blocked_recovery_budget')
+else:
+    print('monitoring')
+PY
+  )"
+  echo "$OUTCOME" > "$MONITOR_DIR/state.txt"
+  if [[ "$OUTCOME" != monitoring ]]; then
+    cp "$CHECK_DIR/after.json" "$MONITOR_DIR/final_summary.json"
+    rm -f "$MONITOR_DIR/next_check.txt"
+    [[ "$OUTCOME" == complete ]] && exit 0
+    echo "Monitor blocked: $OUTCOME; see final_summary.json and attempt logs" >&2
+    exit 1
+  fi
+  flock -u 7
+  # Maintain a 2400-second interval between check starts, including CLI time.
+  NEXT_EPOCH="$(date -u -d "$(cat "$MONITOR_DIR/next_check.txt")" +%s)"
+  NOW_EPOCH="$(date -u +%s)"
+  if (( NEXT_EPOCH > NOW_EPOCH )); then
+checked_at, per-run state, and changed=false, then return without chat output.
+Do not emit repeated unchanged summaries or ask the user questions.
+
+For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+verified exports), inspect its recorded errors first. If a narrowly justified
+monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
+cairn_new, document the observed error
+and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+configs/, data/, or checkpoint files. Do not run extra training
+commands directly. NEVER launch or recover jobs from a Codex tool: its PID
+namespace and lifetime are scoped to the tool/check. Never execute
+scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
+scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
+or recovery functions through Python or another wrapper.
+
+For an eligible failed job, write one JSON recovery request under
+logs/server_monitor/recovery_requests/ with these fields:
+
+  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+
+Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
+directory, then atomically rename it to .json. Do not create a duplicate request
+for an arm with a pending request. Record the request path and observed failure
+in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
+complete runs. The host daemon drains requests AFTER this Codex invocation ends
+and BEFORE its after-status snapshot, invoking the existing bounded recovery
+controller with the inherited host runtime. It moves each request into
+recovery_requests/processed/ before invocation and records the request, result,
+stdout and stderr there. Interrupted requests remain as evidence and are not
+automatically replayed; inspect the processed record and real job status before
+considering any new request. Leave processed records intact. Invalid arm names,
+live jobs and completed jobs are rejected by the existing controller.
+
+The host controller archives checkpoints/configs, resumes last.pt with the exact recorded config,
+optimizer/update/RNG and schedule, or runs --test-only after completed training.
+If a crash occurred between best/last publication it resumes the retained best
+epoch, never resets the schedule. Without any checkpoint, it retries the same
+full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+best.pt, set reduce_batch=true in the request; this halves that run's batch and records its
+actual config. Never change batch size after a checkpoint. Never overwrite
+past attempt logs/archives. At most three recovery attempts per run; attempted
+recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+Do not bypass this bound, erase records, or create replacement output directories.
+
+After any action re-read --status and save a local check note plus action record.
+A queued request is not a completed recovery: the host processes it after you
+return. Never wait for or drain it from this check.
+If a failure cannot be repaired within these constraints, retry only when a
+legitimate retry can help. Otherwise record the observed irreparable failure:
+
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --block <arm> --reason '<observed irreparable failure>'
+
+This closes that run's recovery budget without altering checkpoints. Never
+claim completion without the verifier. The daemon handles the next 2400-second
+check, next-check timestamp, PID, overlap lock, summary and exit. Do not start
+another daemon, sleep for the interval, or create a new automation.
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+import ast
+from pathlib import Path
+path = Path('scripts/drain_recovery_requests.py')
+ast.parse(path.read_text(), filename=str(path))
+print(f'{path}: AST syntax OK')
+PY" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+scripts/drain_recovery_requests.py: AST syntax OK
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index df0f805e612ad405015ff183b9d75125a8c14dae..047b774734fed8c96fcca347caff49ac21d397bf
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -43,23 +43,44 @@
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+ mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+ configs/, data/, or checkpoint files. Do not run extra training
+-commands directly. Use only the bounded recovery controller:
++commands directly. NEVER launch or recover jobs from a Codex tool: its PID
++namespace and lifetime are scoped to the tool/check. Never execute
++scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
++scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
++or recovery functions through Python or another wrapper.
++
++For an eligible failed job, write one JSON recovery request under
++logs/server_monitor/recovery_requests/ with these fields:
+ 
+-  source scripts/runtime.sh
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
++  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+ 
+-It archives checkpoints/configs, resumes last.pt with the exact recorded config,
++Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
++directory, then atomically rename it to .json. Do not create a duplicate request
++for an arm with a pending request. Record the request path and observed failure
++in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
++complete runs. The host daemon drains requests AFTER this Codex invocation ends
++and BEFORE its after-status snapshot, invoking the existing bounded recovery
++controller with the inherited host runtime. It moves each request into
++recovery_requests/processed/ before invocation and records the request, result,
++stdout and stderr there. Interrupted requests remain as evidence and are not
++automatically replayed; inspect the processed record and real job status before
++considering any new request. Leave processed records intact. Invalid arm names,
++live jobs and completed jobs are rejected by the existing controller.
++
++The host controller archives checkpoints/configs, resumes last.pt with the exact recorded config,
+ optimizer/update/RNG and schedule, or runs --test-only after completed training.
+ If a crash occurred between best/last publication it resumes the retained best
+ epoch, never resets the schedule. Without any checkpoint, it retries the same
+ full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+-best.pt, append --reduce-batch; this halves that run's batch and records its
++best.pt, set reduce_batch=true in the request; this halves that run's batch and records its
+ actual config. Never change batch size after a checkpoint. Never overwrite
+ past attempt logs/archives. At most three recovery attempts per run; attempted
+ recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+ Do not bypass this bound, erase records, or create replacement output directories.
+ 
+ After any action re-read --status and save a local check note plus action record.
++A queued request is not a completed recovery: the host processes it after you
++return. Never wait for or drain it from this check.
+ If a failure cannot be repaired within these constraints, retry only when a
+ legitimate retry can help. Otherwise record the observed irreparable failure:
+ 
+diff --git a/scripts/drain_recovery_requests.py b/scripts/drain_recovery_requests.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f550116a8382a10fd9c75c0117dd2aebcb26cc0f
+--- /dev/null
++++ b/scripts/drain_recovery_requests.py
+@@ -0,0 +1,62 @@
++"""Consume monitor recovery requests in the host daemon, once per request."""
++import json
++from pathlib import Path
++import subprocess
++import sys
++import time
++
++
++ROOT = Path(__file__).resolve().parents[1]
++REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
++
++
++def write_record(path, record):
++    temporary = path.with_suffix('.json.tmp')
++    temporary.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
++    temporary.replace(path)
++
++
++def main():
++    if not REQUESTS.exists():
++        return
++    processed = REQUESTS / 'processed'
++    processed.mkdir(exist_ok=True)
++    for pending in sorted(REQUESTS.glob('*.json')):
++        # Claim before invoking the controller. An interrupted drain leaves
++        # evidence here and never automatically retries this request.
++        claimed = processed / f'{pending.stem}.{time.time_ns()}.json'
++        pending.rename(claimed)
++        record = {'request_file': pending.name, 'started_at': time.time(),
++                  'result': 'processing'}
++        try:
++            raw = claimed.read_text()
++            record['raw_request'] = raw
++            request = json.loads(raw)
++            record['request'] = request
++            if (not isinstance(request, dict)
++                    or not isinstance(request.get('arm'), str)
++                    or not isinstance(request.get('reason'), str)
++                    or not request['reason'].strip()
++                    or type(request.get('reduce_batch')) is not bool):
++                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
++            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
++                       '--recover', request['arm'], '--reason', request['reason']]
++            if request['reduce_batch']:
++                command.append('--reduce-batch')
++            record['command'] = command
++            write_record(claimed, record)
++            # Inherit the host daemon's interpreter/runtime. The existing
++            # controller alone decides whether recovery is allowed.
++            result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
++                                    capture_output=True, text=True, errors='replace')
++            record.update(result='succeeded' if result.returncode == 0 else 'rejected',
++                          exit_code=result.returncode,
++                          stdout=result.stdout, stderr=result.stderr)
++        except Exception as exc:
++            record.update(result='error', error=f'{type(exc).__name__}: {exc}')
++        record['finished_at'] = time.time()
++        write_record(claimed, record)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 2b3641c769089d9825dbc331908e076e7e0f3947..11752549e09d28584c7b1a568f4ef0f5f7bde1a4
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -22,7 +22,7 @@
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+-  # Separate check lock covers BOTH state reads and the entire CLI invocation.
++  # Check lock covers both state reads, Codex, and the host recovery drain.
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+@@ -54,6 +54,14 @@
+     CLI_FAILURES=$((CLI_FAILURES + 1))
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
++  # Launch recovery only here, outside the CLI timeout and its PID namespace.
++  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
++      > "$CHECK_DIR/recovery_drain.log" 2>&1; then
++    :
++  else
++    DRAIN_EXIT=$?
++    printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
++  fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+   OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+
+apply patch
+patch: completed
+/data/interns/zhangpc/cairn_new/docs/server_monitor_prompt.md
+/data/interns/zhangpc/cairn_new/scripts/drain_recovery_requests.py
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index df0f805e612ad405015ff183b9d75125a8c14dae..ca6797f57ed2247742a3eaf115f6fb8b9f242d39
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -43,23 +43,45 @@
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+ mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+ configs/, data/, or checkpoint files. Do not run extra training
+-commands directly. Use only the bounded recovery controller:
++commands directly. NEVER launch or recover jobs from a Codex tool: its PID
++namespace and lifetime are scoped to the tool/check. Never execute
++scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
++scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
++or recovery functions through Python or another wrapper.
++
++For an eligible failed job, write one JSON recovery request under
++logs/server_monitor/recovery_requests/ with these fields:
++
++  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+ 
+-  source scripts/runtime.sh
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
++Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
++directory, then atomically rename it to .json. Do not create a duplicate request
++for an arm with a pending request. Record the request path and observed failure
++in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
++complete runs. The host daemon drains requests AFTER this Codex invocation ends
++and BEFORE its after-status snapshot, invoking the existing bounded recovery
++controller with the inherited host runtime. It moves each request into
++recovery_requests/processed/ before invocation and records the request, result,
++stdout and stderr there. Interrupted requests remain as evidence and are not
++automatically replayed; inspect the processed record and real job status before
++considering any new request. Leave processed records intact. Invalid arm names,
++live jobs and completed jobs are rejected by the existing controller.
+ 
+-It archives checkpoints/configs, resumes last.pt with the exact recorded config,
+-optimizer/update/RNG and schedule, or runs --test-only after completed training.
++The host controller archives checkpoints/configs, resumes last.pt with the exact
++recorded config, optimizer/update/RNG and schedule, or runs --test-only after
++completed training.
+ If a crash occurred between best/last publication it resumes the retained best
+ epoch, never resets the schedule. Without any checkpoint, it retries the same
+ full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+-best.pt, append --reduce-batch; this halves that run's batch and records its
+-actual config. Never change batch size after a checkpoint. Never overwrite
++best.pt, set reduce_batch=true in the request; this halves that run's batch and
++records its actual config. Never change batch size after a checkpoint. Never overwrite
+ past attempt logs/archives. At most three recovery attempts per run; attempted
+ recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+ Do not bypass this bound, erase records, or create replacement output directories.
+ 
+ After any action re-read --status and save a local check note plus action record.
++A queued request is not a completed recovery: the host processes it after you
++return. Never wait for or drain it from this check.
+ If a failure cannot be repaired within these constraints, retry only when a
+ legitimate retry can help. Otherwise record the observed irreparable failure:
+ 
+diff --git a/scripts/drain_recovery_requests.py b/scripts/drain_recovery_requests.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..326f0681a007cc8c8d4e9efbb9690ef7c03b41e5
+--- /dev/null
++++ b/scripts/drain_recovery_requests.py
+@@ -0,0 +1,63 @@
++"""Consume monitor recovery requests in the host daemon, once per request."""
++import json
++from pathlib import Path
++import subprocess
++import sys
++import time
++
++
++ROOT = Path(__file__).resolve().parents[1]
++REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
++
++
++def write_record(path, record):
++    temporary = path.with_suffix('.json.tmp')
++    temporary.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
++    temporary.replace(path)
++
++
++def main():
++    if not REQUESTS.exists():
++        return
++    processed = REQUESTS / 'processed'
++    processed.mkdir(exist_ok=True)
++    for pending in sorted(REQUESTS.glob('*.json')):
++        # Claim before invoking the controller. An interrupted drain leaves
++        # evidence here and never automatically retries this request.
++        claimed = processed / f'{pending.stem}.{time.time_ns()}.json'
++        pending.rename(claimed)
++        record = {'request_file': pending.name, 'started_at': time.time(),
++                  'result': 'processing', 'exit_code': None,
++                  'stdout': '', 'stderr': ''}
++        try:
++            raw = claimed.read_text()
++            record['raw_request'] = raw
++            request = json.loads(raw)
++            if (not isinstance(request, dict)
++                    or not isinstance(request.get('arm'), str)
++                    or not isinstance(request.get('reason'), str)
++                    or not request['reason'].strip()
++                    or type(request.get('reduce_batch')) is not bool):
++                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
++            record['request'] = {key: request[key] for key in ('arm', 'reason', 'reduce_batch')}
++            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
++                       '--recover', request['arm'], '--reason', request['reason']]
++            if request['reduce_batch']:
++                command.append('--reduce-batch')
++            record['command'] = command
++            write_record(claimed, record)
++            # Inherit the host daemon's interpreter/runtime. The existing
++            # controller alone decides whether recovery is allowed.
++            result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
++                                    capture_output=True, text=True, errors='replace')
++            record.update(result='succeeded' if result.returncode == 0 else 'rejected',
++                          exit_code=result.returncode,
++                          stdout=result.stdout, stderr=result.stderr)
++        except Exception as exc:
++            record.update(result='error', error=f'{type(exc).__name__}: {exc}')
++        record['finished_at'] = time.time()
++        write_record(claimed, record)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 2b3641c769089d9825dbc331908e076e7e0f3947..11752549e09d28584c7b1a568f4ef0f5f7bde1a4
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -22,7 +22,7 @@
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+-  # Separate check lock covers BOTH state reads and the entire CLI invocation.
++  # Check lock covers both state reads, Codex, and the host recovery drain.
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+@@ -54,6 +54,14 @@
+     CLI_FAILURES=$((CLI_FAILURES + 1))
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
++  # Launch recovery only here, outside the CLI timeout and its PID namespace.
++  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
++      > "$CHECK_DIR/recovery_drain.log" 2>&1; then
++    :
++  else
++    DRAIN_EXIT=$?
++    printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
++  fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+   OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+
+exec
+/bin/bash -lc "bash -n scripts/monitor_loop.sh && python3 - <<'PY'
+import ast
+from pathlib import Path
+path = Path('scripts/drain_recovery_requests.py')
+ast.parse(path.read_text(), filename=str(path))
+print('PASS: bash -n scripts/monitor_loop.sh; AST parse scripts/drain_recovery_requests.py')
+PY" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+PASS: bash -n scripts/monitor_loop.sh; AST parse scripts/drain_recovery_requests.py
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index df0f805e612ad405015ff183b9d75125a8c14dae..ca6797f57ed2247742a3eaf115f6fb8b9f242d39
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -43,23 +43,45 @@
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+ mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+ configs/, data/, or checkpoint files. Do not run extra training
+-commands directly. Use only the bounded recovery controller:
++commands directly. NEVER launch or recover jobs from a Codex tool: its PID
++namespace and lifetime are scoped to the tool/check. Never execute
++scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
++scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
++or recovery functions through Python or another wrapper.
++
++For an eligible failed job, write one JSON recovery request under
++logs/server_monitor/recovery_requests/ with these fields:
++
++  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+ 
+-  source scripts/runtime.sh
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
++Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
++directory, then atomically rename it to .json. Do not create a duplicate request
++for an arm with a pending request. Record the request path and observed failure
++in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
++complete runs. The host daemon drains requests AFTER this Codex invocation ends
++and BEFORE its after-status snapshot, invoking the existing bounded recovery
++controller with the inherited host runtime. It moves each request into
++recovery_requests/processed/ before invocation and records the request, result,
++stdout and stderr there. Interrupted requests remain as evidence and are not
++automatically replayed; inspect the processed record and real job status before
++considering any new request. Leave processed records intact. Invalid arm names,
++live jobs and completed jobs are rejected by the existing controller.
+ 
+-It archives checkpoints/configs, resumes last.pt with the exact recorded config,
+-optimizer/update/RNG and schedule, or runs --test-only after completed training.
++The host controller archives checkpoints/configs, resumes last.pt with the exact
++recorded config, optimizer/update/RNG and schedule, or runs --test-only after
++completed training.
+ If a crash occurred between best/last publication it resumes the retained best
+ epoch, never resets the schedule. Without any checkpoint, it retries the same
+ full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+-best.pt, append --reduce-batch; this halves that run's batch and records its
+-actual config. Never change batch size after a checkpoint. Never overwrite
++best.pt, set reduce_batch=true in the request; this halves that run's batch and
++records its actual config. Never change batch size after a checkpoint. Never overwrite
+ past attempt logs/archives. At most three recovery attempts per run; attempted
+ recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+ Do not bypass this bound, erase records, or create replacement output directories.
+ 
+ After any action re-read --status and save a local check note plus action record.
++A queued request is not a completed recovery: the host processes it after you
++return. Never wait for or drain it from this check.
+ If a failure cannot be repaired within these constraints, retry only when a
+ legitimate retry can help. Otherwise record the observed irreparable failure:
+ 
+diff --git a/scripts/drain_recovery_requests.py b/scripts/drain_recovery_requests.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..326f0681a007cc8c8d4e9efbb9690ef7c03b41e5
+--- /dev/null
++++ b/scripts/drain_recovery_requests.py
+@@ -0,0 +1,63 @@
++"""Consume monitor recovery requests in the host daemon, once per request."""
++import json
++from pathlib import Path
++import subprocess
++import sys
++import time
++
++
++ROOT = Path(__file__).resolve().parents[1]
++REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
++
++
++def write_record(path, record):
++    temporary = path.with_suffix('.json.tmp')
++    temporary.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
++    temporary.replace(path)
++
++
++def main():
++    if not REQUESTS.exists():
++        return
++    processed = REQUESTS / 'processed'
++    processed.mkdir(exist_ok=True)
++    for pending in sorted(REQUESTS.glob('*.json')):
++        # Claim before invoking the controller. An interrupted drain leaves
++        # evidence here and never automatically retries this request.
++        claimed = processed / f'{pending.stem}.{time.time_ns()}.json'
++        pending.rename(claimed)
++        record = {'request_file': pending.name, 'started_at': time.time(),
++                  'result': 'processing', 'exit_code': None,
++                  'stdout': '', 'stderr': ''}
++        try:
++            raw = claimed.read_text()
++            record['raw_request'] = raw
++            request = json.loads(raw)
++            if (not isinstance(request, dict)
++                    or not isinstance(request.get('arm'), str)
++                    or not isinstance(request.get('reason'), str)
++                    or not request['reason'].strip()
++                    or type(request.get('reduce_batch')) is not bool):
++                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
++            record['request'] = {key: request[key] for key in ('arm', 'reason', 'reduce_batch')}
++            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
++                       '--recover', request['arm'], '--reason', request['reason']]
++            if request['reduce_batch']:
++                command.append('--reduce-batch')
++            record['command'] = command
++            write_record(claimed, record)
++            # Inherit the host daemon's interpreter/runtime. The existing
++            # controller alone decides whether recovery is allowed.
++            result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
++                                    capture_output=True, text=True, errors='replace')
++            record.update(result='succeeded' if result.returncode == 0 else 'rejected',
++                          exit_code=result.returncode,
++                          stdout=result.stdout, stderr=result.stderr)
++        except Exception as exc:
++            record.update(result='error', error=f'{type(exc).__name__}: {exc}')
++        record['finished_at'] = time.time()
++        write_record(claimed, record)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 2b3641c769089d9825dbc331908e076e7e0f3947..11752549e09d28584c7b1a568f4ef0f5f7bde1a4
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -22,7 +22,7 @@
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+-  # Separate check lock covers BOTH state reads and the entire CLI invocation.
++  # Check lock covers both state reads, Codex, and the host recovery drain.
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+@@ -54,6 +54,14 @@
+     CLI_FAILURES=$((CLI_FAILURES + 1))
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
++  # Launch recovery only here, outside the CLI timeout and its PID namespace.
++  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
++      > "$CHECK_DIR/recovery_drain.log" 2>&1; then
++    :
++  else
++    DRAIN_EXIT=$?
++    printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
++  fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+   OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+
+codex
+Implemented in three files:
+
+- [Monitor prompt](/data/interns/zhangpc/cairn_new/docs/server_monitor_prompt.md): prohibits direct recovery; defines JSON request handoff.
+- [Host drain](/data/interns/zhangpc/cairn_new/scripts/drain_recovery_requests.py): claims each request once, invokes the unchanged controller, and preserves result/stdout/stderr.
+- [Monitor loop](/data/interns/zhangpc/cairn_new/scripts/monitor_loop.sh): drains after Codex and before after-status.
+
+Static checks passed: `bash -n` and Python AST parsing. No drain execution or fake requests. Live jobs and daemon untouched; monitoring remains `gpt-6.1-sol` low every 2400 seconds. Ready for coordinator review and host-shell restart.
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index df0f805e612ad405015ff183b9d75125a8c14dae..ca6797f57ed2247742a3eaf115f6fb8b9f242d39
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -43,23 +43,45 @@
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+ mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+ configs/, data/, or checkpoint files. Do not run extra training
+-commands directly. Use only the bounded recovery controller:
++commands directly. NEVER launch or recover jobs from a Codex tool: its PID
++namespace and lifetime are scoped to the tool/check. Never execute
++scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
++scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
++or recovery functions through Python or another wrapper.
++
++For an eligible failed job, write one JSON recovery request under
++logs/server_monitor/recovery_requests/ with these fields:
++
++  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+ 
+-  source scripts/runtime.sh
+-  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
++Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
++directory, then atomically rename it to .json. Do not create a duplicate request
++for an arm with a pending request. Record the request path and observed failure
++in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
++complete runs. The host daemon drains requests AFTER this Codex invocation ends
++and BEFORE its after-status snapshot, invoking the existing bounded recovery
++controller with the inherited host runtime. It moves each request into
++recovery_requests/processed/ before invocation and records the request, result,
++stdout and stderr there. Interrupted requests remain as evidence and are not
++automatically replayed; inspect the processed record and real job status before
++considering any new request. Leave processed records intact. Invalid arm names,
++live jobs and completed jobs are rejected by the existing controller.
+ 
+-It archives checkpoints/configs, resumes last.pt with the exact recorded config,
+-optimizer/update/RNG and schedule, or runs --test-only after completed training.
++The host controller archives checkpoints/configs, resumes last.pt with the exact
++recorded config, optimizer/update/RNG and schedule, or runs --test-only after
++completed training.
+ If a crash occurred between best/last publication it resumes the retained best
+ epoch, never resets the schedule. Without any checkpoint, it retries the same
+ full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+-best.pt, append --reduce-batch; this halves that run's batch and records its
+-actual config. Never change batch size after a checkpoint. Never overwrite
++best.pt, set reduce_batch=true in the request; this halves that run's batch and
++records its actual config. Never change batch size after a checkpoint. Never overwrite
+ past attempt logs/archives. At most three recovery attempts per run; attempted
+ recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+ Do not bypass this bound, erase records, or create replacement output directories.
+ 
+ After any action re-read --status and save a local check note plus action record.
++A queued request is not a completed recovery: the host processes it after you
++return. Never wait for or drain it from this check.
+ If a failure cannot be repaired within these constraints, retry only when a
+ legitimate retry can help. Otherwise record the observed irreparable failure:
+ 
+diff --git a/scripts/drain_recovery_requests.py b/scripts/drain_recovery_requests.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..326f0681a007cc8c8d4e9efbb9690ef7c03b41e5
+--- /dev/null
++++ b/scripts/drain_recovery_requests.py
+@@ -0,0 +1,63 @@
++"""Consume monitor recovery requests in the host daemon, once per request."""
++import json
++from pathlib import Path
++import subprocess
++import sys
++import time
++
++
++ROOT = Path(__file__).resolve().parents[1]
++REQUESTS = ROOT / 'logs/server_monitor/recovery_requests'
++
++
++def write_record(path, record):
++    temporary = path.with_suffix('.json.tmp')
++    temporary.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
++    temporary.replace(path)
++
++
++def main():
++    if not REQUESTS.exists():
++        return
++    processed = REQUESTS / 'processed'
++    processed.mkdir(exist_ok=True)
++    for pending in sorted(REQUESTS.glob('*.json')):
++        # Claim before invoking the controller. An interrupted drain leaves
++        # evidence here and never automatically retries this request.
++        claimed = processed / f'{pending.stem}.{time.time_ns()}.json'
++        pending.rename(claimed)
++        record = {'request_file': pending.name, 'started_at': time.time(),
++                  'result': 'processing', 'exit_code': None,
++                  'stdout': '', 'stderr': ''}
++        try:
++            raw = claimed.read_text()
++            record['raw_request'] = raw
++            request = json.loads(raw)
++            if (not isinstance(request, dict)
++                    or not isinstance(request.get('arm'), str)
++                    or not isinstance(request.get('reason'), str)
++                    or not request['reason'].strip()
++                    or type(request.get('reduce_batch')) is not bool):
++                raise ValueError('Request requires arm, nonempty reason, and reduce_batch boolean')
++            record['request'] = {key: request[key] for key in ('arm', 'reason', 'reduce_batch')}
++            command = [sys.executable, str(ROOT / 'scripts/server_jobs.py'),
++                       '--recover', request['arm'], '--reason', request['reason']]
++            if request['reduce_batch']:
++                command.append('--reduce-batch')
++            record['command'] = command
++            write_record(claimed, record)
++            # Inherit the host daemon's interpreter/runtime. The existing
++            # controller alone decides whether recovery is allowed.
++            result = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL,
++                                    capture_output=True, text=True, errors='replace')
++            record.update(result='succeeded' if result.returncode == 0 else 'rejected',
++                          exit_code=result.returncode,
++                          stdout=result.stdout, stderr=result.stderr)
++        except Exception as exc:
++            record.update(result='error', error=f'{type(exc).__name__}: {exc}')
++        record['finished_at'] = time.time()
++        write_record(claimed, record)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 2b3641c769089d9825dbc331908e076e7e0f3947..11752549e09d28584c7b1a568f4ef0f5f7bde1a4
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -22,7 +22,7 @@
+   mkdir -p "$CHECK_DIR"
+   date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+   date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+-  # Separate check lock covers BOTH state reads and the entire CLI invocation.
++  # Check lock covers both state reads, Codex, and the host recovery drain.
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+@@ -54,6 +54,14 @@
+     CLI_FAILURES=$((CLI_FAILURES + 1))
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
++  # Launch recovery only here, outside the CLI timeout and its PID namespace.
++  if CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/drain_recovery_requests.py \
++      > "$CHECK_DIR/recovery_drain.log" 2>&1; then
++    :
++  else
++    DRAIN_EXIT=$?
++    printf '%s drain_exit=%s\n' "$CHECK_ID" "$DRAIN_EXIT" >> "$MONITOR_DIR/recovery_drain_errors.log"
++  fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+   cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
+   OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+
+tokens used
+23,408
+Implemented in three files:
+
+- [Monitor prompt](/data/interns/zhangpc/cairn_new/docs/server_monitor_prompt.md): prohibits direct recovery; defines JSON request handoff.
+- [Host drain](/data/interns/zhangpc/cairn_new/scripts/drain_recovery_requests.py): claims each request once, invokes the unchanged controller, and preserves result/stdout/stderr.
+- [Monitor loop](/data/interns/zhangpc/cairn_new/scripts/monitor_loop.sh): drains after Codex and before after-status.
+
+Static checks passed: `bash -n` and Python AST parsing. No drain execution or fake requests. Live jobs and daemon untouched; monitoring remains `gpt-6.1-sol` low every 2400 seconds. Ready for coordinator review and host-shell restart.

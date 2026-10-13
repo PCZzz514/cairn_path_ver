@@ -1,0 +1,76 @@
+{
+  "checked_at": 1791790322.8370132,
+  "runs": {
+    "single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 3096026,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 3096029,
+        "process_start": "1269993470",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "rareddie_control.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 1,
+      "history_best_validation_macro_f1_85": 0.20553669351267237,
+      "history_bad_epochs": 0,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 2,
+        "update": 1500,
+        "epoch_rows": 42880,
+        "epoch_seconds": 22.77006459236145
+      },
+      "blocked_reason": null,
+      "exit": null
+    },
+    "double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 3096027,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 3096030,
+        "process_start": "1269993471",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "rareddie_control.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 1,
+      "history_best_validation_macro_f1_85": 0.10639952632870232,
+      "history_bad_epochs": 0,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 2,
+        "update": 1600,
+        "epoch_rows": 55680,
+        "epoch_seconds": 28.812037467956543
+      },
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}

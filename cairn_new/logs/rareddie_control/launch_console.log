@@ -1,0 +1,251 @@
+{
+  "single_drugout": {
+    "arm": "single_drugout",
+    "gpu": 6,
+    "attempt": 1,
+    "recoveries": 0,
+    "started_at": 1791790199.7304444,
+    "config": "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+    "mode": "--fresh",
+    "reason": "reviewed initial launch",
+    "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/single_drugout/attempt_1.log",
+    "exit_file": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/single_drugout/attempt_1_exit.json",
+    "command": [
+      "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+      "-m",
+      "rareddie_control.train",
+      "--config",
+      "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+      "--fresh"
+    ],
+    "pid": 3096026,
+    "process_start": "1269993466"
+  },
+  "double_drugout": {
+    "arm": "double_drugout",
+    "gpu": 7,
+    "attempt": 1,
+    "recoveries": 0,
+    "started_at": 1791790199.7391496,
+    "config": "/data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml",
+    "mode": "--fresh",
+    "reason": "reviewed initial launch",
+    "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/double_drugout/attempt_1.log",
+    "exit_file": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/double_drugout/attempt_1_exit.json",
+    "command": [
+      "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+      "-m",
+      "rareddie_control.train",
+      "--config",
+      "/data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml",
+      "--fresh"
+    ],
+    "pid": 3096027,
+    "process_start": "1269993467"
+  }
+}
+{
+ "checked_at": "2026-10-12T15:30:30+0800",
+ "arms": {
+  "single_drugout": {
+   "pid": 3096026,
+   "wrapper_ps": "3096026       1 3096026 3096026       00:31 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python /data/interns/zhangpc/cairn_new/rareddie_control/jobs.py --worker /data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/single_drugout/attempt_1.json",
+   "wrapper_ppid_is_1": true,
+   "trainer": {
+    "pid": 3096029,
+    "process_start": "1269993470",
+    "command": [
+     "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+     "-m",
+     "rareddie_control.train",
+     "--config",
+     "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+     "--fresh"
+    ]
+   },
+   "trainer_ps": "3096029 3096026 3096026 3096026       00:31 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python -m rareddie_control.train --config /data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml --fresh",
+   "trainer_alive_same_process": true,
+   "live": true,
+   "mode": "--fresh",
+   "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/single_drugout/attempt_1.log",
+   "start": {
+    "phase": "start",
+    "mode": "fresh",
+    "start_epoch": 1,
+    "update": 0,
+    "best_metric": -1.0,
+    "bad_epochs": 0,
+    "epochs": 100,
+    "patience": 15,
+    "will_train": true,
+    "planned_updates": 116500,
+    "kl_warmup_updates": 23300,
+    "train_batches": 1165,
+    "train_rows": 149048,
+    "validation_rows": 20785,
+    "batch_size": 128,
+    "seed": 42,
+    "output": "/data/interns/zhangpc/cairn_new/rareddie_control/outputs/single_drugout",
+    "cuda_visible_devices": "6",
+    "device_uuid": "9a4c3035-f289-b3d1-b6df-5fc36a30b066",
+    "pid": 3096029,
+    "started_at": 1791790207.090271
+   },
+   "first_step": {
+    "phase": "train_progress",
+    "epoch": 1,
+    "update": 1,
+    "epoch_rows": 128,
+    "epoch_seconds": 1.9630193710327148,
+    "beta": 4.291845493562232e-08,
+    "running_ce": 4.515107154846191,
+    "running_loss": 4.618603229522705
+   },
+   "progress_100": {
+    "phase": "train_progress",
+    "epoch": 1,
+    "update": 300,
+    "epoch_rows": 38400,
+    "epoch_seconds": 22.756416082382202,
+    "beta": 1.2875536480686696e-05,
+    "running_ce": 2.401319053173065,
+    "running_loss": 2.456440889040629
+   },
+   "first_update": {
+    "labels": 128,
+    "loss_terms": {
+     "ce": 4.515107154846191,
+     "rec": 1.034958839416504,
+     "kl": 0.027611594647169113,
+     "beta": 4.291845493562232e-08,
+     "loss": 4.618603229522705
+    },
+    "gradient_norms": {
+     "fin_entities": 0.1028563380241394,
+     "fin_relations": 0.3782261610031128,
+     "cse": 2.115690231323242,
+     "nai": 1.9296050071716309,
+     "pvr": 2.9502317905426025,
+     "classifier": 2.1110785007476807
+    },
+    "all_gradients_finite": true,
+    "trainable_without_gradient": [
+     "cse.blocks.1.norm2.weight",
+     "cse.blocks.1.norm2.bias"
+    ]
+   },
+   "first_update_ok": true,
+   "inventory_ok": true,
+   "initial_rng_recorded": true,
+   "test_export": null,
+   "exit": null,
+   "progress_confirmed": true
+  },
+  "double_drugout": {
+   "pid": 3096027,
+   "wrapper_ps": "3096027       1 3096027 3096027       00:31 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python /data/interns/zhangpc/cairn_new/rareddie_control/jobs.py --worker /data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/double_drugout/attempt_1.json",
+   "wrapper_ppid_is_1": true,
+   "trainer": {
+    "pid": 3096030,
+    "process_start": "1269993471",
+    "command": [
+     "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+     "-m",
+     "rareddie_control.train",
+     "--config",
+     "/data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml",
+     "--fresh"
+    ]
+   },
+   "trainer_ps": "3096030 3096027 3096027 3096027       00:31 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python -m rareddie_control.train --config /data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml --fresh",
+   "trainer_alive_same_process": true,
+   "live": true,
+   "mode": "--fresh",
+   "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/double_drugout/attempt_1.log",
+   "start": {
+    "phase": "start",
+    "mode": "fresh",
+    "start_epoch": 1,
+    "update": 0,
+    "best_metric": -1.0,
+    "bad_epochs": 0,
+    "epochs": 100,
+    "patience": 15,
+    "will_train": true,
+    "planned_updates": 116500,
+    "kl_warmup_updates": 23300,
+    "train_batches": 1165,
+    "train_rows": 149048,
+    "validation_rows": 760,
+    "batch_size": 128,
+    "seed": 42,
+    "output": "/data/interns/zhangpc/cairn_new/rareddie_control/outputs/double_drugout",
+    "cuda_visible_devices": "7",
+    "device_uuid": "33ef51ee-980e-6d67-10c7-defd79ee32fc",
+    "pid": 3096030,
+    "started_at": 1791790207.1361232
+   },
+   "first_step": {
+    "phase": "train_progress",
+    "epoch": 1,
+    "update": 1,
+    "epoch_rows": 128,
+    "epoch_seconds": 1.6451849937438965,
+    "beta": 4.291845493562232e-08,
+    "running_ce": 4.515107154846191,
+    "running_loss": 4.618603229522705
+   },
+   "progress_100": {
+    "phase": "train_progress",
+    "epoch": 1,
+    "update": 300,
+    "epoch_rows": 38400,
+    "epoch_seconds": 22.889498233795166,
+    "beta": 1.2875536480686696e-05,
+    "running_ce": 2.4013190491994223,
+    "running_loss": 2.456440886259079
+   },
+   "first_update": {
+    "labels": 128,
+    "loss_terms": {
+     "ce": 4.515107154846191,
+     "rec": 1.034958839416504,
+     "kl": 0.027611592784523964,
+     "beta": 4.291845493562232e-08,
+     "loss": 4.618603229522705
+    },
+    "gradient_norms": {
+     "fin_entities": 0.1028563380241394,
+     "fin_relations": 0.3782261610031128,
+     "cse": 2.115690231323242,
+     "nai": 1.9296051263809204,
+     "pvr": 2.9502317905426025,
+     "classifier": 2.1110785007476807
+    },
+    "all_gradients_finite": true,
+    "trainable_without_gradient": [
+     "cse.blocks.1.norm2.weight",
+     "cse.blocks.1.norm2.bias"
+    ]
+   },
+   "first_update_ok": true,
+   "inventory_ok": true,
+   "initial_rng_recorded": true,
+   "test_export": null,
+   "exit": null,
+   "progress_confirmed": true
+  }
+ },
+ "gpu_compute_apps": [
+  "GPU-e4213589-76ee-4100-1163-a64920f3c322, 2560540, 3080 MiB",
+  "GPU-3da157c5-2202-6eab-2bbe-8b6fd39738ba, 2560541, 3080 MiB",
+  "GPU-9a4c3035-f289-b3d1-b6df-5fc36a30b066, 3096029, 1326 MiB",
+  "GPU-33ef51ee-980e-6d67-10c7-defd79ee32fc, 3096030, 1326 MiB"
+ ],
+ "loadavg": [
+  5.748046875,
+  4.23583984375,
+  3.83447265625
+ ],
+ "all_progress_confirmed": true
+}

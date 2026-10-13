@@ -1,0 +1,103 @@
+{
+  "pairs": 188105,
+  "wall_seconds": 192.04684591293335,
+  "setup_seconds": 64.35323095321655,
+  "workers": 32,
+  "k": 10,
+  "max_length": 4,
+  "candidate_budget": 1000,
+  "graph_budget": {
+    "max_nodes": 130,
+    "max_edges": 695
+  },
+  "pair_seconds": {
+    "mean": 0.026684437796296454,
+    "p50": 0.013855114579200745,
+    "p99": 0.21474539503455126,
+    "max": 7.128640091046691,
+    "sum": 5019.476171672344
+  },
+  "status_counts": {
+    "connected_paths": 187409,
+    "one_end_absent": 681,
+    "overlength_empty": 14,
+    "both_absent": 1
+  },
+  "path_mask_true": 187409,
+  "old_cache_path_mask_true": 187409,
+  "budget_truncated": 39,
+  "connected_with_fewer_than_k": 170,
+  "budget_truncated_with_fewer_than_k": 39,
+  "graph_budget_limited": 0,
+  "selected_paths_distribution": {
+    "0": 15,
+    "1": 24,
+    "2": 36,
+    "3": 38,
+    "4": 40,
+    "5": 57,
+    "6": 71,
+    "7": 57,
+    "8": 75,
+    "9": 62,
+    "10": 187630
+  },
+  "shortest_distance_counts": {
+    "-1": 682,
+    "2": 160561,
+    "3": 22613,
+    "4": 4235,
+    "5": 11,
+    "6": 3
+  },
+  "max_nodes": 28,
+  "max_edges": 212,
+  "mean_nodes": 12.379522075436592,
+  "mean_edges": 94.28950851917811,
+  "background": {
+    "non_ddi_triples": 4488504,
+    "directed_node_pairs": 6035852,
+    "atomic_directed_relations": 8977002,
+    "relations_with_inverse": 210,
+    "composite_signatures": 13511,
+    "nodes_in_graph": 96766,
+    "components": 310
+  },
+  "protocols": {
+    "single_drugout": {
+      "train": {
+        "rows": 149048,
+        "path_mask_true": 148419,
+        "connected_paths": 148419
+      },
+      "val": {
+        "rows": 20785,
+        "path_mask_true": 20742,
+        "connected_paths": 20742
+      },
+      "test": {
+        "rows": 16978,
+        "path_mask_true": 16954,
+        "connected_paths": 16954
+      }
+    },
+    "double_drugout": {
+      "train": {
+        "rows": 149048,
+        "path_mask_true": 148419,
+        "connected_paths": 148419
+      },
+      "val": {
+        "rows": 760,
+        "path_mask_true": 760,
+        "connected_paths": 760
+      },
+      "test": {
+        "rows": 534,
+        "path_mask_true": 534,
+        "connected_paths": 534
+      }
+    }
+  },
+  "complete": true
+}

@@ -1,0 +1,12 @@
+Both controls are launched and training:
+
+- GPU6 PairOut: trainer PID `3321255`
+- GPU7 CellOut: trainer PID `3321256`
+
+Both confirmed fresh seed42, 150 epochs, finite first-update gradients and update100+ progress. GPU4/5 remain active and untouched.
+
+LOW monitor PID `3322177` passed its immediate check and will check every 40 minutes until final exports are verified.
+
+These are same-DDI-split replicates, not cell-cold generalization tests. Training continues independently.
+
+[Handoff](/data/interns/zhangpc/cairn_new/logs/rareddie_pairout_cellout/handoff.md)

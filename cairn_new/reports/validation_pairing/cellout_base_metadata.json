@@ -1,0 +1,19 @@
+{
+  "arm": "cellout",
+  "variant": "base",
+  "checkpoint": "/data/interns/zhangpc/cairn_new/dsn_pairout_cellout/outputs/cellout/best.pt",
+  "selected_epoch": 79,
+  "prepared": "/data/interns/zhangpc/cairn_new/pairout_cellout/prepared",
+  "metrics": {
+    "ce": 0.16092459020802857,
+    "rec": 0.1868956404801023,
+    "kl": 3.2801979822180667,
+    "loss": 0.18289435281956187,
+    "macro_f1_85": 0.9211805653994958,
+    "kl_beta": 0.001
+  },
+  "accuracy": 0.9652040762447859,
+  "stored_best_val_f1": 0.9211805653994958,
+  "inference_gpu": "7",
+  "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+}

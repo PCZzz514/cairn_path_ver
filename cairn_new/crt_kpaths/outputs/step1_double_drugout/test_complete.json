@@ -1,0 +1,12 @@
+{
+  "lr": 0.2,
+  "heads": [
+    "crt_lr0.2_seed42",
+    "crt_lr0.2_seed43",
+    "crt_lr0.2_seed44",
+    "natural_lr0.2_seed42",
+    "natural_lr0.2_seed43",
+    "natural_lr0.2_seed44"
+  ],
+  "completed_at": 1791872006.0425029
+}

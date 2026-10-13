@@ -1,0 +1,33 @@
+{
+  "rows": 18938,
+  "accuracy": 0.9650966311120498,
+  "macro_f1_85": 0.9332605417721062,
+  "macro_precision_85": 0.9492526626493945,
+  "macro_recall_85": 0.9223158965604565,
+  "weighted_f1": 0.9650868664167005,
+  "micro_f1": 0.9650966311120498,
+  "mcc": 0.958710306638168,
+  "kappa": 0.9586996929462845,
+  "classes_present": 83,
+  "macro_roc_auc_supported_classes": 0.9990666897137942,
+  "roc_auc_classes": 83,
+  "macro_ap_supported_classes": 0.9761847452757976,
+  "ap_classes": 83,
+  "top5_accuracy": 0.9985214911817509,
+  "loss_terms": {
+    "ce": 0.1606948826394067,
+    "rec": 0.18780584509187143,
+    "kl": 3.2772749539904162,
+    "loss": 0.18275274191323573,
+    "macro_f1_85": 0.9332605417721062,
+    "kl_beta": 0.001
+  },
+  "checkpoint": "best.pt",
+  "selected_epoch": 79,
+  "selected_validation_macro_f1_85": 0.9211805653994958,
+  "selection": "validation only",
+  "protocol": "cellout",
+  "ddi_split_note": "same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicate, NOT true cell-cold DDI generalization",
+  "parameters": 13206361,
+  "training_seconds": 8720.327646017075
+}

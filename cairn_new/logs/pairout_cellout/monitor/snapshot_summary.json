@@ -1,0 +1,118 @@
+{
+  "checked_at": 1791810414.228283,
+  "runs": {
+    "pairout": {
+      "state": "complete",
+      "gpu": 6,
+      "pid": 3253530,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/pairout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+      "evidence": {
+        "selected_epoch": 24,
+        "last_epoch": 39,
+        "bad_epochs": 15,
+        "rows": 18938,
+        "metrics": {
+          "rows": 18938,
+          "accuracy": 0.9554863237934312,
+          "macro_f1_85": 0.8837457611045174,
+          "macro_precision_85": 0.9032415636543852,
+          "macro_recall_85": 0.8777649259188457,
+          "weighted_f1": 0.9553106447765892,
+          "micro_f1": 0.9554863237934312,
+          "mcc": 0.9473149923209239,
+          "kappa": 0.9473018559516183,
+          "classes_present": 83,
+          "macro_roc_auc_supported_classes": 0.9973533962319764,
+          "roc_auc_classes": 83,
+          "macro_ap_supported_classes": 0.9433797352977147,
+          "ap_classes": 83,
+          "top5_accuracy": 0.9986270989544831
+        }
+      },
+      "train_process": {
+        "pid": 3253533,
+        "process_start": "1271289524",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "pairout_cellout.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 39,
+      "history_best_validation_macro_f1_85": 0.9005239724768849,
+      "history_bad_epochs": 15,
+      "last_log_event": {
+        "phase": "best_checkpoint_test"
+      },
+      "blocked_reason": null,
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791807778.2438343
+      }
+    },
+    "cellout": {
+      "state": "complete",
+      "gpu": 7,
+      "pid": 3253531,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/cellout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/cellout.yaml",
+      "evidence": {
+        "selected_epoch": 37,
+        "last_epoch": 52,
+        "bad_epochs": 15,
+        "rows": 18938,
+        "metrics": {
+          "rows": 18938,
+          "accuracy": 0.9578096947935368,
+          "macro_f1_85": 0.8856008856984741,
+          "macro_precision_85": 0.9087457540262626,
+          "macro_recall_85": 0.872698316897856,
+          "weighted_f1": 0.9576373971801365,
+          "micro_f1": 0.9578096947935368,
+          "mcc": 0.9500785540069754,
+          "kappa": 0.9500554362449846,
+          "classes_present": 83,
+          "macro_roc_auc_supported_classes": 0.9980348322886613,
+          "roc_auc_classes": 83,
+          "macro_ap_supported_classes": 0.9440720697730159,
+          "ap_classes": 83,
+          "top5_accuracy": 0.9986799028408491
+        }
+      },
+      "train_process": {
+        "pid": 3253534,
+        "process_start": "1271289524",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "pairout_cellout.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/cellout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 52,
+      "history_best_validation_macro_f1_85": 0.9024906088139462,
+      "history_bad_epochs": 15,
+      "last_log_event": {
+        "phase": "best_checkpoint_test"
+      },
+      "blocked_reason": null,
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791809009.4887362
+      }
+    }
+  },
+  "all_complete": true
+}

@@ -1,0 +1,8 @@
+{
+  "reviewer": "Codex",
+  "approval": false,
+  "required_before_launch": [
+    "Source fixes now reviewed: block reset seed/fresh parameters/AdamW and per-batch hybrid checks plus independent absolute/relative maxima and progress logging are correct.",
+    "Finish the currently running verification, refresh diffs, and finalize your reply. Do not start another evidence run or launch training. Codex must DIRECTLY run the finalized evidence command from host before approval. Timing variance can be reported honestly; no need for endlessly repeated trials."
+  ]
+}

@@ -1,0 +1,140 @@
+{
+ "implementation": {
+  "author": "claude-opus-5-5 default effort",
+  "launched": false,
+  "handoff": "logs/rareddie_pairout_cellout/implementation_handoff.md",
+  "review_diffs": [
+   "rareddie_pairout_cellout/review/implementation.diff",
+   "rareddie_pairout_cellout/review/new_files.diff"
+  ],
+  "evidence": "rareddie_pairout_cellout/evidence/cohort_copy_evidence.json",
+  "evidence_passed": true,
+  "prior_cse_evidence": "rareddie_control/evidence/cse_equivalence.json",
+  "prior_approval": "logs/rareddie_control/review_approval.json",
+  "model_data_byte_identical_to_rareddie_control": true,
+  "arms": {
+   "pairout": 6,
+   "cellout": 7
+  },
+  "configuration": {
+   "epochs": 150,
+   "patience": 15,
+   "seed": 42,
+   "batch_size": 128,
+   "train_batches": 1184,
+   "planned_updates": 177600,
+   "kl_warmup_updates": 35520
+  },
+  "ddi_split_note": "same frozen PairOut DDI split; independent fresh seed42 same-DDI-split replicates, NOT true cell-cold DDI generalization",
+  "launch_gate_dry_run_refusals": [
+   "missing Codex review approval"
+  ],
+  "next": "Codex review -> logs/rareddie_pairout_cellout/review_approval.json -> launch.sh --launch-reviewed -> start_monitor.sh",
+  "stage": "launched_progress_confirmed",
+  "updated_at": "2026-10-12T21:09:16+0800",
+  "launch": {
+   "pairout": {
+    "pid": 3321248,
+    "process_start": "1272027110",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_pairout_cellout/jobs/pairout/attempt_1.log",
+    "gpu": 6,
+    "started_at": 1791810536.1752157
+   },
+   "cellout": {
+    "pid": 3321249,
+    "process_start": "1272027111",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_pairout_cellout/jobs/cellout/attempt_1.log",
+    "gpu": 7,
+    "started_at": 1791810536.1777823
+   }
+  },
+  "launch_check": {
+   "json": "/data/interns/zhangpc/cairn_new/logs/rareddie_pairout_cellout/launch.json",
+   "all_progress_confirmed": true,
+   "pids": {
+    "pairout": 3321248,
+    "cellout": 3321249
+   },
+   "trainer_pids": {
+    "pairout": 3321255,
+    "cellout": 3321256
+   }
+  }
+ },
+ "stage": "monitor_complete",
+ "monitor": {
+  "pid": 3322177,
+  "last_check": "20261012T143016Z_3322177",
+  "last_codex_exit": null,
+  "last_successful_check": "20261012T135016Z_3322177",
+  "next_check": null,
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "outcome": "complete",
+  "runs": {
+   "pairout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 43,
+    "history_best_validation_macro_f1_85": 0.9187999090158677,
+    "history_bad_epochs": 15
+   },
+   "cellout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 43,
+    "history_best_validation_macro_f1_85": 0.9187999090158677,
+    "history_bad_epochs": 15
+   }
+  },
+  "stage": "monitor_complete",
+  "updated_at": "2026-10-12T22:30:29+0800"
+ },
+ "monitor_start": {
+  "pid": 3322177,
+  "ps": "3322177       1 3322177 3322177       00:10 bash /data/interns/zhangpc/cairn_new/rareddie_pairout_cellout/monitor/monitor_loop.sh",
+  "ppid_is_1": true,
+  "state_dir": "/data/interns/zhangpc/cairn_new/logs/rareddie_pairout_cellout/monitor",
+  "first_check": "20261012T131016Z_3322177",
+  "first_check_codex_exit": 0,
+  "first_check_after_json": "/data/interns/zhangpc/cairn_new/logs/rareddie_pairout_cellout/monitor/checks/20261012T131016Z_3322177/after.json",
+  "next_check": "2026-10-12T13:50:16Z",
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "stage": "monitor_first_check_succeeded",
+  "updated_at": "2026-10-12T21:10:27+0800"
+ },
+ "handoff": {
+  "reviewer": "server Codex gpt-6.1-sol medium",
+  "review_approved": true,
+  "review_approval": "logs/rareddie_pairout_cellout/review_approval.json",
+  "handoff": "logs/rareddie_pairout_cellout/handoff.md",
+  "training_complete": false,
+  "epochs": 150,
+  "patience": 15,
+  "planned_updates": 177600,
+  "kl_warmup_updates": 35520,
+  "launch_pids": {
+   "pairout": {
+    "wrapper": 3321248,
+    "trainer": 3321255
+   },
+   "cellout": {
+    "wrapper": 3321249,
+    "trainer": 3321256
+   }
+  },
+  "monitor_pid": 3322177,
+  "monitor_first_check_succeeded": true,
+  "monitor_interval_seconds": 2400,
+  "next_check": "2026-10-12T13:50:16Z",
+  "ddi_split_note": "independent fresh seed42 same-DDI-split replicates; NOT true cell-cold DDI generalization",
+  "coordinator_ends_at_handoff": true,
+  "stage": "launch_and_low_monitor_handoff_confirmed",
+  "updated_at": "2026-10-12T21:11:29+0800"
+ }
+}

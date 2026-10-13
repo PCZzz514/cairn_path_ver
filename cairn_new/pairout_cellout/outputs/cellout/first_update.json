@@ -1,0 +1,34 @@
+{
+  "labels": 128,
+  "loss_terms": {
+    "ce": 4.431826591491699,
+    "rec": 1.0414559841156006,
+    "kl": 0.030611183494329453,
+    "beta": 2.8153153153153155e-08,
+    "loss": 4.5359721183776855
+  },
+  "logits_finite": true,
+  "gradient_norms": {
+    "fin_entities": 0.07070052623748779,
+    "fin_relations": 0.16901516914367676,
+    "cse": 0.9091827273368835,
+    "nai": 0.969549834728241,
+    "path": 0.9427016973495483,
+    "pvr": 2.929126262664795,
+    "classifier": 2.377312660217285
+  },
+  "all_gradients_finite": true,
+  "trainable_without_gradient": [
+    "cse.blocks.1.norm2.weight",
+    "cse.blocks.1.norm2.bias"
+  ],
+  "path_batch": {
+    "nodes": 8498,
+    "edges": 50824,
+    "pairs_with_cached_path": 128,
+    "present_directions_v_to_u_u_to_v": [
+      128,
+      128
+    ]
+  }
+}

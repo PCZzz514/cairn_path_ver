@@ -1,0 +1,70 @@
+{
+ "summarized_at": "2026-10-12T12:04:31+0800",
+ "arms_present": [
+  "path_single_drugout",
+  "path_double_drugout",
+  "no_path_single_drugout",
+  "no_path_double_drugout"
+ ],
+ "all_passed": true,
+ "checks": {
+  "path_single_drugout": {
+   "snapshot_provenance_passed": true,
+   "resumed_files_are_immutable_snapshot": true,
+   "config_only_whitelist_changed": true,
+   "strict_resume_config": true,
+   "state_dict_layout": true,
+   "construction_and_rng": true,
+   "strict_model_adamw_load_exact": true,
+   "adamw_hyperparameters_and_steps": true,
+   "rng_restore_and_permutation": true,
+   "epoch_update_schedule": true,
+   "history_and_selection": true,
+   "collator_exact": true
+  },
+  "path_double_drugout": {
+   "snapshot_provenance_passed": true,
+   "resumed_files_are_immutable_snapshot": true,
+   "config_only_whitelist_changed": true,
+   "strict_resume_config": true,
+   "state_dict_layout": true,
+   "construction_and_rng": true,
+   "strict_model_adamw_load_exact": true,
+   "adamw_hyperparameters_and_steps": true,
+   "rng_restore_and_permutation": true,
+   "epoch_update_schedule": true,
+   "history_and_selection": true,
+   "collator_exact": true
+  },
+  "no_path_single_drugout": {
+   "snapshot_provenance_passed": true,
+   "resumed_files_are_immutable_snapshot": true,
+   "config_only_whitelist_changed": true,
+   "strict_resume_config": true,
+   "state_dict_layout": true,
+   "construction_and_rng": true,
+   "strict_model_adamw_load_exact": true,
+   "adamw_hyperparameters_and_steps": true,
+   "rng_restore_and_permutation": true,
+   "epoch_update_schedule": true,
+   "history_and_selection": true,
+   "collator_exact": true,
+   "no_path_gpu_numerical": true
+  },
+  "no_path_double_drugout": {
+   "snapshot_provenance_passed": true,
+   "resumed_files_are_immutable_snapshot": true,
+   "config_only_whitelist_changed": true,
+   "strict_resume_config": true,
+   "state_dict_layout": true,
+   "construction_and_rng": true,
+   "strict_model_adamw_load_exact": true,
+   "adamw_hyperparameters_and_steps": true,
+   "rng_restore_and_permutation": true,
+   "epoch_update_schedule": true,
+   "history_and_selection": true,
+   "collator_exact": true,
+   "no_path_gpu_numerical": true
+  }
+ }
+}

@@ -1,0 +1,22 @@
+{
+  "arm": "no_path_single_drugout",
+  "gpu": 6,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791778285.1477442,
+  "config": "/data/interns/zhangpc/cairn_new/accelerated_four/configs/no_path_single_drugout.yaml",
+  "mode": "--resume",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "accelerated_four.dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/accelerated_four/configs/no_path_single_drugout.yaml",
+    "--resume"
+  ],
+  "pid": 2968296,
+  "process_start": "1268802008"
+}

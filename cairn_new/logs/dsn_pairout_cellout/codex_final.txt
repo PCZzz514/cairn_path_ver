@@ -1,0 +1,12 @@
+Launched and verified both NO PATH DSN controls:
+
+- PairOut: GPU6, trainer PID `3338014`
+- CellOut: GPU7, trainer PID `3338015`
+
+Both completed epoch 1 and passed first-update plus 100-update checks. DSN GAT/projection remain active; path module and path arrays are absent. Schedule: maximum 150 epochs, patience 15.
+
+Existing trainers and monitors remain untouched and live. These are same-DDI-split seed42 replicates; GPU/CPU contention is expected.
+
+Detached LOW monitor PID `3338772` passed its first check. Next check: **22:14:03 China time**, then every 40 minutes.
+
+[Status and handoff](/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/handoff_confirmation.json). Medium task complete; training and monitoring continue independently.

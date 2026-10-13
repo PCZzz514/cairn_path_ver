@@ -1,0 +1,160 @@
+{
+ "arm": "no_path_double_drugout",
+ "gpu": 7,
+ "created_at": "2026-10-12T11:59:38+0800",
+ "tool": "/data/interns/zhangpc/cairn_new/accelerated_four/tools/snapshot.py",
+ "original_output": "/data/interns/zhangpc/cairn_new/outputs/no_path_double_drugout",
+ "accelerated_output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_double_drugout",
+ "original_files_read": {
+  "last.pt": {
+   "path": "/data/interns/zhangpc/cairn_new/outputs/no_path_double_drugout/last.pt",
+   "inode": 95140612,
+   "size": 169885039,
+   "mtime": 1791776796.5288947
+  },
+  "best.pt": {
+   "path": "/data/interns/zhangpc/cairn_new/outputs/no_path_double_drugout/best.pt",
+   "inode": 95140611,
+   "size": 169885039,
+   "mtime": 1791765125.3476212
+  },
+  "history.jsonl": "/data/interns/zhangpc/cairn_new/outputs/no_path_double_drugout/history.jsonl",
+  "config.yaml": "/data/interns/zhangpc/cairn_new/outputs/no_path_double_drugout/config.yaml"
+ },
+ "original_process_at_snapshot": {
+  "attempt": 1,
+  "pid": 2560543,
+  "alive_same_process": true
+ },
+ "read_attempts": [
+  {
+   "at": "2026-10-12T11:59:37+0800",
+   "last_epoch": 32,
+   "best_epoch": 24,
+   "history_records": 32,
+   "incoherent": []
+  }
+ ],
+ "cutoff_epoch": 32,
+ "cutoff_update": 37280,
+ "history_records_retained": 32,
+ "history_epochs": [
+  1,
+  32
+ ],
+ "best_epoch": 24,
+ "best_update": 27960,
+ "best_metric": 0.1259564026908654,
+ "bad_epochs": 8,
+ "epochs": 100,
+ "patience": 15,
+ "planned_updates": 116500,
+ "kl_warmup_updates": 23300,
+ "training_done": false,
+ "early_stopped": false,
+ "next_epoch": 33,
+ "config_migration_whitelist": [
+  "output",
+  "generator",
+  "namespace",
+  "optimization"
+ ],
+ "config_migration": {
+  "output": {
+   "original": "/data/interns/zhangpc/cairn_new/outputs/no_path_double_drugout",
+   "accelerated": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_double_drugout"
+  },
+  "generator": {
+   "original": "gpt-6.1-sol high",
+   "accelerated": "gpt-6.1-sol high; accelerated_four packed-attention copy by claude-opus-5-5"
+  },
+  "namespace": {
+   "original": "<absent>",
+   "accelerated": "accelerated_four"
+  },
+  "optimization": {
+   "original": "<absent>",
+   "accelerated": "GPU3-reviewed packed cross-pair inter-graph attention: one GATConv call per direction, per-pair local self loops built by the collator, add_self_loops=False"
+  }
+ },
+ "resume_config_equals_snapshot_config": true,
+ "exact_state_equivalence": {
+  "last.pt": {
+   "keys": [
+    "epoch",
+    "update",
+    "model",
+    "optimizer",
+    "config",
+    "best_metric",
+    "bad_epochs",
+    "metrics",
+    "rng"
+   ],
+   "non_config_mismatches": [],
+   "config_keys_changed": [
+    "generator",
+    "namespace",
+    "optimization",
+    "output"
+   ],
+   "config_equals_migrated": true,
+   "model": {
+    "tensors": 110,
+    "elements": 14614561
+   },
+   "optimizer_state": {
+    "tensors": 312,
+    "elements": 26412310
+   },
+   "optimizer_param_groups_equal": true,
+   "rng_streams": [
+    "cuda",
+    "numpy",
+    "python",
+    "torch"
+   ],
+   "cuda_rng_devices": 1,
+   "passed": true
+  },
+  "best.pt": {
+   "keys": [
+    "epoch",
+    "update",
+    "model",
+    "optimizer",
+    "config",
+    "best_metric",
+    "bad_epochs",
+    "metrics",
+    "rng"
+   ],
+   "non_config_mismatches": [],
+   "config_keys_changed": [
+    "generator",
+    "namespace",
+    "optimization",
+    "output"
+   ],
+   "config_equals_migrated": true,
+   "model": {
+    "tensors": 110,
+    "elements": 14614561
+   },
+   "optimizer_state": {
+    "tensors": 312,
+    "elements": 26412310
+   },
+   "optimizer_param_groups_equal": true,
+   "rng_streams": [
+    "cuda",
+    "numpy",
+    "python",
+    "torch"
+   ],
+   "cuda_rng_devices": 1,
+   "passed": true
+  }
+ },
+ "passed": true
+}

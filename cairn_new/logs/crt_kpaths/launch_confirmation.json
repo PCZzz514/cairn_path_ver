@@ -1,0 +1,17 @@
+{
+  "checked_at": 1791871975.3460643,
+  "launched": [
+    "step1_single_drugout",
+    "step1_double_drugout",
+    "step2_kpaths_single_drugout",
+    "step2_kpaths_double_drugout"
+  ],
+  "first_update_confirmed": {
+    "step1_single_drugout": true,
+    "step1_double_drugout": true,
+    "step2_kpaths_single_drugout": true,
+    "step2_kpaths_double_drugout": true
+  },
+  "failed": [],
+  "dispatcher_live": true
+}

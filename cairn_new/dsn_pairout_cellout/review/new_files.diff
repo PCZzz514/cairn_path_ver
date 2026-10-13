@@ -1,0 +1,59 @@
+--- /dev/null	2026-05-18 15:44:45.167941316 +0800
++++ dsn_pairout_cellout/dsn/__init__.py	2026-10-12 21:26:27.435513615 +0800
+@@ -0,0 +1 @@
++"""Byte-identical copies of accelerated_four/dsn/model.py and data.py (GPU3-verified packed DSN cross-pair GAT); used with with_path=False only."""
+--- /dev/null	2026-05-18 15:44:45.167941316 +0800
++++ dsn_pairout_cellout/inventory.py	2026-10-12 21:26:40.743346313 +0800
+@@ -0,0 +1,52 @@
++"""Parameter groups and inventory for the unchanged DSNRareDDI(with_path=False).
++
++Kept outside the byte-identical dsn/model.py. Groups are disjoint: the DSN
++InterGraphAttention (cse.blocks.N.interAtt) and its 192->128 inter_projection
++are separated from the remaining (molecular RareDDIE) CSE parameters, so the
++first update proves each of them receives a gradient. There is no path group:
++the path module is absent.
++"""
++from torch_geometric.nn import TransformerConv, GATConv
++
++# Ordered: the DSN prefixes are matched before the generic cse prefix.
++GROUPS = {'dsn_inter_attention': ('cse.blocks.0.interAtt.', 'cse.blocks.1.interAtt.'),
++          'inter_projection': ('cse.blocks.0.inter_projection.', 'cse.blocks.1.inter_projection.'),
++          'cse': ('cse.',), 'fin_entities': ('fin_entities.',), 'fin_relations': ('fin_relations.',),
++          'nai': ('nai.',), 'pvr': ('pvr.',), 'classifier': ('classifier.',)}
++# Trainable parameters whose output the original forward never consumes.
++UNUSED_TRAINABLE = ['cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight']
++
++
++def group_of(name):
++    return next(g for g, prefixes in GROUPS.items() if name.startswith(prefixes))
++
++
++def parameter_inventory(model, collator):
++    """Every named parameter with its group; DSN GAT/projection present, path module NONE."""
++    rows = [{'name': name, 'shape': list(p.shape), 'numel': p.numel(), 'requires_grad': p.requires_grad,
++             'group': group_of(name)} for name, p in model.named_parameters()]
++    gats = {name: {'type': type(m).__name__, 'heads': m.heads, 'out_channels': m.out_channels,
++                   'add_self_loops': m.add_self_loops}
++            for name, m in model.cse.named_modules() if isinstance(m, GATConv)}
++    return {
++        'parameters': sum(r['numel'] for r in rows),
++        'trainable_parameters': sum(r['numel'] for r in rows if r['requires_grad']),
++        'groups': {g: sum(r['numel'] for r in rows if r['group'] == g) for g in GROUPS},
++        'frozen': [r['name'] for r in rows if not r['requires_grad']],
++        'dsn_inter_attention_present': bool(gats) and all('interAtt' in n for n in gats),
++        'dsn_inter_attention_gatconvs': gats,
++        'inter_projection_present': any('inter_projection' in r['name'] for r in rows),
++        'molecular_transformer_convs': {name: type(m).__name__ for name, m in model.cse.named_modules()
++                                        if isinstance(m, TransformerConv)},
++        'with_path': model.with_path,
++        'path_module': 'NONE' if not hasattr(model, 'path') else type(model.path).__name__,
++        'path_parameters': sum(r['numel'] for r in rows if r['name'].startswith('path.')),
++        'collator_path_arrays_loaded': hasattr(collator, 'paths'),
++        'fin_trainable': model.fin_entities.weight.requires_grad and model.fin_relations.weight.requires_grad,
++        'fin_entity_table': list(model.fin_entities.weight.shape),
++        'fin_relation_table': list(model.fin_relations.weight.shape),
++        'pair_input': model.pvr.feature_dim, 'pvr_presence_dim': model.pvr.presence_dim,
++        'latent': model.pvr.mu.out_features,
++        'classifier_route': 'deterministic PVR mu (128) -> classifier; same classifier as pure/full-path',
++        'classifier': [str(m) for m in model.classifier],
++        'tensors': rows}

@@ -1,0 +1,59 @@
+The packed-attention change is implemented in an isolated copy and verified on GPU3. On the same real batches and parameters the new code matches the original to FP32 roundoff and takes about 14× less time per training step. I have not launched the five-epoch benchmark: the launcher refuses until Codex writes an approval file, and I confirmed that refusal is now its only reason for blocking.
+
+## Results (final evidence run, finished 11:30:39)
+- **Device:** physical GPU3 only (A100-PCIE-40GB). The UUID torch sees matches `nvidia-smi -i 3`. torch 2.8.0+cu128, PyG 2.7.0, driver 570.133.20, TF32 matmul off.
+- **Batches:** the first 35 real training batches of 128 rows in the seed-42 epoch-1 shuffle order. They contain 2273 pairs with nh<nt and 2059 with nh>nt. Row IDs are in the JSON.
+- **Edges and self-loops:**
+  - In both directions, each pair's edge list is exactly what PyG's own self-loop rule produces, in the same order.
+  - 10,158 edges whose global row and column indices happen to coincide are kept, as they should be. An unmodified GATConv on the packed batch would instead have added 101,821 self-loops linking different pairs.
+  - Attention weights match per pair (max difference 6e-7).
+  - Each pair's outputs have exactly zero gradient with respect to every other pair's inputs, checked for all 128 pairs.
+- **Numerical agreement:** worst relative discrepancy is ‖new−old‖∞ / ‖old‖∞ per tensor, measured with fresh seed-42 parameters and with the trained production `best.pt` (read only).
+
+| comparison | worst relative | tolerance |
+|---|---|---|
+| attention layer, FP64, packed vs per-pair | 4.9e-15 | 1e-10 |
+| attention layer outputs, FP32 | 8.0e-7 | 1e-5 |
+| attention layer gradients, FP32 | 3.3e-6 | 1e-4 |
+| whole-model outputs (logits, CE, reconstruction, KL, loss), train and eval | 5.7e-7 | 1e-4 |
+| input gradients (node and bond features) | 8.6e-6 | 1e-3 |
+| parameter gradients, every tensor on every batch | 2.3e-4 (path branch, trained parameters) | 1e-3, plus a small absolute floor |
+
+  The FP32 differences are consistent with summation-order roundoff (u ≈ 6e-8): FP64 agrees to 1e-15. Dropout and the latent-variable (PVR) sampling ran under the same RNG seeds for old and new. Seed-42 initialisation is bitwise identical, and the RNG state after model construction is equal.
+- **Gradient tolerance revision:** my first passing criterion was purely relative and it failed. The six tensors involved (attention key biases and the pooling score bias) have gradients that are mathematically zero; what's left is ~1e-10 noise, and the original code doesn't reproduce those values between its own runs either. I added an absolute floor of 1e-7 × the largest gradient in the model and kept the failed attempt as an artifact.
+- **Per-step timing:** every block restarts from the same parameters, a fresh AdamW and seed 42, in A-B-B-A order with 5 warm-up and 30 measured steps.
+
+| measurement | old | new | old/new |
+|---|---|---|---|
+| full training step | 1.128 s | 0.078 s | 14.4× |
+| forward | — | — | 17.2× |
+| backward | — | — | 13.0× |
+| eval forward | 0.577 s | 0.033 s | 17.6× |
+
+  Peak activation memory is about the same (~1.43 GB for both). The new collator costs 0.039 s per batch on CPU versus 0.023 s, which with 2 workers should stay below the GPU step.
+- **Contention:** load average was 6.4–7.4. In two earlier passing runs, one of the new code's two training blocks slowed to a median of 0.19–0.21 s, while the other block stayed at 0.077 s. The final run shows no slowed new-code block, and GPU3 reported no throttling. These are per-step measurements on 30 batches, not an epoch speedup; only the five-epoch run will show that.
+
+## Risks for review
+- The five-epoch training script has only been compiled and imported, never run, because training wasn't allowed before review. The launcher waits for its start line, and it logs progress every 100 updates.
+- The detached runner gets PPID 1 only if no subreaper adopts it. The launcher records the actual parent and warns if it isn't 1.
+
+## Commands for Codex (run from `/data/interns/zhangpc/cairn_new`)
+1. Optionally rerun the evidence (about 3.5 minutes, foreground): `bash logs/gpu3_speed/run_evidence.sh`
+2. Refresh the diffs if any code changed: `bash benchmarks/gpu3_speed/tools/make_review.sh`
+3. Write `logs/gpu3_speed/review_approval.json` with `approved: true`, a Codex reviewer, `reviewed_diff` and `reviewed_evidence`. `REVIEW.md` has a template. The gate rejects an approval older than the code, diff or evidence.
+4. Launch: `bash logs/gpu3_speed/launch_benchmark.sh`. It refuses if any check fails. Otherwise it detaches the run and logs to `logs/gpu3_speed/benchmark.log`. It records the PID and parent in `logs/gpu3_speed/launch.json`. After the five epochs (or any failure) a summary is written to `logs/gpu3_speed/five_epoch_summary.{json,md}` and status is set to `complete` or `failed`.
+
+The run keeps the original 100-epoch KL schedule (116,500 planned updates, 23,300 warm-up) and stops after 5 epochs with no early stopping. Each epoch logs train, validation and total seconds, macro-F1 over 85 classes, accuracy, train CE and loss, and the ratio to the historical 1498–1534 s. There is no test loader and nothing is written to production outputs.
+
+`status.json` is at stage `evidence_complete_awaiting_codex_review`, lists all paths, and leaves `ready_for_host_launch` as false. The original code, configs, scripts, outputs, the four jobs and the monitor are untouched, and all earlier logs are kept.
+
+## Files
+All new files are under `benchmarks/gpu3_speed/` unless shown with another path.
+- **Isolated copy:** `dsn_gpu3/model.py`, `dsn_gpu3/data.py`, `dsn_gpu3/train.py`, `dsn_gpu3/status.py`, `configs/path_single_drugout.yaml`
+- **Scripts:** `env.sh`, `run_benchmark.sh`, `tools/evidence.py`, `tools/summarize.py`, `tools/launch_gate.py`, `tools/make_review.sh`
+- **Review:** `review/REVIEW.md`, `review/implementation.diff` (actual unified diff against the originals), `review/new_files.diff`
+- **Evidence:** `evidence/gpu3_evidence.json` and `.md`, `evidence/attempt1_pure_relative_criterion_failed.json` and `.md`
+- `logs/gpu3_speed/run_evidence.sh`
+- `logs/gpu3_speed/launch_benchmark.sh`
+- `logs/gpu3_speed/evidence_run.log`
+- `logs/gpu3_speed/status.json`

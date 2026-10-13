@@ -1,0 +1,10 @@
+Both jobs are launched and advancing:
+
+- GPU6 PairOut: PID 3253533
+- GPU7 CellOut: PID 3253534
+
+Both use **150 maximum epochs**, patience 15, 177,600 planned updates, and 35,520 KL warmup updates (30 epochs). Finite first updates and 100-update progress passed.
+
+LOW monitor PID 3254270 passed its immediate check; next check is **19:46:44 China time**, then every 40 minutes. GPU4/5 remain untouched.
+
+[Review and launch handoff](/data/interns/zhangpc/cairn_new/logs/pairout_cellout/launch_monitor_handoff.md). Server coordination is complete.

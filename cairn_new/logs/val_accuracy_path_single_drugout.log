@@ -1,0 +1,1 @@
+{"arm": "path_single_drugout", "checkpoint": "best.pt", "epoch": 20, "rows": 20785, "accuracy": 0.7395718065912918, "macro_f1_85": 0.5696434336070745}

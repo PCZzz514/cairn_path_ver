@@ -1,0 +1,74 @@
+{
+  "path_single_drugout": {
+    "strict_model_last_and_best_load": true,
+    "adamw_exact_load": true,
+    "strict_resume_config": true,
+    "epoch": 29,
+    "next_epoch": 30,
+    "update": 33785,
+    "best_epoch": 20,
+    "bad_epochs": 9,
+    "state_entries": 138,
+    "fin_trainable": true,
+    "schedule": [
+      100,
+      116500,
+      23300
+    ],
+    "snapshot_checkpoint_inodes_preserved": true
+  },
+  "path_double_drugout": {
+    "strict_model_last_and_best_load": true,
+    "adamw_exact_load": true,
+    "strict_resume_config": true,
+    "epoch": 33,
+    "next_epoch": 34,
+    "update": 38445,
+    "best_epoch": 28,
+    "bad_epochs": 5,
+    "state_entries": 138,
+    "fin_trainable": true,
+    "schedule": [
+      100,
+      116500,
+      23300
+    ],
+    "snapshot_checkpoint_inodes_preserved": true
+  },
+  "no_path_single_drugout": {
+    "strict_model_last_and_best_load": true,
+    "adamw_exact_load": true,
+    "strict_resume_config": true,
+    "epoch": 30,
+    "next_epoch": 31,
+    "update": 34950,
+    "best_epoch": 16,
+    "bad_epochs": 14,
+    "state_entries": 110,
+    "fin_trainable": true,
+    "schedule": [
+      100,
+      116500,
+      23300
+    ],
+    "snapshot_checkpoint_inodes_preserved": true
+  },
+  "no_path_double_drugout": {
+    "strict_model_last_and_best_load": true,
+    "adamw_exact_load": true,
+    "strict_resume_config": true,
+    "epoch": 32,
+    "next_epoch": 33,
+    "update": 37280,
+    "best_epoch": 24,
+    "bad_epochs": 8,
+    "state_entries": 110,
+    "fin_trainable": true,
+    "schedule": [
+      100,
+      116500,
+      23300
+    ],
+    "snapshot_checkpoint_inodes_preserved": true
+  }
+}

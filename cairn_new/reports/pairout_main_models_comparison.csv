@@ -1,0 +1,6 @@
+model,accuracy,macro_f1_85,top5,macro_auroc_supported,auc_classes,epoch,source
+reference85,0.9680008448621819,0.9271664329763427,0.9988383144999472,0.9961564130864053,83,76,/data/interns/zhangpc/cairn_dev/outputs/ddi_stage1_test_seed42/reference85/pairout
+DT_free,0.9673671982257894,0.9177269073981656,0.9988383144999472,0.9960504037913376,83,88,/data/interns/zhangpc/cairn_dev/outputs/ddi_stage1_test_seed42/DT_free/pairout
+no_gene_embeddings,0.9699017847713591,0.9290681270496833,0.9988911183863133,0.9970557869192568,83,93,/data/interns/zhangpc/cairn_dev/outputs/ddi_stage1_test_seed42/no_gene_embeddings/pairout
+GenePT3072,0.9572288520435104,0.9165859313009785,0.9989967261590453,0.9961651484306457,83,32,/data/interns/zhangpc/cairn_dev/outputs/experiments/GenePT3072/pairout/stage1_test
+DSN-DDI+EmerGNN+RareDDIE,0.9554863237934312,0.8837457611045174,0.9986270989544831,0.9973533962319764,83,24,/data/interns/zhangpc/cairn_new/pairout_cellout/outputs/pairout

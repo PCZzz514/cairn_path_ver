@@ -1,0 +1,12 @@
+{
+  "pid": 3253533,
+  "process_start": "1271289524",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "pairout_cellout.dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+    "--fresh"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "approved": true,
+  "reviewer": "Codex gpt-6.1-sol medium",
+  "state": "approved_for_fresh_launch",
+  "review": "logs/rareddie_control/review.md",
+  "evidence": "rareddie_control/evidence/cse_equivalence.json",
+  "frozen_rows_exact": true,
+  "fresh_only": true,
+  "gpu_mapping": {"single_drugout": 6, "double_drugout": 7},
+  "postlaunch_required": "both finite actual first updates and progress; durable LOW monitor immediate successful check/PPID1/nextcheck"
+}

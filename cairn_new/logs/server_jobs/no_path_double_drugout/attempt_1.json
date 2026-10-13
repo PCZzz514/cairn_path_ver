@@ -1,0 +1,21 @@
+{
+  "arm": "no_path_double_drugout",
+  "gpu": 7,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5385025,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ],
+  "pid": 2560539,
+  "process_start": "1264159747"
+}

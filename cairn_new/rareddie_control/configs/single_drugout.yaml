@@ -1,0 +1,16 @@
+protocol: single_drugout
+gpu: 6
+prepared: data/prepared
+output: rareddie_control/outputs/single_drugout
+seed: 42
+epochs: 100
+patience: 15
+batch_size: 128
+learning_rate: 0.0001
+weight_decay: 0.0001
+reconstruction_weight: 0.1
+kl_weight: 0.001
+kl_warmup_fraction: 0.2
+nai_cap: 30
+cpu_threads: 2
+num_workers: 2

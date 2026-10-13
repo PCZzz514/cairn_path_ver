@@ -1,0 +1,837 @@
+### rareddie_control -> rareddie_pairout_cellout (model.py/data.py byte-identical: empty diffs)
+model.py: byte-identical
+data.py: byte-identical
+--- rareddie_control/__init__.py	2026-10-12 15:20:45.935355628 +0800
++++ rareddie_pairout_cellout/__init__.py	2026-10-12 21:03:22.196928423 +0800
+@@ -1 +1 @@
+-"""RareDDIE-only control: original CSE -> NAI/FIN -> PVR -> mu MLP, no DSN inter-graph attention, no path."""
++"""RareDDIE-only control (rareddie_control model/data, unchanged) on PairOut/CellOut: same-DDI-split seed42 replicates."""
+--- rareddie_control/train.py	2026-10-12 15:22:17.618203019 +0800
++++ rareddie_pairout_cellout/train.py	2026-10-12 21:04:17.564232362 +0800
+@@ -1,9 +1,13 @@
+ """Full DDI training, fixed85 validation selection, selected-checkpoint test export.
+ 
+-rareddie_control copy of the accelerated_four trainer: RareDDIE-only model
+-(no DSN inter-graph attention, no path), molecule-only collator, outputs only
+-under rareddie_control/outputs. --fresh is the initial launch only; --resume
+-and --test-only continue this run's own checkpoints with the exact config.
++rareddie_pairout_cellout copy of the rareddie_control trainer: the unchanged
++RareDDIE-only model.py/data.py (no DSN inter-graph attention, no cross edges, no
++path), protocols pairout (GPU6) and cellout (GPU7) on the identical frozen
++PairOut DDI split of pairout_cellout/prepared (read-only), outputs only under
++rareddie_pairout_cellout/outputs. Both arms are independent fresh seed42
++same-DDI-split replicates, NOT true cell-cold DDI generalization. --fresh is the
++initial launch only; --resume and --test-only continue this run's own
++checkpoints with the exact config.
+ """
+ import argparse
+ import json
+@@ -23,15 +27,38 @@
+ from .model import GROUPS, RareDDIEControl, parameter_inventory
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-OUTPUTS = ROOT / 'rareddie_control/outputs'
+-GPU = {'single_drugout': 6, 'double_drugout': 7}
+-GENERATOR = 'gpt-6.1-sol medium plan/review; rareddie_control implementation by claude-opus-5-5'
+-NAMESPACE = 'rareddie_control'
+-ABLATION = ('accelerated_four no-path model with DSN InterGraphAttention, inter_projection and cross edges '
+-            'removed: original RareDDIE CSE order; same NAI/FIN, PVR, mu classifier, loss and protocol')
++OUTPUTS = ROOT / 'rareddie_pairout_cellout/outputs'
++PREPARED = ROOT / 'pairout_cellout/prepared'
++GPU = {'pairout': 6, 'cellout': 7}
++GENERATOR = 'gpt-6.1-sol medium plan/review; rareddie_pairout_cellout implementation by claude-opus-5-5'
++NAMESPACE = 'rareddie_pairout_cellout'
++ABLATION = ('rareddie_control model/data unchanged: accelerated_four no-path model with DSN InterGraphAttention, '
++            'inter_projection and cross edges removed: original RareDDIE CSE order; same NAI/FIN, PVR, mu classifier, '
++            'loss; PairOut/CellOut DDI protocol')
++DDI_SPLIT_NOTE = ('same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 '
++                  'same-DDI-split replicate, NOT true cell-cold DDI generalization')
++# Authorized schedule: 151508 rows / 128 -> 1184 batches, 150 * 1184 = 177600
++# planned updates, KL warmup ceil(0.2 * 177600) = 35520 (30 epochs), patience 15.
++SCHEDULE = {'epochs': 150, 'patience': 15, 'kl_warmup_fraction': .2,
++            'planned_updates': 177600, 'kl_warmup_updates': 35520}
++TRAIN_BATCHES = 1184
+ PROGRESS_EVERY = 100
+ 
+ 
++def preparation_gate(prepared, config):
++    """Reuse the existing full pairout_cellout preparation audit (read-only)."""
++    if prepared != PREPARED:
++        raise ValueError(f'prepared must be {PREPARED}')
++    preparation = json.loads((prepared / 'preparation_report.json').read_text())
++    audit = json.loads((prepared / 'audit_report.json').read_text())
++    assert audit['passed'] is True and audit['pairout_cellout_frames_identical'] is True
++    protocol = audit['protocols'][config['protocol']]
++    assert all(protocol[k] is True for k in ['all_rows_exact', 'all_columns_order_dtypes_exact', 'event_names_exact',
++                                             'global_drug_ids_exact', 'pair_index_exact'])
++    assert config['nai_cap'] == preparation['nai']['cap']
++    return preparation
++
++
+ def workspace_path(value):
+     path = Path(value)
+     path = (ROOT / path).resolve() if not path.is_absolute() else path.resolve()
+@@ -104,7 +131,11 @@
+     metrics, per_class, confusion = classification_metrics(y, probabilities)
+     metrics.update({'top5_accuracy': top_k_accuracy(y, probabilities), 'loss_terms': totals,
+                     'checkpoint': 'best.pt', 'selected_epoch': best['epoch'],
+-                    'selected_validation_macro_f1_85': best['best_metric'], 'selection': 'validation only'})
++                    'selected_validation_macro_f1_85': best['best_metric'], 'selection': 'validation only',
++                    'protocol': config['protocol'], 'ddi_split_note': DDI_SPLIT_NOTE,
++                    'parameters': sum(p.numel() for p in model.parameters()),
++                    'training_seconds': sum(json.loads(line)['seconds'] for line in
++                                            (output / 'history.jsonl').read_text().splitlines())})
+     frame = dataset.frame.copy()
+     assert np.array_equal(original_rows, dataset.rows)
+     frame.insert(0, 'frozen_row_index', original_rows)
+@@ -150,7 +181,7 @@
+     if not args.fresh:
+         own = torch.load(output_dir / ('best.pt' if args.test_only else 'last.pt'), map_location='cpu', weights_only=False)
+         if own['config'].get('namespace') != NAMESPACE or Path(own['config']['output']) != output_dir:
+-            raise ValueError('Checkpoint is not this rareddie_control run')
++            raise ValueError('Checkpoint is not this rareddie_pairout_cellout run')
+     saved = own if args.resume else None
+     if args.test_only:
+         assert own['config']['gpu'] == assigned and own['config']['protocol'] == config['protocol']
+@@ -160,15 +191,15 @@
+     if args.fresh:
+         # Seeded state immediately before model construction (exact, restorable).
+         torch.save(rng_state(), output_dir / 'initial_rng.pt')
++    preparation = preparation_gate(prepared, config)
++    if config['ddi_split_note'] != DDI_SPLIT_NOTE:
++        raise ValueError(f'ddi_split_note must state: {DDI_SPLIT_NOTE}')
+     if not args.test_only:
+         config.update({'prepared': str(prepared), 'output': str(output_dir), 'generator': GENERATOR,
+                        'namespace': NAMESPACE, 'ablation': ABLATION, 'with_path': False,
+                        'selection_metric': 'fixed85 validation macroF1', 'test_selection': False,
++                       'cohort_source_identity': preparation['source_identity'],
+                        'source_provenance': json.loads((ROOT / 'docs/source_provenance.json').read_text())})
+-    preparation = json.loads((prepared / 'preparation_report.json').read_text())
+-    assert config['nai_cap'] == preparation['nai']['cap']
+-    audit = json.loads((prepared / 'audit_report.json').read_text())
+-    assert audit['protocols'][config['protocol']]['all_rows_exact']
+     assets = torch.load(prepared / 'assets.pt', map_location='cpu', weights_only=False)
+     model = RareDDIEControl(assets).to(device)
+     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+@@ -178,9 +209,14 @@
+                                  num_workers=config['num_workers'], collate_fn=collate, pin_memory=True,
+                                  persistent_workers=False)
+                for split, dataset in datasets.items()}
++    assert len(loaders['train']) == TRAIN_BATCHES
+     if args.fresh:
+         config['planned_updates'] = config['epochs'] * len(loaders['train'])
+         config['kl_warmup_updates'] = max(1, math.ceil(config['kl_warmup_fraction'] * config['planned_updates']))
++    # Every mode (fresh, resume, test-only) runs only the authorized schedule.
++    if any(config[k] != v for k, v in SCHEDULE.items()):
++        raise ValueError(f'Schedule must be {SCHEDULE}')
++    if args.fresh:
+         (output_dir / 'config.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
+         save_json(output_dir / 'model_inventory.json', parameter_inventory(model))
+     if saved is not None and saved['config'] != config:
+@@ -206,7 +242,8 @@
+                       'will_train': will_train, 'planned_updates': config['planned_updates'],
+                       'kl_warmup_updates': warmup_updates, 'train_batches': len(loaders['train']),
+                       'train_rows': len(datasets['train']), 'validation_rows': len(datasets['val']),
+-                      'batch_size': config['batch_size'], 'seed': config['seed'], 'output': str(output_dir),
++                      'batch_size': config['batch_size'], 'seed': config['seed'], 'protocol': config['protocol'],
++                      'with_path': config['with_path'], 'output': str(output_dir),
+                       'cuda_visible_devices': os.environ.get('CUDA_VISIBLE_DEVICES'),
+                       'device_uuid': str(torch.cuda.get_device_properties(device).uuid), 'pid': os.getpid(),
+                       'started_at': time.time()}), flush=True)
+@@ -232,6 +269,10 @@
+                         'labels': len(batch['label']),
+                         'loss_terms': {'ce': float(ce), 'rec': float(result['rec']), 'kl': float(result['kl']),
+                                        'beta': beta, 'loss': float(loss)},
++                        'logits_finite': bool(torch.isfinite(result['logits']).all()),
++                        # Actual molecule-only batch: no DSN cross edges, no path graph.
++                        'batch_keys': sorted(batch), 'output_keys': sorted(result),
++                        'cross_edges_present': 'cross_edges' in batch, 'path_graph_present': 'path_graph' in batch,
+                         'gradient_norms': {group: float(torch.stack([g.detach().square().sum() for n, g in grads.items()
+                                                                      if g is not None and n.startswith(prefixes)]).sum().sqrt())
+                                            for group, prefixes in GROUPS.items()},
+@@ -288,7 +329,8 @@
+         sort_keys=False))
+     save_json(output_dir / 'test_complete.json', {
+         'checkpoint': 'best.pt', 'selected_epoch': best['epoch'], 'selected_update': best['update'],
+-        'rows': len(test_data), 'completed_at': time.time()})
++        'rows': len(test_data), 'protocol': config['protocol'], 'ddi_split_note': DDI_SPLIT_NOTE,
++        'completed_at': time.time()})
+ 
+ 
+ if __name__ == '__main__':
+--- rareddie_control/configs/single_drugout.yaml	2026-10-12 15:21:21.130913160 +0800
++++ rareddie_pairout_cellout/configs/pairout.yaml	2026-10-12 21:03:26.396875622 +0800
+@@ -1,9 +1,9 @@
+-protocol: single_drugout
++protocol: pairout
+ gpu: 6
+-prepared: data/prepared
+-output: rareddie_control/outputs/single_drugout
++prepared: pairout_cellout/prepared
++output: rareddie_pairout_cellout/outputs/pairout
+ seed: 42
+-epochs: 100
++epochs: 150
+ patience: 15
+ batch_size: 128
+ learning_rate: 0.0001
+@@ -14,3 +14,4 @@
+ nai_cap: 30
+ cpu_threads: 2
+ num_workers: 2
++ddi_split_note: same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicate, NOT true cell-cold DDI generalization
+--- rareddie_control/configs/double_drugout.yaml	2026-10-12 15:21:21.138913059 +0800
++++ rareddie_pairout_cellout/configs/cellout.yaml	2026-10-12 21:03:26.396875622 +0800
+@@ -1,9 +1,9 @@
+-protocol: double_drugout
++protocol: cellout
+ gpu: 7
+-prepared: data/prepared
+-output: rareddie_control/outputs/double_drugout
++prepared: pairout_cellout/prepared
++output: rareddie_pairout_cellout/outputs/cellout
+ seed: 42
+-epochs: 100
++epochs: 150
+ patience: 15
+ batch_size: 128
+ learning_rate: 0.0001
+@@ -14,3 +14,4 @@
+ nai_cap: 30
+ cpu_threads: 2
+ num_workers: 2
++ddi_split_note: same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicate, NOT true cell-cold DDI generalization
+--- rareddie_control/env.sh	2026-10-12 15:23:21.889395020 +0800
++++ rareddie_pairout_cellout/env.sh	2026-10-12 21:03:36.320750862 +0800
+@@ -1,14 +1,15 @@
+ #!/usr/bin/env bash
+-# Source only. Runtime for the isolated rareddie_control arms. The cairn
+-# environment, cairn_dev, accelerated_four, cairn_dsn and scripts/ are
+-# read-only; caches/temporary files stay under rareddie_control and its logs.
++# Source only. Runtime for the isolated rareddie_pairout_cellout arms. The cairn
++# environment, cairn_dev, rareddie_control, pairout_cellout (prepared data),
++# accelerated_four, cairn_dsn and scripts/ are read-only; caches/temporary
++# files stay under rareddie_pairout_cellout and its logs.
+ set -euo pipefail
+ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+-CONTROL_DIR="$ROOT_DIR/rareddie_control"
+-LOG_DIR="$ROOT_DIR/logs/rareddie_control"
++CONTROL_DIR="$ROOT_DIR/rareddie_pairout_cellout"
++LOG_DIR="$ROOT_DIR/logs/rareddie_pairout_cellout"
+ cd "$ROOT_DIR"
+ export PYTHONDONTWRITEBYTECODE=1
+-# rareddie_control (new) and accelerated_four (reused, read-only) resolve from ROOT.
++# rareddie_pairout_cellout (new) and accelerated_four (reused, read-only) resolve from ROOT.
+ export PYTHONPATH="$ROOT_DIR"
+ export CUDA_DEVICE_ORDER=PCI_BUS_ID
+ export TMPDIR="$LOG_DIR/tmp"
+--- rareddie_control/status.py	2026-10-12 15:25:35.443716015 +0800
++++ rareddie_pairout_cellout/status.py	2026-10-12 21:03:31.956805725 +0800
+@@ -1,9 +1,9 @@
+-"""Merge implementation/launch/monitor progress into logs/rareddie_control/status.json (shared with Codex)."""
++"""Merge implementation/launch/monitor progress into logs/rareddie_pairout_cellout/status.json (shared with Codex)."""
+ import json
+ from pathlib import Path
+ import time
+ 
+-STATUS = Path(__file__).resolve().parents[1] / 'logs/rareddie_control/status.json'
++STATUS = Path(__file__).resolve().parents[1] / 'logs/rareddie_pairout_cellout/status.json'
+ 
+ 
+ def update_status(stage, section='implementation', **fields):
+--- rareddie_control/jobs.py	2026-10-12 15:24:44.440357214 +0800
++++ rareddie_pairout_cellout/jobs.py	2026-10-12 21:04:52.223796632 +0800
+@@ -1,11 +1,14 @@
+ """Durable two-arm job records, real export verification, bounded recovery.
+ 
+-rareddie_control copy of accelerated_four/jobs.py: isolated state
+-(logs/rareddie_control/jobs), outputs (rareddie_control/outputs) and trainer
+-(rareddie_control.train). The reviewed initial launch is the ONLY --fresh run.
+-A recovery continues this run's own checkpoint with its exact recorded config
+-(--resume, or --test-only once its schedule is finished); it never restarts
+-from scratch, never reads DSN/accelerated/GPU3 state, never changes batch size.
++rareddie_pairout_cellout copy of rareddie_control/jobs.py: isolated state
++(logs/rareddie_pairout_cellout/jobs), outputs (rareddie_pairout_cellout/outputs)
++and trainer (rareddie_pairout_cellout.train, unchanged RareDDIE-only model).
++Arms pairout (GPU6) and cellout (GPU7) are independent fresh seed42
++same-DDI-split replicates, NOT true cell-cold DDI generalization. The reviewed
++initial launch is the ONLY --fresh run. A recovery continues this run's own
++checkpoint with its exact recorded config (--resume, or --test-only once its
++schedule is finished); it never restarts from scratch, never reads
++DSN/accelerated/GPU3/rareddie_control/pairout_cellout state, never changes batch size.
+ 
+ CPU controller only. Training children receive exactly their assigned GPU.
+ No model forward, preparation, smoke run, or credential access here.
+@@ -13,6 +16,7 @@
+ import argparse
+ from contextlib import contextmanager
+ import fcntl
++import filecmp
+ import json
+ import os
+ from pathlib import Path
+@@ -22,16 +26,27 @@
+ import time
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+-CONTROL = ROOT / 'rareddie_control'
+-STATE = ROOT / 'logs/rareddie_control/jobs'
++CONTROL = ROOT / 'rareddie_pairout_cellout'
++STATE = ROOT / 'logs/rareddie_pairout_cellout/jobs'
+ OUTPUTS = CONTROL / 'outputs'
+ CONFIGS = CONTROL / 'configs'
+-APPROVAL = ROOT / 'logs/rareddie_control/review_approval.json'
+-EVIDENCE = CONTROL / 'evidence/cse_equivalence.json'
++APPROVAL = ROOT / 'logs/rareddie_pairout_cellout/review_approval.json'
++# Exact frame/source/cohort checks and byte-identical model/data copy record
++# (tools/cohort_evidence.py). The bond-aware CSE itself was verified for the
++# unchanged rareddie_control model; that evidence and approval are reused.
++EVIDENCE = CONTROL / 'evidence/cohort_copy_evidence.json'
++ORIGINAL = ROOT / 'rareddie_control'
++PRIOR_CSE_EVIDENCE = ORIGINAL / 'evidence/cse_equivalence.json'
++PRIOR_APPROVAL = ROOT / 'logs/rareddie_control/review_approval.json'
+ REVIEW_DIFF = CONTROL / 'review/implementation.diff'
+-ARMS = {'single_drugout': 6, 'double_drugout': 7}
+-NAMESPACE = 'rareddie_control'
++ARMS = {'pairout': 6, 'cellout': 7}
++NAMESPACE = 'rareddie_pairout_cellout'
+ MAX_RECOVERIES = 3
++# The ONLY schedule these jobs may verify or recover with. Literal here,
++# independent of the trainer constant.
++AUTHORIZED_SCHEDULE = {'epochs': 150, 'patience': 15, 'kl_warmup_fraction': .2,
++                       'planned_updates': 177600, 'kl_warmup_updates': 35520}
++AUTHORIZED_TRAIN_BATCHES = 1184
+ 
+ 
+ def write_json(path, value):
+@@ -95,7 +110,7 @@
+     import pandas as pd
+     import yaml
+     from accelerated_four.dsn.metrics import classification_metrics
+-    from rareddie_control.train import top_k_accuracy
++    from rareddie_pairout_cellout.train import DDI_SPLIT_NOTE, SCHEDULE, TRAIN_BATCHES, top_k_accuracy
+ 
+     output = OUTPUTS / arm
+     required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+@@ -110,12 +125,19 @@
+         cfg = best['config']
+         assert cfg['gpu'] == ARMS[arm] and cfg['protocol'] == arm and cfg['namespace'] == NAMESPACE
+         assert Path(cfg['output']) == output
++        assert cfg['with_path'] is False and cfg['batch_size'] == 128 and cfg['seed'] == 42
++        assert cfg['ddi_split_note'] == DDI_SPLIT_NOTE
++        assert SCHEDULE == AUTHORIZED_SCHEDULE and TRAIN_BATCHES == AUTHORIZED_TRAIN_BATCHES
++        assert all(cfg[k] == v for k, v in AUTHORIZED_SCHEDULE.items()), f'schedule differs from {AUTHORIZED_SCHEDULE}'
+         assert last['config'] == cfg
+         assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
++        # Every finished epoch ran all 1184 updates of the frozen train split.
++        assert last['epoch'] <= cfg['epochs'] and last['update'] == last['epoch'] * AUTHORIZED_TRAIN_BATCHES
+         # Selected best is the strict fixed85 maximum of the full history.
+         assert best['epoch'] <= last['epoch'] and best['best_metric'] == last['best_metric']
+         records = history(output)
+         assert [r['epoch'] for r in records] == list(range(1, last['epoch'] + 1))
++        assert all(r['update'] == r['epoch'] * AUTHORIZED_TRAIN_BATCHES for r in records)
+         assert records[-1] == last['metrics'] and records[best['epoch'] - 1] == best['metrics']
+         assert best['best_metric'] == records[best['epoch'] - 1]['validation']['macro_f1_85']
+         assert all(r['validation']['macro_f1_85'] <= best['best_metric'] for r in records)
+@@ -127,6 +149,8 @@
+         assert marker['selected_update'] == best['update']
+         assert metrics['selection'] == 'validation only'
+         assert metrics['selected_validation_macro_f1_85'] == best['best_metric']
++        assert metrics['protocol'] == marker['protocol'] == arm
++        assert metrics['ddi_split_note'] == marker['ddi_split_note'] == DDI_SPLIT_NOTE
+         eval_cfg = yaml.safe_load((output / 'test_config.yaml').read_text())
+         assert all(eval_cfg.get(k) == v for k, v in cfg.items())
+         assert eval_cfg['evaluation_checkpoint'] == 'best.pt'
+@@ -237,7 +261,7 @@
+     if not config_path.is_relative_to(ROOT):
+         raise ValueError('Config must remain in workspace')
+     exit_file = directory / f'attempt_{attempt}_exit.json'
+-    command = [sys.executable, '-m', 'rareddie_control.train', '--config', str(config_path), mode]
++    command = [sys.executable, '-m', 'rareddie_pairout_cellout.train', '--config', str(config_path), mode]
+     launch_file = directory / f'attempt_{attempt}.json'
+     record = {'arm': arm, 'gpu': ARMS[arm], 'attempt': attempt, 'recoveries': recoveries,
+               'started_at': time.time(), 'config': str(config_path), 'mode': mode,
+@@ -281,7 +305,9 @@
+     cfg = state['config']
+     # Own state only: never a DSN/accelerated/GPU3 checkpoint.
+     if cfg.get('namespace') != NAMESPACE or Path(cfg['output']) != output:
+-        raise RuntimeError(f'{source} is not this rareddie_control run')
++        raise RuntimeError(f'{source} is not this rareddie_pairout_cellout run')
++    if any(cfg[k] != v for k, v in AUTHORIZED_SCHEDULE.items()):
++        raise RuntimeError(f'{source} schedule differs from the authorized {AUTHORIZED_SCHEDULE}')
+     done = state['epoch'] >= cfg['epochs'] or state['bad_epochs'] >= cfg['patience']
+     if done and best is None:
+         raise RuntimeError('Training is done but best.pt is missing; do not reset training')
+@@ -350,7 +376,9 @@
+ 
+ def launch_refusals():
+     """Initial launch gate: Codex approval newer than code/diff/evidence, passing
+-    evidence, idle GPU6/7, and both arms without any record or output state."""
++    cohort/copy evidence, model.py/data.py still byte-identical to the verified
++    rareddie_control copies (prior CSE evidence and approval), idle GPU6/7, and
++    both arms without any record or output state."""
+     code = [p for p in CONTROL.rglob('*') if p.is_file() and p.suffix in ('.py', '.sh', '.yaml', '.md')
+             and 'outputs' not in p.parts and 'evidence' not in p.parts and '.cache' not in p.parts]
+     if not APPROVAL.exists():
+@@ -366,10 +394,15 @@
+             yield f'approval is older than {newest}'
+     if not EVIDENCE.exists() or read_json(EVIDENCE).get('passed') is not True:
+         yield f'evidence {EVIDENCE} missing or not passed'
+-    elif EVIDENCE.stat().st_mtime < max(p.stat().st_mtime for p in CONTROL.glob('*.py')):
+-        yield 'evidence is older than rareddie_control code'
++    for name in ['model.py', 'data.py']:
++        if not filecmp.cmp(CONTROL / name, ORIGINAL / name, shallow=False):
++            yield f'{name} is not byte-identical to the verified {ORIGINAL / name}'
++    if read_json(PRIOR_CSE_EVIDENCE).get('passed') is not True:
++        yield f'prior CSE evidence {PRIOR_CSE_EVIDENCE} not passed'
++    if read_json(PRIOR_APPROVAL).get('approved') is not True:
++        yield f'prior rareddie_control approval {PRIOR_APPROVAL} not approved'
+     if not REVIEW_DIFF.exists():
+-        yield f'missing {REVIEW_DIFF} (run rareddie_control/tools/make_review.sh)'
++        yield f'missing {REVIEW_DIFF} (run rareddie_pairout_cellout/tools/make_review.sh)'
+     for arm, gpu in ARMS.items():
+         if (STATE / arm / 'record.json').exists():
+             yield f'{arm}: existing job record; use --status and bounded --recover'
+@@ -428,7 +461,7 @@
+             if refusals:
+                 raise RuntimeError('LAUNCH REFUSED:\n  ' + '\n  '.join(refusals))
+             result = {arm: start(arm, CONFIGS / f'{arm}.yaml', '--fresh') for arm in ARMS}
+-            from rareddie_control.status import update_status
++            from rareddie_pairout_cellout.status import update_status
+             update_status('launched_awaiting_progress_confirmation',
+                           launch={arm: {k: r[k] for k in ['pid', 'process_start', 'mode', 'log', 'gpu', 'started_at']}
+                                   for arm, r in result.items()})
+--- rareddie_control/launch.sh	2026-10-12 15:25:10.068035031 +0800
++++ rareddie_pairout_cellout/launch.sh	2026-10-12 21:03:31.964805624 +0800
+@@ -1,15 +1,15 @@
+ #!/usr/bin/env bash
+-# Host launch of both rareddie_control arms (GPU6 single_drugout, GPU7
+-# double_drugout). Codex runs this ONLY after writing
+-# logs/rareddie_control/review_approval.json; the controller refuses otherwise.
++# Host launch of both rareddie_pairout_cellout arms (GPU6 pairout, GPU7
++# cellout). Codex runs this ONLY after writing
++# logs/rareddie_pairout_cellout/review_approval.json; the controller refuses otherwise.
+ # Each arm: detached session (wrapper orphaned -> PPID 1) holding its job.lock,
+ # inherited by the training child, --fresh. Then waits (bounded) for the actual
+ # first update and a 100-update line of both arms; writes launch.json.
+-# Usage: bash rareddie_control/launch.sh --launch-reviewed
++# Usage: bash rareddie_pairout_cellout/launch.sh --launch-reviewed
+ source "$(dirname -- "${BASH_SOURCE[0]}")/env.sh"
+ if [[ "${1:-}" != --launch-reviewed || $# != 1 ]]; then
+-  echo 'Usage: bash rareddie_control/launch.sh --launch-reviewed (only after Codex review approval)' >&2
++  echo 'Usage: bash rareddie_pairout_cellout/launch.sh --launch-reviewed (only after Codex review approval)' >&2
+   exit 2
+ fi
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_control/jobs.py --launch-reviewed
+-CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_control/confirm_launch.py --wait 1800
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_pairout_cellout/jobs.py --launch-reviewed
++CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" rareddie_pairout_cellout/confirm_launch.py --wait 1800
+--- rareddie_control/confirm_launch.py	2026-10-12 15:25:10.064035081 +0800
++++ rareddie_pairout_cellout/confirm_launch.py	2026-10-12 21:05:11.611552895 +0800
+@@ -1,9 +1,13 @@
+ """Confirm real progress of both launched arms (no signals, read-only).
+ 
+-Per arm: wrapper/trainer PID, PPID, session, process identity; the fresh start
+-line; the actual first update (finite CE/loss and gradients, first_update.json),
+-the parameter inventory and initial RNG record; and a 100-update progress line.
+-Writes logs/rareddie_control/launch.json and updates status.json.
++Per arm: wrapper/trainer PID, PPID, session, process identity; the fresh seed42
++start line with the authorized schedule (150 epochs, patience 15, 1184 batches,
++177600 planned updates, 35520 KL warmup updates); the actual first update
++(finite CE/rec/KL/loss, logits and every group's gradients; molecule-only batch
++without cross edges or path graph, first_update.json); the parameter inventory
++(no DSN/path modules, same counts as the verified rareddie_control model) and
++initial RNG record; and a 100-update progress line.
++Writes logs/rareddie_pairout_cellout/launch.json and updates status.json.
+ """
+ import argparse
+ import json
+@@ -12,11 +16,17 @@
+ import subprocess
+ import sys
+ import time
++import yaml
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(ROOT))
+-from rareddie_control.jobs import ARMS, OUTPUTS, STATE, live, process_start, read_json, write_json  # noqa: E402
+-from rareddie_control.status import update_status  # noqa: E402
++from rareddie_pairout_cellout.jobs import (ARMS, AUTHORIZED_SCHEDULE, AUTHORIZED_TRAIN_BATCHES, OUTPUTS,  # noqa: E402
++                                           STATE, live, process_start, read_json, write_json)
++from rareddie_pairout_cellout.model import GROUPS  # noqa: E402
++from rareddie_pairout_cellout.status import update_status  # noqa: E402
++
++# Inventory of the verified rareddie_control model (same global FIN tables), read-only.
++REFERENCE_INVENTORY = ROOT / 'rareddie_control/outputs/single_drugout/model_inventory.json'
+ 
+ 
+ def events(log):
+@@ -51,16 +61,32 @@
+     output = OUTPUTS / arm
+     first = read_json(output / 'first_update.json') if (output / 'first_update.json').exists() else None
+     inventory = read_json(output / 'model_inventory.json') if (output / 'model_inventory.json').exists() else None
+-    first_ok = bool(first) and first['all_gradients_finite'] and all(
+-        math.isfinite(v) for v in [*first['loss_terms'].values(), *first['gradient_norms'].values()]) and all(
+-        v > 0 for v in first['gradient_norms'].values()) and sorted(first['trainable_without_gradient']) == [
+-        'cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight']
++    first_ok = bool(first) and first['all_gradients_finite'] and first['logits_finite'] and all(
++        math.isfinite(v) for v in [*first['loss_terms'].values(), *first['gradient_norms'].values()]) and sorted(
++        first['gradient_norms']) == sorted(GROUPS) and all(v > 0 for v in first['gradient_norms'].values()) and sorted(
++        first['trainable_without_gradient']) == ['cse.blocks.1.norm2.bias', 'cse.blocks.1.norm2.weight'] and (
++        not first['cross_edges_present'] and not first['path_graph_present'])
++    reference = read_json(REFERENCE_INVENTORY)
+     inventory_ok = bool(inventory) and not inventory['forbidden_name_matches'] and not (
+         inventory['dsn_inter_attention_present'] or inventory['inter_projection_present']
+-        or inventory['path_modules_present']) and len(inventory['molecular_transformer_convs']) == 4
+-    fresh = (found.get('start') or {}).get('mode') == 'fresh' or record['mode'] != '--fresh'
++        or inventory['path_modules_present']) and len(inventory['molecular_transformer_convs']) == 4 and all(
++        inventory[k] == reference[k] for k in ['parameters', 'trainable_parameters', 'groups', 'frozen'])
++    start = found.get('start') or {}
++    fresh = (start.get('mode') == 'fresh' and start.get('seed') == 42 and start.get('with_path') is False and
++             start.get('train_batches') == AUTHORIZED_TRAIN_BATCHES == 1184 and start.get('train_rows') == 151508 and
++             start.get('epochs') == AUTHORIZED_SCHEDULE['epochs'] == 150 and
++             start.get('patience') == AUTHORIZED_SCHEDULE['patience'] == 15 and
++             start.get('planned_updates') == AUTHORIZED_SCHEDULE['planned_updates'] == 177600 and
++             start.get('kl_warmup_updates') == AUTHORIZED_SCHEDULE['kl_warmup_updates'] == 35520 and
++             start.get('batch_size') == 128) or record['mode'] != '--fresh'
++    # Written config and the actual KL beta of the first and 100-update lines
++    # follow the 35520-update warmup.
++    run_cfg = yaml.safe_load((output / 'config.yaml').read_text()) if (output / 'config.yaml').is_file() else {}
++    schedule_ok = all(run_cfg.get(k) == v for k, v in AUTHORIZED_SCHEDULE.items()) and all(
++        event is not None and math.isclose(event['beta'], .001 * min(1., event['update'] / 35520), rel_tol=1e-9)
++        for event in [found.get('first_step'), found.get('progress_100')])
+     ok = 'start' in found and fresh and (('first_step' in found and 'progress_100' in found and first_ok
+-                                          and inventory_ok) or 'best_checkpoint_test' in found)
++                                          and inventory_ok and schedule_ok) or 'best_checkpoint_test' in found)
+     return {'pid': record['pid'], 'wrapper_ps': ps(record['pid']),
+             'wrapper_ppid_is_1': (ps(record['pid']) or '').split()[1:2] == ['1'],
+             'trainer': trainer, 'trainer_ps': ps(trainer['pid']) if trainer else None,
+@@ -68,6 +94,7 @@
+             'live': live(record), 'mode': record['mode'], 'log': record['log'],
+             'start': found.get('start'), 'first_step': found.get('first_step'), 'progress_100': found.get('progress_100'),
+             'first_update': first, 'first_update_ok': first_ok, 'inventory_ok': inventory_ok,
++            'schedule_ok': schedule_ok, 'parameters': (inventory or {}).get('parameters'),
+             'initial_rng_recorded': (output / 'initial_rng.pt').is_file(),
+             'test_export': found.get('best_checkpoint_test', {}).get('macro_f1_85'),
+             'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None,
+@@ -90,9 +117,9 @@
+     launch = {'checked_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'arms': arms,
+               'gpu_compute_apps': gpus, 'loadavg': list(__import__('os').getloadavg()),
+               'all_progress_confirmed': all(a['progress_confirmed'] for a in arms.values())}
+-    write_json(ROOT / 'logs/rareddie_control/launch.json', launch)
++    write_json(ROOT / 'logs/rareddie_pairout_cellout/launch.json', launch)
+     update_status('launched_progress_confirmed' if launch['all_progress_confirmed'] else 'launched_progress_unconfirmed',
+-                  launch_check={'json': str(ROOT / 'logs/rareddie_control/launch.json'),
++                  launch_check={'json': str(ROOT / 'logs/rareddie_pairout_cellout/launch.json'),
+                                 'all_progress_confirmed': launch['all_progress_confirmed'],
+                                 'pids': {a: v['pid'] for a, v in arms.items()},
+                                 'trainer_pids': {a: (v['trainer'] or {}).get('pid') for a, v in arms.items()}})
+--- rareddie_control/monitor/monitor_loop.sh	2026-10-12 15:26:00.063406504 +0800
++++ rareddie_pairout_cellout/monitor/monitor_loop.sh	2026-10-12 21:05:23.171407568 +0800
+@@ -1,9 +1,9 @@
+ #!/usr/bin/env bash
+-# Detached rareddie_control monitor daemon (started only by start_monitor.sh).
+-# Pattern of accelerated_four/monitor/monitor_loop.sh (left untouched):
++# Detached rareddie_pairout_cellout monitor daemon (started only by start_monitor.sh).
++# Pattern of rareddie_control/monitor/monitor_loop.sh (left untouched):
+ # deterministic status, one gpt-6.1-sol LOW Codex check, host drain of recovery
+ # requests, after status; first check immediately, then one every 2400 seconds.
+-# Local state only (logs/rareddie_control/monitor, status.json); no notifications.
++# Local state only (logs/rareddie_pairout_cellout/monitor, status.json); no notifications.
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ MONITOR_DIR="$LOG_DIR/monitor"
+@@ -14,9 +14,12 @@
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ # The monitor never needs a GPU; training jobs run in their own sessions.
+ export CUDA_VISIBLE_DEVICES=''
+-# Use the existing proxy service without shell initialization/history writes.
+-export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
+-export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++# Inherit the launching shell's proxy; only if absent, use the existing proxy
++# service. No shell initialization/history writes.
++export http_proxy="${http_proxy:-${HTTP_PROXY:-http://127.0.0.1:7890}}"
++export https_proxy="${https_proxy:-${HTTPS_PROXY:-http://127.0.0.1:7890}}"
++export all_proxy="${all_proxy:-${ALL_PROXY:-socks5://127.0.0.1:7890}}"
++export no_proxy="${no_proxy:-${NO_PROXY:-localhost,127.0.0.1,::1}}"
+ export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
+ export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+@@ -24,15 +27,15 @@
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ status_to() {
+   # A status/verifier error is recorded and never stops monitoring.
+-  "$PYTHON_BIN" rareddie_control/jobs.py --status > "$1" 2> "$1.err" \
++  "$PYTHON_BIN" rareddie_pairout_cellout/jobs.py --status > "$1" 2> "$1.err" \
+     || printf '{"all_complete": false, "status_error": true, "runs": {}}\n' > "$1"
+ }
+ record_status() {
+-  # monitor section of logs/rareddie_control/status.json; failures never stop monitoring.
++  # monitor section of logs/rareddie_pairout_cellout/status.json; failures never stop monitoring.
+   "$PYTHON_BIN" - "$MONITOR_DIR" "$CHECK_ID" "$1" "${CODEX_EXIT:-}" <<'PY' || true
+ import json, sys
+ from pathlib import Path
+-from rareddie_control.status import update_status
++from rareddie_pairout_cellout.status import update_status
+ monitor, check, outcome, codex_exit = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+ after = monitor / 'checks' / check / 'after.json'
+ runs = json.loads(after.read_text()).get('runs', {}) if after.exists() else {}
+@@ -79,7 +82,7 @@
+       /data/interns/zhangpc/.local/bin/codex exec \
+       --dangerously-bypass-approvals-and-sandbox --ignore-user-config --ephemeral --skip-git-repo-check \
+       -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+-      -o "$CHECK_DIR/codex_final.txt" - < rareddie_control/monitor/prompt.md \
++      -o "$CHECK_DIR/codex_final.txt" - < rareddie_pairout_cellout/monitor/prompt.md \
+       > "$CHECK_DIR/codex.log" 2>&1; then
+     CODEX_EXIT=0
+     CLI_FAILURES=0
+@@ -90,7 +93,7 @@
+   fi
+   echo "$CODEX_EXIT" > "$CHECK_DIR/codex_exit.txt"
+   # Launch recovery only here, outside the CLI timeout and its PID namespace.
+-  if "$PYTHON_BIN" rareddie_control/monitor/drain_recovery_requests.py \
++  if "$PYTHON_BIN" rareddie_pairout_cellout/monitor/drain_recovery_requests.py \
+       > "$CHECK_DIR/recovery_drain.log" 2>&1; then
+     :
+   else
+--- rareddie_control/monitor/start_monitor.sh	2026-10-12 15:26:17.107192234 +0800
++++ rareddie_pairout_cellout/monitor/start_monitor.sh	2026-10-12 21:05:23.143407920 +0800
+@@ -1,9 +1,9 @@
+ #!/usr/bin/env bash
+-# Start the detached rareddie_control monitor daemon ONLY after both jobs have
++# Start the detached rareddie_pairout_cellout monitor daemon ONLY after both jobs have
+ # records and confirmed real progress. The daemon is double-forked (setsid -f,
+ # PPID 1, own session). Waits for its FIRST SUCCESSFUL check: Codex exit 0,
+ # after.json and next_check.txt persisted. Safe to repeat while it is live.
+-# Usage: bash rareddie_control/monitor/start_monitor.sh
++# Usage: bash rareddie_pairout_cellout/monitor/start_monitor.sh
+ set -euo pipefail
+ source "$(dirname -- "${BASH_SOURCE[0]}")/../env.sh"
+ export CUDA_VISIBLE_DEVICES=''
+@@ -21,9 +21,9 @@
+ import sys
+ import time
+ from pathlib import Path
+-from rareddie_control.jobs import ARMS, STATE, process_start
+-from rareddie_control.confirm_launch import arm_state, ps
+-from rareddie_control.status import update_status
++from rareddie_pairout_cellout.jobs import ARMS, STATE, process_start
++from rareddie_pairout_cellout.confirm_launch import arm_state, ps
++from rareddie_pairout_cellout.status import update_status
+ monitor = Path(sys.argv[1])
+ for arm in ARMS:
+     if not (STATE / arm / 'record.json').is_file():
+@@ -37,7 +37,7 @@
+ (monitor / 'monitor.pid').unlink(missing_ok=True)
+ started = time.time()
+ with (monitor / 'daemon.log').open('a') as log:
+-    subprocess.run(['setsid', '-f', 'bash', str(root / 'rareddie_control/monitor/monitor_loop.sh')], cwd=root,
++    subprocess.run(['setsid', '-f', 'bash', str(root / 'rareddie_pairout_cellout/monitor/monitor_loop.sh')], cwd=root,
+                    stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, close_fds=True, check=True)
+ for _ in range(300):
+     if (monitor / 'monitor.pid').is_file() and (monitor / 'monitor.pid').read_text().strip():
+@@ -71,5 +71,5 @@
+ print(fields)
+ if not success:
+     raise SystemExit(f'First monitor check NOT successful (codex exit {codex_exit}); daemon keeps its 2400 s schedule')
+-print(f'Detached rareddie_control monitor PID {pid}; first check succeeded; next check {next_check}')
++print(f'Detached rareddie_pairout_cellout monitor PID {pid}; first check succeeded; next check {next_check}')
+ PY
+--- rareddie_control/monitor/drain_recovery_requests.py	2026-10-12 15:25:35.447715965 +0800
++++ rareddie_pairout_cellout/monitor/drain_recovery_requests.py	2026-10-12 21:05:23.147407869 +0800
+@@ -1,7 +1,7 @@
+ """Consume monitor recovery requests in the host daemon, once per request.
+ 
+-Copy of accelerated_four/monitor/drain_recovery_requests.py for rareddie_control:
+-requests carry only arm and reason; rareddie_control/jobs.py alone decides.
++Copy of rareddie_control/monitor/drain_recovery_requests.py for rareddie_pairout_cellout:
++requests carry only arm and reason; rareddie_pairout_cellout/jobs.py alone decides.
+ """
+ import json
+ from pathlib import Path
+@@ -11,7 +11,7 @@
+ 
+ 
+ ROOT = Path(__file__).resolve().parents[2]
+-REQUESTS = ROOT / 'logs/rareddie_control/monitor/recovery_requests'
++REQUESTS = ROOT / 'logs/rareddie_pairout_cellout/monitor/recovery_requests'
+ 
+ 
+ def write_record(path, record):
+@@ -44,7 +44,7 @@
+                     or set(request) - {'arm', 'reason'}):
+                 raise ValueError('Request requires exactly arm and a nonempty reason')
+             record['request'] = {key: request[key] for key in ('arm', 'reason')}
+-            command = [sys.executable, str(ROOT / 'rareddie_control/jobs.py'),
++            command = [sys.executable, str(ROOT / 'rareddie_pairout_cellout/jobs.py'),
+                        '--recover', request['arm'], '--reason', request['reason']]
+             record['command'] = command
+             write_record(claimed, record)
+--- rareddie_control/monitor/prompt.md	2026-10-12 15:26:30.827019753 +0800
++++ rareddie_pairout_cellout/monitor/prompt.md	2026-10-12 21:05:35.539252083 +0800
+@@ -1,5 +1,5 @@
+-You are the detached SERVER monitor for the two rareddie_control DDI jobs in
+-/data/interns/zhangpc/cairn_new (namespace rareddie_control). Use gpt-6.1-sol
++You are the detached SERVER monitor for the two rareddie_pairout_cellout DDI jobs in
++/data/interns/zhangpc/cairn_new (namespace rareddie_pairout_cellout). Use gpt-6.1-sol
+ with reasoning LOW. The main chat has ended; do not require it, app automation,
+ or user confirmation. Scheduled networked CLI execution and the existing private
+ .codex_runtime authentication are authorized. Never inspect, print, copy, or
+@@ -7,25 +7,29 @@
+ variables for the existing service. Do not source .bashrc, call clashon, or
+ start interactive shells/history writes. Do not notify or message anyone.
+ 
+-SCOPE: only the rareddie_control arms: state logs/rareddie_control/jobs/,
+-outputs rareddie_control/outputs/<arm>/, their recorded wrapper/trainer PIDs.
+-Exact GPU mapping: single_drugout=GPU6, double_drugout=GPU7. Everything else is
+-someone else's: the original jobs (logs/server_jobs/, outputs/, scripts/,
+-cairn_dsn/, configs/), accelerated_four/ and logs/accelerated_four/, GPU0-5 and
+-their monitors. Never read their checkpoints for decisions, never signal them,
+-never write there.
++SCOPE: ONLY the two NEW rareddie_pairout_cellout arms: state
++logs/rareddie_pairout_cellout/jobs/, outputs rareddie_pairout_cellout/outputs/<arm>/,
++their recorded wrapper/trainer PIDs. Exact GPU mapping: pairout=GPU6,
++cellout=GPU7. Both are independent fresh seed42 replicates on the SAME frozen
++PairOut DDI split (the CellOut DDI frame is identical), NOT true cell-cold DDI
++generalization. Everything else is someone else's and stays untouched, live or
++not: the original jobs (logs/server_jobs/, outputs/, scripts/, cairn_dsn/,
++configs/), accelerated_four/, rareddie_control/, pairout_cellout/ (its prepared
++data is read-only input) and their logs/, GPU0-5 and all their monitors. Never
++read their checkpoints for decisions, never signal them, never write there.
+ 
+-First read logs/rareddie_control/jobs/status.json (written immediately before
+-this check by `rareddie_control/jobs.py --status`), then as needed the per-run
++First read logs/rareddie_pairout_cellout/jobs/status.json (written immediately before
++this check by `rareddie_pairout_cellout/jobs.py --status`), then as needed the per-run
+ record.json, current attempt log tail, attempt_<N>_process.json and exit records,
+ history.jsonl tail and output state. Use the read-only Python environment via
+-`source rareddie_control/env.sh` ($PYTHON_BIN). Keep every write, temporary file
+-and cache inside cairn_new, under logs/rareddie_control/monitor/ only.
++`source rareddie_pairout_cellout/env.sh` ($PYTHON_BIN). Keep every write, temporary file
++and cache inside cairn_new, under logs/rareddie_pairout_cellout/monitor/ only.
+ cairn_dev is READ ONLY. No permission changes, broad audits, hashes, smoke runs,
+ preparation, new experiments, or changes to data/model/selection formulas.
+ 
+-`rareddie_control/jobs.py --status` performs the real export verification:
+-stopped schedule (100 epochs or patience 15), selected best.pt consistent with
++`rareddie_pairout_cellout/jobs.py --status` performs the real export verification:
++stopped schedule (150 epochs or patience 15; 1184 updates per epoch, 177600
++planned updates, KL warmup 35520), selected best.pt consistent with
+ last.pt and the strict fixed85 validation MacroF1 history maximum, frozen test
+ rows, 85-way probabilities, metrics incl. report-only Top-5, predictions,
+ per-class and confusion exports, test config and completion marker. Exit status
+@@ -38,31 +42,32 @@
+ wrapper died, the job.lock may still be held by its live training child
+ (attempt_<N>_process.json). Never kill/restart live jobs because of SSH loss,
+ CLI timeout, polling timeout, stale epoch lines, or missing logs. The trainer
+-prints a train_progress line every 100 updates; one epoch is 1165 updates.
++prints a train_progress line every 100 updates; one epoch is 1184 updates
++(at most 150 epochs).
+ If all states are live/complete with no actionable change, stay quiet.
+-Optionally append one short line to logs/rareddie_control/monitor/codex_notes.jsonl;
++Optionally append one short line to logs/rareddie_pairout_cellout/monitor/codex_notes.jsonl;
+ no chat output, no questions.
+ 
+-You may ONLY: read logs/artifacts, run `rareddie_control/jobs.py --status`, and
++You may ONLY: read logs/artifacts, run `rareddie_pairout_cellout/jobs.py --status`, and
+ file recovery requests. Do not edit any code, config, data, model, checkpoint,
+ history or output file. Never launch, resume or test-run training yourself.
+-NEVER execute rareddie_control/jobs.py --recover, --launch-reviewed, --block or
+---worker, rareddie_control/launch.sh, or
+-rareddie_control/monitor/drain_recovery_requests.py, and never call the
++NEVER execute rareddie_pairout_cellout/jobs.py --recover, --launch-reviewed, --block or
++--worker, rareddie_pairout_cellout/launch.sh, or
++rareddie_pairout_cellout/monitor/drain_recovery_requests.py, and never call the
+ controller's functions through Python or another wrapper: a Codex tool's PID
+ namespace and lifetime are scoped to this check.
+ 
+ For an actually FAILED job (state failed: dead process AND unlocked job.lock AND
+ unverified exports, i.e. a genuine exited failure), inspect its recorded errors
+ first. Then write ONE JSON recovery request under
+-logs/rareddie_control/monitor/recovery_requests/:
++logs/rareddie_pairout_cellout/monitor/recovery_requests/:
+ 
+   {"arm": "<exact arm name>", "reason": "<actual observed failure>"}
+ 
+ Use a unique filename (timestamp plus UUID), write a .tmp file in that same
+ directory, then atomically rename it to .json. Do not create a duplicate request
+ for an arm with a pending request. Record the request path and observed failure
+-in logs/rareddie_control/monitor/actions.jsonl. Never request recovery for live
++in logs/rareddie_pairout_cellout/monitor/actions.jsonl. Never request recovery for live
+ or complete runs. The host daemon drains requests AFTER this Codex invocation
+ ends and BEFORE its after-status snapshot, invoking the bounded controller (at
+ most three recoveries per arm, preparation errors included). It archives
+@@ -70,8 +75,8 @@
+ exact recorded config, optimizer, update, RNG and schedule (--resume), or runs
+ --test-only once training has stopped. It never restarts from scratch (--fresh
+ is the initial launch only; a run that died before its first epoch checkpoint
+-is not recoverable and stays failed), never restores DSN/accelerated/GPU3
+-weights, and never changes the batch size. Processed requests and their results
++is not recoverable and stays failed), never restores DSN/accelerated/GPU3/
++rareddie_control/pairout_cellout weights, and never changes the batch size. Processed requests and their results
+ are in recovery_requests/processed/; interrupted requests are not replayed. A
+ queued request is not a completed recovery.
+ 
+--- rareddie_control/tools/make_review.sh	2026-10-12 15:26:53.634733021 +0800
++++ rareddie_pairout_cellout/tools/make_review.sh	2026-10-12 21:06:33.934517955 +0800
+@@ -1,35 +1,32 @@
+ #!/usr/bin/env bash
+-# Actual unified diffs for review: rareddie_control against the reused
+-# accelerated_four files it adapts (review/implementation.diff), plus the new
+-# files (review/new_files.diff). The original RareDDIE block is included for
+-# the CSE order comparison.
++# Actual unified diffs for review: rareddie_pairout_cellout against the
++# rareddie_control files it copies/adapts (review/implementation.diff; model.py
++# and data.py must show NO diff), plus the new files (review/new_files.diff).
+ set -uo pipefail
+ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+ cd "$ROOT_DIR"
+-A=accelerated_four
+ C=rareddie_control
++N=rareddie_pairout_cellout
+ {
+-  echo "### accelerated_four no-path comparator -> rareddie_control"
+-  diff -u "$A/dsn/model.py" "$C/model.py"
+-  diff -u "$A/dsn/data.py" "$C/data.py"
+-  diff -u "$A/dsn/train.py" "$C/train.py"
+-  diff -u "$A/configs/no_path_single_drugout.yaml" "$C/configs/single_drugout.yaml"
+-  diff -u "$A/configs/no_path_double_drugout.yaml" "$C/configs/double_drugout.yaml"
+-  diff -u "$A/env.sh" "$C/env.sh"
+-  diff -u "$A/status.py" "$C/status.py"
+-  diff -u "$A/jobs.py" "$C/jobs.py"
+-  diff -u "$A/launch_four.sh" "$C/launch.sh"
+-  diff -u "$A/tools/confirm_launch.py" "$C/confirm_launch.py"
+-  diff -u "$A/monitor/monitor_loop.sh" "$C/monitor/monitor_loop.sh"
+-  diff -u "$A/monitor/start_monitor.sh" "$C/monitor/start_monitor.sh"
+-  diff -u "$A/monitor/drain_recovery_requests.py" "$C/monitor/drain_recovery_requests.py"
+-  diff -u "$A/monitor/prompt.md" "$C/monitor/prompt.md"
+-  echo "### original RareDDIE MVN_DDI_Block (references/RareDDIE/models_t_struc.py lines 79-145) for CSE order"
+-  sed -n '79,145p' references/RareDDIE/models_t_struc.py
+-} > "$C/review/implementation.diff"
++  echo "### rareddie_control -> rareddie_pairout_cellout (model.py/data.py byte-identical: empty diffs)"
++  cmp "$C/model.py" "$N/model.py" && echo "model.py: byte-identical"
++  cmp "$C/data.py" "$N/data.py" && echo "data.py: byte-identical"
++  diff -u "$C/__init__.py" "$N/__init__.py"
++  diff -u "$C/train.py" "$N/train.py"
++  diff -u "$C/configs/single_drugout.yaml" "$N/configs/pairout.yaml"
++  diff -u "$C/configs/double_drugout.yaml" "$N/configs/cellout.yaml"
++  diff -u "$C/env.sh" "$N/env.sh"
++  diff -u "$C/status.py" "$N/status.py"
++  diff -u "$C/jobs.py" "$N/jobs.py"
++  diff -u "$C/launch.sh" "$N/launch.sh"
++  diff -u "$C/confirm_launch.py" "$N/confirm_launch.py"
++  diff -u "$C/monitor/monitor_loop.sh" "$N/monitor/monitor_loop.sh"
++  diff -u "$C/monitor/start_monitor.sh" "$N/monitor/start_monitor.sh"
++  diff -u "$C/monitor/drain_recovery_requests.py" "$N/monitor/drain_recovery_requests.py"
++  diff -u "$C/monitor/prompt.md" "$N/monitor/prompt.md"
++  diff -u "$C/tools/make_review.sh" "$N/tools/make_review.sh"
++} > "$N/review/implementation.diff"
+ {
+-  for f in "$C/__init__.py" "$C/tools/cse_equivalence.py" "$C/tools/make_review.sh"; do
+-    diff -uN /dev/null "$f"
+-  done
+-} > "$C/review/new_files.diff"
+-wc -l "$C/review/implementation.diff" "$C/review/new_files.diff"
++  diff -uN /dev/null "$N/tools/cohort_evidence.py"
++} > "$N/review/new_files.diff"
++wc -l "$N/review/implementation.diff" "$N/review/new_files.diff"

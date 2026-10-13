@@ -1,0 +1,151 @@
+{
+  "namespace": "pairout_cellout",
+  "syntax": [
+    "pairout_cellout/__init__.py",
+    "pairout_cellout/audit.py",
+    "pairout_cellout/confirm_launch.py",
+    "pairout_cellout/dsn/__init__.py",
+    "pairout_cellout/dsn/data.py",
+    "pairout_cellout/dsn/metrics.py",
+    "pairout_cellout/dsn/model.py",
+    "pairout_cellout/dsn/train.py",
+    "pairout_cellout/jobs.py",
+    "pairout_cellout/monitor/drain_recovery_requests.py",
+    "pairout_cellout/paths.py",
+    "pairout_cellout/prepare.py",
+    "pairout_cellout/status.py"
+  ],
+  "unchanged_copies": {
+    "pairout_cellout/dsn/model.py": "accelerated_four/dsn/model.py",
+    "pairout_cellout/dsn/data.py": "accelerated_four/dsn/data.py",
+    "pairout_cellout/dsn/metrics.py": "accelerated_four/dsn/metrics.py",
+    "pairout_cellout/paths.py": "cairn_dsn/paths.py"
+  },
+  "protocols": {
+    "pairout": {
+      "all_rows_exact": true,
+      "all_columns_order_dtypes_exact": true,
+      "byte_identical_copy": true,
+      "event_names_exact": true,
+      "global_drug_ids_exact": true,
+      "pair_index_exact": true,
+      "split_pair_leakage_zero": true,
+      "counts": {
+        "test": 18938,
+        "train": 151508,
+        "val": 18939
+      },
+      "classes_present": {
+        "train": 85,
+        "val": 82,
+        "test": 83
+      },
+      "zero_support_classes": {
+        "train": [],
+        "val": [
+          11,
+          26,
+          65
+        ],
+        "test": [
+          50,
+          52
+        ]
+      },
+      "missing_path_rate": {
+        "train": 0.003735776328642748,
+        "val": 0.0030624636992448995,
+        "test": 0.00380187981835467
+      }
+    },
+    "cellout": {
+      "all_rows_exact": true,
+      "all_columns_order_dtypes_exact": true,
+      "byte_identical_copy": true,
+      "event_names_exact": true,
+      "global_drug_ids_exact": true,
+      "pair_index_exact": true,
+      "split_pair_leakage_zero": true,
+      "counts": {
+        "test": 18938,
+        "train": 151508,
+        "val": 18939
+      },
+      "classes_present": {
+        "train": 85,
+        "val": 82,
+        "test": 83
+      },
+      "zero_support_classes": {
+        "train": [],
+        "val": [
+          11,
+          26,
+          65
+        ],
+        "test": [
+          50,
+          52
+        ]
+      },
+      "missing_path_rate": {
+        "train": 0.003735776328642748,
+        "val": 0.0030624636992448995,
+        "test": 0.00380187981835467
+      }
+    }
+  },
+  "pairout_cellout_frames_identical": true,
+  "source_identity_note": "CellOut DDI rows, order, labels and split are exactly the PairOut frame; the cell split only affects cell-level tasks. Both DDI-only jobs are independent fresh seed42 same-DDI-split replicates, NOT DDI cell-cold generalization. No synergy/LINCS/DepMap/cell features are used.",
+  "all_cached_real_edges_found_in_source": true,
+  "source_fact_multiplicity_preserved": true,
+  "all_real_edges_have_inverse": true,
+  "endpoint_mapping_exact": true,
+  "all_pairs_depth4_reachability_equals_explicit_mask": true,
+  "missing_paths_have_no_edges": true,
+  "explicit_self_count_exact": true,
+  "no_compound_compound_background_facts": true,
+  "reused_segments_exact_copies": {
+    "pairs": 188105,
+    "runs": 1215
+  },
+  "newly_extracted_pairs": 1280,
+  "molecular_graphs_exact_from_bundle": 1666,
+  "fin_tables_exact": true,
+  "nai_table_equal_to_data_prepared": true,
+  "original_data_prepared_unchanged": true,
+  "pairs": 189385,
+  "pairs_with_paths": 188689,
+  "missing_paths": 696,
+  "missing_path_rate": 0.003675053462523392,
+  "real_edges": 64998270,
+  "explicit_self_edges": 13000966,
+  "cached_gene_gene_edges_both_directions": 5857414,
+  "cached_gene_pathway_edges_both_directions": 3593104,
+  "max_nodes": 131,
+  "max_edges": 695,
+  "gpu_config": {
+    "pairout": 6,
+    "cellout": 7
+  },
+  "configs": {
+    "pairout": {
+      "gpu": 6,
+      "output": "pairout_cellout/outputs/pairout"
+    },
+    "cellout": {
+      "gpu": 7,
+      "output": "pairout_cellout/outputs/cellout"
+    }
+  },
+  "schedule": {
+    "epochs": 150,
+    "patience": 15,
+    "kl_warmup_fraction": 0.2,
+    "train_batches": 1184,
+    "planned_updates": 177600,
+    "kl_warmup_updates": 35520
+  },
+  "validation": "Full real-data and static checks only; no model forward, smoke experiment, or GPU training",
+  "passed": true
+}

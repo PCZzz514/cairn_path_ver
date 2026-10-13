@@ -1,0 +1,119 @@
+--- a/pairout_cellout/jobs.py
++++ b/pairout_cellout/jobs.py
+@@ -35,6 +35,12 @@
+ ARMS = {'pairout': 6, 'cellout': 7}
+ NAMESPACE = 'pairout_cellout'
+ MAX_RECOVERIES = 3
++# The ONLY schedule these jobs may verify or recover with (latest human update:
++# 150 maximum epochs, overriding 100). Literal here, independent of the trainer
++# constant, so a 100-epoch (118400/23680) state can never pass as complete.
++AUTHORIZED_SCHEDULE = {'epochs': 150, 'patience': 15, 'kl_warmup_fraction': .2,
++                       'planned_updates': 177600, 'kl_warmup_updates': 35520}
++AUTHORIZED_TRAIN_BATCHES = 1184
+ 
+ 
+ def write_json(path, value):
+@@ -98,7 +104,7 @@
+     import pandas as pd
+     import yaml
+     from pairout_cellout.dsn.metrics import classification_metrics
+-    from pairout_cellout.dsn.train import SCHEDULE, top_k_accuracy
++    from pairout_cellout.dsn.train import SCHEDULE, TRAIN_BATCHES, top_k_accuracy
+ 
+     output = OUTPUTS / arm
+     required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+@@ -114,14 +120,22 @@
+         assert cfg['gpu'] == ARMS[arm] and cfg['protocol'] == arm and cfg['namespace'] == NAMESPACE
+         assert cfg['with_path'] is True and cfg['batch_size'] == 128 and cfg['seed'] == 42
+         # Only the authorized 150-epoch schedule can ever verify as complete.
+-        assert all(cfg[k] == v for k, v in SCHEDULE.items()), f'schedule differs from {SCHEDULE}'
++        assert SCHEDULE == AUTHORIZED_SCHEDULE and TRAIN_BATCHES == AUTHORIZED_TRAIN_BATCHES
++        assert all(cfg[k] == v for k, v in AUTHORIZED_SCHEDULE.items()), f'schedule differs from {AUTHORIZED_SCHEDULE}'
++        assert cfg['planned_updates'] == cfg['epochs'] * AUTHORIZED_TRAIN_BATCHES
+         assert Path(cfg['output']) == output
+         assert last['config'] == cfg
+         assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
++        # Every finished epoch ran all 1184 updates of the frozen train split.
++        assert last['epoch'] <= cfg['epochs'] and last['update'] == last['epoch'] * AUTHORIZED_TRAIN_BATCHES
++        assert best['update'] == best['epoch'] * AUTHORIZED_TRAIN_BATCHES
++        run_cfg = yaml.safe_load((output / 'config.yaml').read_text())
++        assert all(run_cfg.get(k) == v for k, v in AUTHORIZED_SCHEDULE.items())
+         # Selected best is the strict fixed85 maximum of the full history.
+         assert best['epoch'] <= last['epoch'] and best['best_metric'] == last['best_metric']
+         records = history(output)
+         assert [r['epoch'] for r in records] == list(range(1, last['epoch'] + 1))
++        assert all(r['update'] == r['epoch'] * AUTHORIZED_TRAIN_BATCHES for r in records)
+         assert records[-1] == last['metrics'] and records[best['epoch'] - 1] == best['metrics']
+         assert best['best_metric'] == records[best['epoch'] - 1]['validation']['macro_f1_85']
+         assert all(r['validation']['macro_f1_85'] <= best['best_metric'] for r in records)
+@@ -294,8 +308,8 @@
+     if cfg.get('namespace') != NAMESPACE or Path(cfg['output']) != output:
+         raise RuntimeError(f'{source} is not this pairout_cellout run')
+     from pairout_cellout.dsn.train import SCHEDULE
+-    if any(cfg[k] != v for k, v in SCHEDULE.items()):
+-        raise RuntimeError(f'{source} schedule differs from the authorized {SCHEDULE}')
++    if SCHEDULE != AUTHORIZED_SCHEDULE or any(cfg[k] != v for k, v in AUTHORIZED_SCHEDULE.items()):
++        raise RuntimeError(f'{source} schedule differs from the authorized {AUTHORIZED_SCHEDULE}')
+     done = state['epoch'] >= cfg['epochs'] or state['bad_epochs'] >= cfg['patience']
+     if done and best is None:
+         raise RuntimeError('Training is done but best.pt is missing; do not reset training')
+--- a/pairout_cellout/confirm_launch.py
++++ b/pairout_cellout/confirm_launch.py
+@@ -14,10 +14,12 @@
+ import subprocess
+ import sys
+ import time
++import yaml
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(ROOT))
+-from pairout_cellout.jobs import ARMS, OUTPUTS, STATE, live, process_start, read_json, write_json  # noqa: E402
++from pairout_cellout.jobs import (ARMS, AUTHORIZED_SCHEDULE, AUTHORIZED_TRAIN_BATCHES, OUTPUTS, STATE,  # noqa: E402
++                                  live, process_start, read_json, write_json)
+ from pairout_cellout.dsn.train import GROUPS, SCHEDULE, TRAIN_BATCHES  # noqa: E402
+ from pairout_cellout.status import update_status  # noqa: E402
+ 
+@@ -74,13 +76,21 @@
+     start = found.get('start') or {}
+     # Authorized schedule: 150 epochs, patience 15, 1184 batches, 177600 updates, KL warmup 35520.
+     fresh = (start.get('mode') == 'fresh' and start.get('seed') == 42 and start.get('with_path') is True and
+-             start.get('train_batches') == TRAIN_BATCHES == 1184 and start.get('epochs') == SCHEDULE['epochs'] == 150 and
++             start.get('train_batches') == TRAIN_BATCHES == AUTHORIZED_TRAIN_BATCHES == 1184 and
++             SCHEDULE == AUTHORIZED_SCHEDULE and start.get('epochs') == SCHEDULE['epochs'] == 150 and
+              start.get('patience') == SCHEDULE['patience'] == 15 and
+              start.get('planned_updates') == SCHEDULE['planned_updates'] == 177600 and
+              start.get('kl_warmup_updates') == SCHEDULE['kl_warmup_updates'] == 35520 and
+              start.get('batch_size') == 128) or record['mode'] != '--fresh'
++    # The run's written config and the actual KL beta of the first and 100-update
++    # lines must follow the 35520-update warmup (a 23680 warmup would differ).
++    run_cfg = yaml.safe_load((output / 'config.yaml').read_text()) if (output / 'config.yaml').is_file() else {}
++    schedule_ok = all(run_cfg.get(k) == v for k, v in AUTHORIZED_SCHEDULE.items()) and all(
++        event is not None and math.isclose(event['beta'], .001 * min(1., event['update'] / 35520), rel_tol=1e-9)
++        for event in [found.get('first_step'), found.get('progress_100')]) and (
++        found.get('first_step') or {}).get('update') == (start.get('update', 0) + 1)
+     ok = 'start' in found and fresh and (('first_step' in found and 'progress_100' in found and first_ok
+-                                          and inventory_ok) or 'best_checkpoint_test' in found)
++                                          and inventory_ok and schedule_ok) or 'best_checkpoint_test' in found)
+     return {'pid': record['pid'], 'wrapper_ps': ps(record['pid']),
+             'wrapper_ppid_is_1': (ps(record['pid']) or '').split()[1:2] == ['1'],
+             'trainer': trainer, 'trainer_ps': ps(trainer['pid']) if trainer else None,
+@@ -88,6 +98,7 @@
+             'live': live(record), 'mode': record['mode'], 'log': record['log'],
+             'start': found.get('start'), 'first_step': found.get('first_step'), 'progress_100': found.get('progress_100'),
+             'first_update': first, 'first_update_ok': first_ok, 'inventory_ok': inventory_ok,
++            'schedule_ok': schedule_ok,
+             'initial_rng_recorded': (output / 'initial_rng.pt').is_file(),
+             'test_export': found.get('best_checkpoint_test', {}).get('macro_f1_85'),
+             'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None,
+--- a/pairout_cellout/audit.py
++++ b/pairout_cellout/audit.py
+@@ -210,6 +210,9 @@
+         cfg = yaml.safe_load((ROOT / 'pairout_cellout/configs' / f'{name}.yaml').read_text())
+         assert cfg['protocol'] == name and cfg['gpu'] == gpu and cfg['output'] == f'pairout_cellout/outputs/{name}'
+         assert all(cfg[k] == v for k, v in expected_cfg.items()), name
++        # No extra keys (e.g. planned_updates/kl_warmup_updates overrides): the
++        # trainer derives the schedule only from these reviewed values.
++        assert set(cfg) == set(expected_cfg) | {'protocol', 'gpu', 'output', 'ddi_split_note'}, name
+         configs[name] = {'gpu': gpu, 'output': cfg['output']}
+     report = {'namespace': 'pairout_cellout', 'syntax': syntax, 'unchanged_copies': UNCHANGED,
+               'protocols': protocols, 'pairout_cellout_frames_identical': True,

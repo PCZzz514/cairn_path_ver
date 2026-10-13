@@ -1,0 +1,21 @@
+protocol: cellout
+with_path: true
+gpu: 7
+prepared: pairout_cellout/prepared
+output: pairout_cellout/outputs/cellout
+seed: 42
+epochs: 150
+patience: 15
+batch_size: 128
+learning_rate: 0.0001
+weight_decay: 0.0001
+reconstruction_weight: 0.1
+kl_weight: 0.001
+kl_warmup_fraction: 0.2
+path_depth: 4
+path_meeting_cap: 32
+path_arm_cap: 2
+nai_cap: 30
+cpu_threads: 2
+num_workers: 2
+ddi_split_note: same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicate, not DDI cell-cold generalization

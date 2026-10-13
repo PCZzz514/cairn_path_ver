@@ -1,0 +1,18 @@
+All four replicas launched; first-step and periodic progress verified. Detached jobs were confirmed PPID 1.
+
+| Variant | GPU | Job / trainer PID | Resume epoch |
+|---|---:|---|---|
+| path_single | 4 | 2968281 / 2968282 | 29 → 30 |
+| path_double | 5 | 2968292 / 2968293 | 33 → 34 |
+| no_path_single | 6 | 2968296 / 2968297 | 30 → 31 |
+| no_path_double | 7 | 2968307 / 2968308 | 32 → 33 |
+
+Outputs: `accelerated_four/outputs/<full_arm_name>/`.
+
+No-path single naturally early-stopped at epoch 31; selected-best test exports verified complete. Other three continue normally to patience 15 or epoch 100. Originals were never paused or restarted; original no-path single also completed naturally.
+
+Separate LOW monitor **2968961**, PPID 1, completed its startup check. Next check: **12:52:01 Shanghai**, then every 40 minutes.
+
+Claude authored all implementation/deployment code; server Codex review and real no-path equivalence checks passed. Prior GPU3 speed evidence remains **14.62× per step / ~13× per epoch**; shared-GPU contention limits extrapolation.
+
+[Review approval](/data/interns/zhangpc/cairn_new/logs/accelerated_four/review_approval.json) · [Status and handoff](/data/interns/zhangpc/cairn_new/logs/accelerated_four/status.json)

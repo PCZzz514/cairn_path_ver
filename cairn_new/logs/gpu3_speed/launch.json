@@ -1,0 +1,18 @@
+{
+  "runner_pid": 2941955,
+  "runner_ppid": 1,
+  "ppid_is_1": true,
+  "pgid": 2941955,
+  "sid": 2941955,
+  "setsid_pid_from_launcher": 2941955,
+  "train_pid": 2941968,
+  "runner_alive": true,
+  "training_start_line_seen": true,
+  "log": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/benchmark.log",
+  "launched_at": "2026-10-12T11:35:56+0800",
+  "expected_outputs": [
+    "benchmarks/gpu3_speed/outputs/path_single_drugout/history.jsonl",
+    "logs/gpu3_speed/five_epoch_summary.json",
+    "logs/gpu3_speed/five_epoch_summary.md"
+  ]
+}

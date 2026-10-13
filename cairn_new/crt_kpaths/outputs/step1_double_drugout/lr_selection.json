@@ -1,0 +1,31 @@
+{
+  "lr": 0.2,
+  "rule": "max mean of natural/cRT best validation fixed85 macro-F1 at dev seed; ties by candidate order",
+  "dev_seed": 42,
+  "candidates": [
+    0.01,
+    0.05,
+    0.2
+  ],
+  "scores": [
+    {
+      "lr": 0.01,
+      "natural_best_val_macro_f1_85": 0.1052683618833471,
+      "crt_best_val_macro_f1_85": 0.11056333483840236,
+      "mean_best_val_macro_f1_85": 0.10791584836087473
+    },
+    {
+      "lr": 0.05,
+      "natural_best_val_macro_f1_85": 0.11424495382296469,
+      "crt_best_val_macro_f1_85": 0.11854590207289264,
+      "mean_best_val_macro_f1_85": 0.11639542794792868
+    },
+    {
+      "lr": 0.2,
+      "natural_best_val_macro_f1_85": 0.12720679284091138,
+      "crt_best_val_macro_f1_85": 0.11952818507361229,
+      "mean_best_val_macro_f1_85": 0.12336748895726184
+    }
+  ],
+  "test_used": false
+}

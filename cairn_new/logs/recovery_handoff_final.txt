@@ -1,0 +1,7 @@
+Implemented in three files:
+
+- [Monitor prompt](/data/interns/zhangpc/cairn_new/docs/server_monitor_prompt.md): prohibits direct recovery; defines JSON request handoff.
+- [Host drain](/data/interns/zhangpc/cairn_new/scripts/drain_recovery_requests.py): claims each request once, invokes the unchanged controller, and preserves result/stdout/stderr.
+- [Monitor loop](/data/interns/zhangpc/cairn_new/scripts/monitor_loop.sh): drains after Codex and before after-status.
+
+Static checks passed: `bash -n` and Python AST parsing. No drain execution or fake requests. Live jobs and daemon untouched; monitoring remains `gpt-6.1-sol` low every 2400 seconds. Ready for coordinator review and host-shell restart.

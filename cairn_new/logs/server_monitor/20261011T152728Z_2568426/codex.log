@@ -1,0 +1,749 @@
+OpenAI Codex v0.160.0
+--------
+workdir: /data/interns/zhangpc/cairn_new
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: low
+reasoning summaries: none
+session id: 01a12b93-7ee8-7df2-81fa-f371b4862dc7
+--------
+user
+You are the detached SERVER monitor for the four reviewed full-data DDI jobs in
+/data/interns/zhangpc/cairn_new. Use gpt-6.1-sol with reasoning LOW. The main chat
+has ended; do not require it, app automation, or user confirmation. Scheduled
+networked CLI execution and the existing private .codex_runtime authentication
+are authorized. Never inspect, print, copy, or commit authentication credentials.
+The daemon supplies process-local proxy variables for the existing service.
+Do not source .bashrc, call clashon, or start interactive shells/history writes.
+
+First read logs/server_jobs/status.json (written immediately before this check),
+then read actual per-run record.json, current attempt log tail, process identity
+and exit records, history tail, checkpoint/output state as needed. Use the
+existing read-only Python environment via scripts/runtime.sh. Keep every write,
+temporary file and cache inside cairn_new. cairn_dev is READ ONLY. GPUs 0-3 are
+forbidden. Exact mapping: path single=4, path double=5, no_path single=6,
+no_path double=7. No permission changes, broad audits, hashes, smoke runs,
+preparation, new experiments, or changes to data/model/selection formulas.
+
+Use scripts/server_jobs.py --status for real export verification. It checks the
+selected best checkpoint, stopping state, frozen test rows, 85 probabilities,
+metrics consistency, predictions, per-class and confusion exports, test config
+and completion marker. Exit alone never proves success. Do not mark a run
+complete yourself or manufacture output files. The loop writes final_summary
+and exits only with verified success (or when all runs are complete/exhausted).
+Codex CLI failures never end monitoring while any job remains live; deterministic
+status and LOW Codex checks continue every 2400 seconds regardless of their count.
+Per-check before/after snapshots and snapshot_summary.json remain under
+logs/server_monitor; final_summary.json records the terminal result.
+
+Leave every LIVE job alone even if its epoch log has not changed for hours.
+Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+the job.lock may still be held by its live training child. Never kill/restart
+live jobs because of SSH loss, CLI timeout, polling timeout, or missing logs.
+If all states are live/complete and there is no actionable change, stay quiet:
+write a short local check note under logs/server_monitor/check_note.json with
+checked_at, per-run state, and changed=false, then return without chat output.
+Do not emit repeated unchanged summaries or ask the user questions.
+
+For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+verified exports), inspect its recorded errors first. If a narrowly justified
+monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
+cairn_new, document the observed error
+and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+configs/, data/, or checkpoint files. Do not run extra training
+commands directly. NEVER launch or recover jobs from a Codex tool: its PID
+namespace and lifetime are scoped to the tool/check. Never execute
+scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
+scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
+or recovery functions through Python or another wrapper.
+
+For an eligible failed job, write one JSON recovery request under
+logs/server_monitor/recovery_requests/ with these fields:
+
+  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+
+Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
+directory, then atomically rename it to .json. Do not create a duplicate request
+for an arm with a pending request. Record the request path and observed failure
+in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
+complete runs. The host daemon drains requests AFTER this Codex invocation ends
+and BEFORE its after-status snapshot, invoking the existing bounded recovery
+controller with the inherited host runtime. It moves each request into
+recovery_requests/processed/ before invocation and records the request, result,
+stdout and stderr there. Interrupted requests remain as evidence and are not
+automatically replayed; inspect the processed record and real job status before
+considering any new request. Leave processed records intact. Invalid arm names,
+live jobs and completed jobs are rejected by the existing controller.
+
+The host controller archives checkpoints/configs, resumes last.pt with the exact
+recorded config, optimizer/update/RNG and schedule, or runs --test-only after
+completed training.
+If a crash occurred between best/last publication it resumes the retained best
+epoch, never resets the schedule. Without any checkpoint, it retries the same
+full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+best.pt, set reduce_batch=true in the request; this halves that run's batch and
+records its actual config. Never change batch size after a checkpoint. Never overwrite
+past attempt logs/archives. At most three recovery attempts per run; attempted
+recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+Do not bypass this bound, erase records, or create replacement output directories.
+
+After any action re-read --status and save a local check note plus action record.
+A queued request is not a completed recovery: the host processes it after you
+return. Never wait for or drain it from this check.
+If a failure cannot be repaired within these constraints, retry only when a
+legitimate retry can help. Otherwise record the observed irreparable failure:
+
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --block <arm> --reason '<observed irreparable failure>'
+
+This closes that run's recovery budget without altering checkpoints. Never
+claim completion without the verifier. The daemon handles the next 2400-second
+check, next-check timestamp, PID, overlap lock, summary and exit. Do not start
+another daemon, sleep for the interval, or create a new automation.
+
+warning: Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.
+codex
+I’ll check the recorded status and live process evidence, then leave a local note or queue a recovery request only if a run is confirmed failed.
+
+exec
+/bin/bash -c 'cat logs/server_jobs/status.json' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+{
+  "checked_at": 1791732448.635408,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+
+exec
+/bin/bash -c "rg --files -g AGENTS.md -g 'runtime.sh' -g 'server_jobs.py' -g '*process.json' -g 'record.json' -g 'snapshot_summary.json' -g 'check_note.json' -g 'actions.jsonl' scripts logs/server_jobs logs/server_monitor .agents" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+logs/server_monitor/snapshot_summary.json
+logs/server_monitor/check_note.json
+scripts/runtime.sh
+scripts/server_jobs.py
+logs/server_jobs/path_single_drugout/record.json
+logs/server_jobs/path_single_drugout/attempt_1_process.json
+logs/server_jobs/no_path_double_drugout/record.json
+logs/server_jobs/no_path_double_drugout/attempt_1_process.json
+logs/server_jobs/no_path_single_drugout/record.json
+logs/server_jobs/no_path_single_drugout/attempt_1_process.json
+logs/server_jobs/path_double_drugout/record.json
+logs/server_jobs/path_double_drugout/attempt_1_process.json
+
+exec
+/bin/bash -c "cat scripts/runtime.sh; rg -n 'status|history|exit|lock|output_dir|PYTHON' scripts/server_jobs.py; for f in AGENTS.md scripts/AGENTS.md logs/AGENTS.md logs/server_monitor/AGENTS.md; do if [ -f \""'$f" ]; then cat "$f"; fi; done' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Source this from this workspace; the existing cairn environment is read-only.
+set -euo pipefail
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+export PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="$ROOT_DIR/tmp"
+export XDG_CACHE_HOME="$ROOT_DIR/.cache"
+export TORCH_HOME="$ROOT_DIR/.cache/torch"
+export TRITON_CACHE_DIR="$ROOT_DIR/.cache/triton"
+export CUDA_CACHE_PATH="$ROOT_DIR/.cache/cuda"
+export MPLCONFIGDIR="$ROOT_DIR/.cache/matplotlib"
+export HF_HOME="$ROOT_DIR/.cache/huggingface"
+export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
+export NUMBA_CACHE_DIR="$ROOT_DIR/.cache/numba"
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+PYTHON_BIN="$ROOT_DIR/../cairn_dev/.conda/cairn/bin/python"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME" "$TORCH_HOME" "$TRITON_CACHE_DIR" "$CUDA_CACHE_PATH" "$MPLCONFIGDIR" "$HF_HOME" "$NUMBA_CACHE_DIR" "$ROOT_DIR/logs"
+36:def registry_lock():
+38:    with (STATE / 'registry.lock').open('a') as lock:
+39:        fcntl.flock(lock, fcntl.LOCK_EX)
+53:    # The training child inherits this lock. If its wrapper dies, the live
+55:    with (STATE / arm / 'job.lock').open('a') as lock:
+57:            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+59:        except BlockingIOError:
+142:def status():
+159:                      'blocked_reason': record.get('blocked_reason'),
+160:                      'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+163:    write_json(STATE / 'status.json', snapshot)
+183:    exit_file = directory / f'attempt_{attempt}_exit.json'
+190:              'reason': reason, 'log': str(log), 'exit_file': str(exit_file), 'command': command}
+205:    with (STATE / record['arm'] / 'job.lock').open('a') as lock:
+206:        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+207:        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(record['gpu']), PYTHONUNBUFFERED='1')
+208:        child = subprocess.Popen(record['command'], cwd=ROOT, env=env, pass_fds=(lock.fileno(),))
+212:        write_json(Path(record['exit_file']), {'exit_code': code, 'finished_at': time.time()})
+280:    action.add_argument('--status', action='store_true')
+282:    action.add_argument('--block', choices=ARMS)
+292:    with registry_lock():
+293:        if args.status:
+294:            result = status()
+295:        elif args.block:
+297:                parser.error('--block requires the observed irreparable --reason')
+298:            record_path = STATE / args.block / 'record.json'
+300:            if live(result) or verify_exports(args.block)[0]:
+301:                raise RuntimeError('Cannot block a live or completed job')
+302:            result.update(recoveries=MAX_RECOVERIES, blocked_reason=args.reason, blocked_at=time.time())
+322:                    raise RuntimeError('Existing run found: use --status and bounded --recover')
+329:    sys.exit(main())
+
+exec
+/bin/bash -c 'for arm in path_single_drugout path_double_drugout no_path_single_drugout no_path_double_drugout; do cat "logs/server_jobs/$arm/record.json" "logs/server_jobs/$arm/attempt_1_process.json"; tail -n 12 "logs/server_jobs/$arm/attempt_1.log"; done; cat logs/server_monitor/check_note.json logs/server_monitor/snapshot_summary.json; rg --files logs/server_jobs logs/server_monitor/recovery_requests' in /data/interns/zhangpc/cairn_new
+ exited 2 in 0ms:
+{
+  "arm": "path_single_drugout",
+  "gpu": 4,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5274358,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml"
+  ],
+  "pid": 2560536,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560540,
+  "process_start": "1264159749",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml"
+  ]
+}
+{
+  "arm": "path_double_drugout",
+  "gpu": 5,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5320885,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml"
+  ],
+  "pid": 2560537,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560541,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml"
+  ]
+}
+{
+  "arm": "no_path_single_drugout",
+  "gpu": 6,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5355487,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml"
+  ],
+  "pid": 2560538,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560542,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml"
+  ]
+}
+{
+  "arm": "no_path_double_drugout",
+  "gpu": 7,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5385025,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ],
+  "pid": 2560539,
+  "process_start": "1264159747"
+}
+{
+  "pid": 2560543,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ]
+}
+{
+  "checked_at": 1791732156.8475435,
+  "runs": {
+    "path_single_drugout": "live",
+    "path_double_drugout": "live",
+    "no_path_single_drugout": "live",
+    "no_path_double_drugout": "live"
+  },
+  "changed": false
+}
+{
+  "checked_at": 1791732448.635408,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+rg: logs/server_monitor/recovery_requests: No such file or directory (os error 2)
+logs/server_jobs/registry.lock
+logs/server_jobs/path_single_drugout/job.pid
+logs/server_jobs/path_single_drugout/record.json
+logs/server_jobs/path_single_drugout/job.lock
+logs/server_jobs/path_single_drugout/attempt_1_process.json
+logs/server_jobs/path_single_drugout/attempt_1.json
+logs/server_jobs/path_single_drugout/attempt_1.log
+logs/server_jobs/no_path_double_drugout/job.pid
+logs/server_jobs/no_path_double_drugout/record.json
+logs/server_jobs/no_path_double_drugout/job.lock
+logs/server_jobs/no_path_double_drugout/attempt_1_process.json
+logs/server_jobs/no_path_double_drugout/attempt_1.json
+logs/server_jobs/no_path_double_drugout/attempt_1.log
+logs/server_jobs/path_double_drugout/job.pid
+logs/server_jobs/path_double_drugout/record.json
+logs/server_jobs/path_double_drugout/job.lock
+logs/server_jobs/path_double_drugout/attempt_1_process.json
+logs/server_jobs/path_double_drugout/attempt_1.json
+logs/server_jobs/path_double_drugout/attempt_1.log
+logs/server_jobs/no_path_single_drugout/job.pid
+logs/server_jobs/no_path_single_drugout/record.json
+logs/server_jobs/no_path_single_drugout/job.lock
+logs/server_jobs/no_path_single_drugout/attempt_1_process.json
+logs/server_jobs/no_path_single_drugout/attempt_1.json
+logs/server_jobs/no_path_single_drugout/attempt_1.log
+logs/server_jobs/status.json
+
+exec
+/bin/bash -c "sed -n '1,175p' scripts/server_jobs.py; rg -n 'output|history' configs/path_single_drugout.yaml configs/path_double_drugout.yaml configs/no_path_single_drugout.yaml configs/no_path_double_drugout.yaml" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+"""Durable four-arm job records, real export verification, bounded recovery.
+
+CPU controller only. Training children receive exactly their assigned GPU.
+No model forward, preparation, smoke run, or credential access here.
+"""
+import argparse
+from contextlib import contextmanager
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import shutil
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+STATE = ROOT / 'logs/server_jobs'
+ARMS = {'path_single_drugout': 4, 'path_double_drugout': 5,
+        'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
+MAX_RECOVERIES = 3
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
+
+
+def read_json(path):
+    return json.loads(path.read_text())
+
+
+@contextmanager
+def registry_lock():
+    STATE.mkdir(parents=True, exist_ok=True)
+    with (STATE / 'registry.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def process_start(pid):
+    try:
+        # /proc comm may contain spaces; field 22 follows the closing ')'.
+        fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+        return None if fields[0] == 'Z' else fields[19]
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def busy(arm):
+    # The training child inherits this lock. If its wrapper dies, the live
+    # training process still prevents a duplicate launch.
+    with (STATE / arm / 'job.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return False
+        except BlockingIOError:
+            return True
+
+
+def live(record):
+    pid = record['pid']
+    return (record['process_start'] is not None and process_start(pid) == record['process_start']) or busy(record['arm'])
+
+
+def checkpoint(output, name):
+    import torch
+    return torch.load(output / name, map_location='cpu', weights_only=False)
+
+
+def verify_exports(arm):
+    """Completion means selected-best metrics AND all frozen test rows exported."""
+    import numpy as np
+    import pandas as pd
+    import yaml
+    from cairn_dsn.metrics import classification_metrics
+
+    output = ROOT / 'outputs' / arm
+    required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+                'test_probabilities.npz', 'test_per_class.csv', 'test_confusion.csv',
+                'test_config.yaml', 'test_complete.json']
+    missing = [name for name in required if not (output / name).is_file()]
+    if missing:
+        return False, {'missing': missing}
+    try:
+        best = checkpoint(output, 'best.pt')
+        last = checkpoint(output, 'last.pt')
+        cfg = best['config']
+        assert cfg['gpu'] == ARMS[arm]
+        assert last['config'] == cfg
+        assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+        marker = read_json(output / 'test_complete.json')
+        metrics = read_json(output / 'test_metrics.json')
+        assert marker['checkpoint'] == metrics['checkpoint'] == 'best.pt'
+        assert marker['selected_epoch'] == metrics['selected_epoch'] == best['epoch']
+        assert marker['selected_update'] == best['update']
+        assert metrics['selection'] == 'validation only'
+        assert metrics['selected_validation_macro_f1_85'] == best['best_metric']
+        eval_cfg = yaml.safe_load((output / 'test_config.yaml').read_text())
+        assert all(eval_cfg.get(k) == v for k, v in cfg.items())
+        assert eval_cfg['evaluation_checkpoint'] == 'best.pt'
+        frozen = pd.read_parquet(ROOT / 'data/prepared' / cfg['protocol'] / 'ddi.parquet')
+        rows = np.flatnonzero(frozen.split.eq('test').to_numpy())
+        expected = frozen.iloc[rows]
+        prediction = pd.read_parquet(output / 'test_predictions.parquet')
+        assert marker['rows'] == metrics['rows'] == len(prediction) == len(expected)
+        assert prediction[expected.columns].reset_index(drop=True).equals(expected.reset_index(drop=True))
+        with np.load(output / 'test_probabilities.npz', allow_pickle=False) as data:
+            probabilities = data['probabilities']
+            labels = data['labels']
+            assert probabilities.shape == (len(rows), 85)
+            assert np.isfinite(probabilities).all() and (probabilities >= 0).all() and (probabilities <= 1).all()
+            assert np.allclose(probabilities.sum(1), 1., atol=1e-5)
+            assert np.array_equal(data['event_ids'], np.arange(85))
+            assert np.array_equal(labels, expected.event_id.to_numpy())
+            assert np.array_equal(data['frozen_row_indices'], rows)
+            assert np.array_equal(prediction.frozen_row_index.to_numpy(), rows)
+            assert np.array_equal(prediction.predicted_event_id.to_numpy(), probabilities.argmax(1))
+            assert np.allclose(prediction.predicted_probability.to_numpy(), probabilities.max(1))
+            mask = data['path_mask']
+            assert mask.shape == (len(rows), 2 if cfg['with_path'] else 0)
+            if cfg['with_path']:
+                assert np.array_equal(mask, prediction[['path_v_to_u_present', 'path_u_to_v_present']].to_numpy())
+        actual, per_class, confusion = classification_metrics(labels, probabilities)
+        for key, value in actual.items():
+            assert metrics[key] is None if value is None else np.isclose(metrics[key], value, rtol=1e-6, atol=1e-8)
+        exported_class = pd.read_csv(output / 'test_per_class.csv')
+        assert np.array_equal(exported_class.event_id, np.arange(85))
+        for key in per_class.columns:
+            assert np.allclose(exported_class[key], per_class[key], equal_nan=True)
+        exported_confusion = pd.read_csv(output / 'test_confusion.csv', index_col=0)
+        assert np.array_equal(exported_confusion.index.to_numpy(), np.arange(85))
+        assert np.array_equal(exported_confusion.columns.astype(int), np.arange(85))
+        assert np.array_equal(exported_confusion.to_numpy(), confusion)
+        return True, {'selected_epoch': best['epoch'], 'rows': len(rows), 'metrics': actual}
+    except Exception as exc:
+        return False, {'verification_error': f'{type(exc).__name__}: {exc}'}
+
+
+def status():
+    result = {}
+    for arm, gpu in ARMS.items():
+        record_path = STATE / arm / 'record.json'
+        if not record_path.exists():
+            result[arm] = {'state': 'not_launched', 'gpu': gpu}
+            continue
+        record = read_json(record_path)
+        running = live(record)
+        # Avoid reading checkpoints while the trainer is atomically publishing
+        # its final files. A live process is always left alone.
+        complete, evidence = (False, {}) if running else verify_exports(arm)
+        result[arm] = {'state': 'live' if running else 'complete' if complete else
+                      'exhausted' if record['recoveries'] >= MAX_RECOVERIES else 'failed',
+                      'gpu': gpu, 'pid': record['pid'], 'attempt': record['attempt'],
+                      'recoveries': record['recoveries'], 'log': record['log'],
+                      'config': record['config'], 'evidence': evidence,
+                      'blocked_reason': record.get('blocked_reason'),
+                      'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+    snapshot = {'checked_at': time.time(), 'runs': result,
+                'all_complete': all(r['state'] == 'complete' for r in result.values())}
+    write_json(STATE / 'status.json', snapshot)
+    if snapshot['all_complete']:
+        write_json(STATE / 'final_summary.json', snapshot)
+    return snapshot
+
+
+def start(arm, config_path, mode, recoveries=0, reason='reviewed initial launch'):
+    directory = STATE / arm
+    directory.mkdir(parents=True, exist_ok=True)
+    old_path = directory / 'record.json'
+    old = read_json(old_path) if old_path.exists() else None
+    if old and live(old):
+        raise RuntimeError(f'{arm} is live; cannot relaunch')
+configs/no_path_double_drugout.yaml:5:output: outputs/no_path_double_drugout
+configs/path_double_drugout.yaml:5:output: outputs/path_double_drugout
+configs/no_path_single_drugout.yaml:5:output: outputs/no_path_single_drugout
+configs/path_single_drugout.yaml:5:output: outputs/path_single_drugout
+
+exec
+/bin/bash -c "source scripts/runtime.sh
+CUDA_VISIBLE_DEVICES='' \""'$PYTHON_BIN" scripts/server_jobs.py --status' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+{
+  "checked_at": 1791732467.8233004,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+
+exec
+/bin/bash -c "source scripts/runtime.sh
+CUDA_VISIBLE_DEVICES='' \""'$PYTHON_BIN" - <<'"'PY'
+import json,time
+from pathlib import Path
+root=Path.cwd()
+status=json.loads((root/'logs/server_jobs/status.json').read_text())
+for arm, state in status['runs'].items():
+    directory=root/'logs/server_jobs'/arm
+    record=json.loads((directory/'record.json').read_text())
+    child=json.loads((directory/f\"attempt_{record['attempt']}_process.json\").read_text())
+    evidence={'arm':arm,'state':state['state'],'processes':[]}
+    for role, entry in [('wrapper',record),('training',child)]:
+        p=Path('/proc')/str(entry['pid'])
+        try:
+            fields=(p/'stat').read_text().rsplit(')',1)[1].split()
+            cmd=(p/'cmdline').read_bytes().replace(b'\\0',b' ').decode()
+            evidence['processes'].append({'role':role,'pid':entry['pid'],'state':fields[0],'identity_matches':fields[19]==entry['process_start'],'command':cmd})
+        except FileNotFoundError:
+            evidence['processes'].append({'role':role,'pid':entry['pid'],'present':False})
+    exit_path=Path(record['exit_file'])
+    evidence['exit']=json.loads(exit_path.read_text()) if exit_path.exists() else None
+    log=Path(record['log'])
+    evidence['log_bytes']=log.stat().st_size
+    output=root/'outputs'/arm
+    evidence['output_files']=[{'name':f.name,'bytes':f.stat().st_size} for f in output.iterdir() if f.is_file()] if output.exists() else []
+    histories=list(output.glob('*history*')) if output.exists() else []
+    evidence['history_tails']={f.name:f.read_text().splitlines()[-3:] for f in histories if f.is_file()}
+    print(json.dumps(evidence))
+assert all(r['state'] in ('live','complete') for r in status['runs'].values())
+note={'checked_at':time.time(),'runs':{arm:r['state'] for arm,r in status['runs'].items()},'changed':False}
+path=root/'logs/server_monitor/check_note.json'
+tmp=path.with_suffix('.json.tmp')
+tmp.write_text(json.dumps(note,indent=2)+'\\n')
+tmp.replace(path)
+PY" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+{"arm": "path_single_drugout", "state": "live", "processes": [{"role": "wrapper", "pid": 2560536, "present": false}, {"role": "training", "pid": 2560540, "present": false}], "exit": null, "log_bytes": 0, "output_files": [{"name": "model_inventory.json", "bytes": 585}, {"name": "first_update_gradients.json", "bytes": 233}, {"name": "config.yaml", "bytes": 3240}], "history_tails": {}}
+{"arm": "path_double_drugout", "state": "live", "processes": [{"role": "wrapper", "pid": 2560537, "present": false}, {"role": "training", "pid": 2560541, "present": false}], "exit": null, "log_bytes": 0, "output_files": [{"name": "model_inventory.json", "bytes": 585}, {"name": "first_update_gradients.json", "bytes": 233}, {"name": "config.yaml", "bytes": 3240}], "history_tails": {}}
+{"arm": "no_path_single_drugout", "state": "live", "processes": [{"role": "wrapper", "pid": 2560538, "present": false}, {"role": "training", "pid": 2560542, "present": false}], "exit": null, "log_bytes": 0, "output_files": [{"name": "model_inventory.json", "bytes": 585}, {"name": "first_update_gradients.json", "bytes": 201}, {"name": "config.yaml", "bytes": 3244}], "history_tails": {}}
+{"arm": "no_path_double_drugout", "state": "live", "processes": [{"role": "wrapper", "pid": 2560539, "present": false}, {"role": "training", "pid": 2560543, "present": false}], "exit": null, "log_bytes": 0, "output_files": [{"name": "model_inventory.json", "bytes": 585}, {"name": "first_update_gradients.json", "bytes": 202}, {"name": "config.yaml", "bytes": 3244}], "history_tails": {}}
+
+codex
+
+tokens used
+17,368
+

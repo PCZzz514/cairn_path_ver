@@ -1,0 +1,86 @@
+event_id,template
+0,The absorption of {drug_B} can be decreased when combined with {drug_A}.
+1,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.
+2,The bioavailability of {drug_B} can be increased when combined with {drug_A}.
+3,The metabolism of {drug_B} can be decreased when combined with {drug_A}.
+4,The metabolism of {drug_B} can be increased when combined with {drug_A}.
+5,The protein binding of {drug_B} can be decreased when combined with {drug_A}.
+6,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.
+7,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.
+8,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.
+9,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.
+10,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.
+11,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.
+12,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.
+13,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.
+14,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.
+15,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.
+16,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.
+17,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.
+18,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.
+19,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.
+20,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.
+21,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.
+22,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.
+23,{drug_A} may decrease the analgesic activities of {drug_B}.
+24,{drug_A} may decrease the anticoagulant activities of {drug_B}.
+25,{drug_A} may decrease the antihypertensive activities of {drug_B}.
+26,{drug_A} may decrease the antiplatelet activities of {drug_B}.
+27,{drug_A} may decrease the bronchodilatory activities of {drug_B}.
+28,{drug_A} may decrease the cardiotoxic activities of {drug_B}.
+29,{drug_A} may decrease the diuretic activities of {drug_B}.
+30,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.
+31,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.
+32,{drug_A} may decrease the sedative activities of {drug_B}.
+33,{drug_A} may decrease the stimulatory activities of {drug_B}.
+34,{drug_A} may decrease the vasoconstricting activities of {drug_B}.
+35,{drug_A} may increase the QTc-prolonging activities of {drug_B}.
+36,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.
+37,{drug_A} may increase the analgesic activities of {drug_B}.
+38,{drug_A} may increase the anticholinergic activities of {drug_B}.
+39,{drug_A} may increase the anticoagulant activities of {drug_B}.
+40,{drug_A} may increase the antihypertensive activities of {drug_B}.
+41,{drug_A} may increase the antiplatelet activities of {drug_B}.
+42,{drug_A} may increase the antipsychotic activities of {drug_B}.
+43,{drug_A} may increase the arrhythmogenic activities of {drug_B}.
+44,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.
+45,{drug_A} may increase the bradycardic activities of {drug_B}.
+46,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.
+47,{drug_A} may increase the cardiotoxic activities of {drug_B}.
+48,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.
+49,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.
+50,{drug_A} may increase the central neurotoxic activities of {drug_B}.
+51,{drug_A} may increase the constipating activities of {drug_B}.
+52,{drug_A} may increase the dermatologic adverse activities of {drug_B}.
+53,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.
+54,{drug_A} may increase the fluid retaining activities of {drug_B}.
+55,{drug_A} may increase the hepatotoxic activities of {drug_B}.
+56,{drug_A} may increase the hypercalcemic activities of {drug_B}.
+57,{drug_A} may increase the hyperglycemic activities of {drug_B}.
+58,{drug_A} may increase the hyperkalemic activities of {drug_B}.
+59,{drug_A} may increase the hypertensive activities of {drug_B}.
+60,{drug_A} may increase the hypocalcemic activities of {drug_B}.
+61,{drug_A} may increase the hypoglycemic activities of {drug_B}.
+62,{drug_A} may increase the hypokalemic activities of {drug_B}.
+63,{drug_A} may increase the hyponatremic activities of {drug_B}.
+64,{drug_A} may increase the hypotensive activities of {drug_B}.
+65,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.
+66,{drug_A} may increase the immunosuppressive activities of {drug_B}.
+67,{drug_A} may increase the myelosuppressive activities of {drug_B}.
+68,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.
+69,{drug_A} may increase the nephrotoxic activities of {drug_B}.
+70,{drug_A} may increase the neuroexcitatory activities of {drug_B}.
+71,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.
+72,{drug_A} may increase the neurotoxic activities of {drug_B}.
+73,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.
+74,{drug_A} may increase the ototoxic activities of {drug_B}.
+75,{drug_A} may increase the respiratory depressant activities of {drug_B}.
+76,{drug_A} may increase the sedative activities of {drug_B}.
+77,{drug_A} may increase the serotonergic activities of {drug_B}.
+78,{drug_A} may increase the stimulatory activities of {drug_B}.
+79,{drug_A} may increase the tachycardic activities of {drug_B}.
+80,{drug_A} may increase the thrombogenic activities of {drug_B}.
+81,{drug_A} may increase the ulcerogenic activities of {drug_B}.
+82,{drug_A} may increase the vasoconstricting activities of {drug_B}.
+83,{drug_A} may increase the vasodilatory activities of {drug_B}.
+84,{drug_A} may increase the vasopressor activities of {drug_B}.

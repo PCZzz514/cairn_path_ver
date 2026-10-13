@@ -1,0 +1,226 @@
+189385 cohort pairs: 188105 reused, 1280 to extract, 2048 reused re-extracted for equality
+Building full-graph two-hop endpoint balls
+Extracting 3328 full-data pair subgraphs
+{
+  "complete": true,
+  "paths": {
+    "unique_ordered_pairs": 189385,
+    "depth": 4,
+    "meeting_cap": 32,
+    "arm_cap": 2,
+    "nodes": 13002358,
+    "edges_with_inverses_self": 77999236,
+    "max_nodes": 131,
+    "max_edges": 695,
+    "pairs_with_paths": 188689,
+    "missing": 696,
+    "missing_path_rate": 0.003675053462523392,
+    "reused_from_data_prepared": 188105,
+    "newly_extracted": 1280,
+    "newly_extracted_with_paths": 1280,
+    "newly_extracted_missing_path_rate": 0.0,
+    "data_prepared_pairs_not_in_cohort": 0,
+    "reused_reextracted_equal": {
+      "pairs": 2048,
+      "mismatches": 0,
+      "selection": "2048 evenly spaced reused cohort positions"
+    },
+    "reuse_rule": "ordered global (drug_a, drug_b) pair; topology depends only on its two FIN endpoints",
+    "source_pair_index": "source_pair_index.npy: data/prepared pair index or -1 (newly extracted)",
+    "coverage_test": "full unbounded two-hop-ball intersection before selecting real routes",
+    "label_free": "endpoints only; no labels, splits, learned states or NAI slots in extraction"
+  },
+  "protocols": {
+    "pairout": {
+      "counts": {
+        "test": 18938,
+        "train": 151508,
+        "val": 18939
+      },
+      "source": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet",
+      "resolved_source": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet",
+      "exact_dataframe_equal": true,
+      "byte_identical_copy": true,
+      "leakage": {
+        "train_val": {
+          "ordered_pairs": 0,
+          "reversed_ordered_pairs": 0,
+          "unordered_pairs": 0,
+          "pair_groups": 0,
+          "shared_drugs_expected_for_pairout": 1509
+        },
+        "train_test": {
+          "ordered_pairs": 0,
+          "reversed_ordered_pairs": 0,
+          "unordered_pairs": 0,
+          "pair_groups": 0,
+          "shared_drugs_expected_for_pairout": 1508
+        },
+        "val_test": {
+          "ordered_pairs": 0,
+          "reversed_ordered_pairs": 0,
+          "unordered_pairs": 0,
+          "pair_groups": 0,
+          "shared_drugs_expected_for_pairout": 1460
+        }
+      },
+      "splits": {
+        "train": {
+          "rows": 151508,
+          "classes_present": 85,
+          "zero_support_classes": [],
+          "min_support_present": 4,
+          "max_support": 48226,
+          "with_real_path_le4": 150942,
+          "path_fraction": 0.9962642236713573,
+          "missing_path_rate": 0.003735776328642748,
+          "rows_reusing_data_prepared_topology": 150482,
+          "rows_with_newly_extracted_topology": 1026,
+          "missing_path_rate_new_pairs": 0.0,
+          "mapped_drugs": 1647,
+          "drugs": 1651,
+          "nai_drugs_present": 1597
+        },
+        "val": {
+          "rows": 18939,
+          "classes_present": 82,
+          "zero_support_classes": [
+            11,
+            26,
+            65
+          ],
+          "min_support_present": 1,
+          "max_support": 6098,
+          "with_real_path_le4": 18881,
+          "path_fraction": 0.9969375363007551,
+          "missing_path_rate": 0.0030624636992448995,
+          "rows_reusing_data_prepared_topology": 18813,
+          "rows_with_newly_extracted_topology": 126,
+          "missing_path_rate_new_pairs": 0.0,
+          "mapped_drugs": 1513,
+          "drugs": 1517,
+          "nai_drugs_present": 1480
+        },
+        "test": {
+          "rows": 18938,
+          "classes_present": 83,
+          "zero_support_classes": [
+            50,
+            52
+          ],
+          "min_support_present": 1,
+          "max_support": 5987,
+          "with_real_path_le4": 18866,
+          "path_fraction": 0.9961981201816453,
+          "missing_path_rate": 0.00380187981835467,
+          "rows_reusing_data_prepared_topology": 18810,
+          "rows_with_newly_extracted_topology": 128,
+          "missing_path_rate_new_pairs": 0.0,
+          "mapped_drugs": 1512,
+          "drugs": 1515,
+          "nai_drugs_present": 1480
+        }
+      }
+    },
+    "cellout": {
+      "counts": {
+        "test": 18938,
+        "train": 151508,
+        "val": 18939
+      },
+      "source": "/data/interns/zhangpc/cairn_dev/data/experiments/reference85/cellout/ddi.parquet",
+      "resolved_source": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet",
+      "exact_dataframe_equal": true,
+      "byte_identical_copy": true,
+      "leakage": {
+        "train_val": {
+          "ordered_pairs": 0,
+          "reversed_ordered_pairs": 0,
+          "unordered_pairs": 0,
+          "pair_groups": 0,
+          "shared_drugs_expected_for_pairout": 1509
+        },
+        "train_test": {
+          "ordered_pairs": 0,
+          "reversed_ordered_pairs": 0,
+          "unordered_pairs": 0,
+          "pair_groups": 0,
+          "shared_drugs_expected_for_pairout": 1508
+        },
+        "val_test": {
+          "ordered_pairs": 0,
+          "reversed_ordered_pairs": 0,
+          "unordered_pairs": 0,
+          "pair_groups": 0,
+          "shared_drugs_expected_for_pairout": 1460
+        }
+      },
+      "splits": {
+        "train": {
+          "rows": 151508,
+          "classes_present": 85,
+          "zero_support_classes": [],
+          "min_support_present": 4,
+          "max_support": 48226,
+          "with_real_path_le4": 150942,
+          "path_fraction": 0.9962642236713573,
+          "missing_path_rate": 0.003735776328642748,
+          "rows_reusing_data_prepared_topology": 150482,
+          "rows_with_newly_extracted_topology": 1026,
+          "missing_path_rate_new_pairs": 0.0,
+          "mapped_drugs": 1647,
+          "drugs": 1651,
+          "nai_drugs_present": 1597
+        },
+        "val": {
+          "rows": 18939,
+          "classes_present": 82,
+          "zero_support_classes": [
+            11,
+            26,
+            65
+          ],
+          "min_support_present": 1,
+          "max_support": 6098,
+          "with_real_path_le4": 18881,
+          "path_fraction": 0.9969375363007551,
+          "missing_path_rate": 0.0030624636992448995,
+          "rows_reusing_data_prepared_topology": 18813,
+          "rows_with_newly_extracted_topology": 126,
+          "missing_path_rate_new_pairs": 0.0,
+          "mapped_drugs": 1513,
+          "drugs": 1517,
+          "nai_drugs_present": 1480
+        },
+        "test": {
+          "rows": 18938,
+          "classes_present": 83,
+          "zero_support_classes": [
+            50,
+            52
+          ],
+          "min_support_present": 1,
+          "max_support": 5987,
+          "with_real_path_le4": 18866,
+          "path_fraction": 0.9961981201816453,
+          "missing_path_rate": 0.00380187981835467,
+          "rows_reusing_data_prepared_topology": 18810,
+          "rows_with_newly_extracted_topology": 128,
+          "missing_path_rate_new_pairs": 0.0,
+          "mapped_drugs": 1512,
+          "drugs": 1515,
+          "nai_drugs_present": 1480
+        }
+      }
+    }
+  },
+  "source_identity": {
+    "pairout_cellout_dataframes_identical": true,
+    "byte_identical_sources": true,
+    "resolved_sources": {
+      "pairout": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet",
+      "cellout": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet"
+    },
+    "note": "CellOut DDI rows, order, labels and split are exactly the PairOut frame; the cell split only affects cell-level tasks. Both DDI-only jobs are independent fresh seed42 same-DDI-split replicates, NOT DDI cell-cold generalization. No synergy/LINCS/DepMap/cell features are used."
+  }
+}

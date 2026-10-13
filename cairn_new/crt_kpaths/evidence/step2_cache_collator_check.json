@@ -1,0 +1,26 @@
+{
+  "single_drugout": {
+    "asserts_pass": true,
+    "batch_edges": 14403,
+    "n_nodes": 1465,
+    "relation_range": [
+      0,
+      210
+    ],
+    "multiplicity_min": 1.0,
+    "endpoints_in_range": true,
+    "path_mask_true": 128
+  },
+  "double_drugout": {
+    "asserts_pass": true,
+    "batch_edges": 14403,
+    "n_nodes": 1465,
+    "relation_range": [
+      0,
+      210
+    ],
+    "multiplicity_min": 1.0,
+    "endpoints_in_range": true,
+    "path_mask_true": 128
+  }
+}

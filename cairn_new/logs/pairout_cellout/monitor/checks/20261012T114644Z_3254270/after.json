@@ -1,0 +1,76 @@
+{
+  "checked_at": 1791805616.4617343,
+  "runs": {
+    "pairout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 3253530,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/pairout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 3253533,
+        "process_start": "1271289524",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "pairout_cellout.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 20,
+      "history_best_validation_macro_f1_85": 0.8897002521670714,
+      "history_bad_epochs": 1,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 21,
+        "update": 24700,
+        "epoch_rows": 130560,
+        "epoch_seconds": 90.41115760803223
+      },
+      "blocked_reason": null,
+      "exit": null
+    },
+    "cellout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 3253531,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/cellout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/cellout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 3253534,
+        "process_start": "1271289524",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "pairout_cellout.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/cellout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 21,
+      "history_best_validation_macro_f1_85": 0.8885275940073205,
+      "history_bad_epochs": 3,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 22,
+        "update": 25700,
+        "epoch_rows": 107008,
+        "epoch_seconds": 72.72382712364197
+      },
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}

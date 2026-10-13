@@ -1,0 +1,119 @@
+{
+ "official_source_files": {
+  "modules_structure_fp_neigh": "references/RareDDIE_source/RareDDIE-f658cae053af1e93eecc88ad77dc3af2e33cf527/RareDDIE/modules_structure_fp_neigh.py",
+  "layers": "references/RareDDIE_source/RareDDIE-f658cae053af1e93eecc88ad77dc3af2e33cf527/RareDDIE/layers.py",
+  "models_t_struc": "references/RareDDIE_source/RareDDIE-f658cae053af1e93eecc88ad77dc3af2e33cf527/RareDDIE/models_t_struc.py",
+  "matcher_structure_acc_fp_neigh_VAE_struc": "references/RareDDIE_source/RareDDIE-f658cae053af1e93eecc88ad77dc3af2e33cf527/RareDDIE/matcher_structure_acc_fp_neigh_VAE_struc.py"
+ },
+ "reference_copy_identical_to_official": true,
+ "pairs": 60,
+ "protocol_split": "single_drugout train (real frozen rows)",
+ "atoms_per_molecule": {
+  "min": 1,
+  "max": 208
+ },
+ "directed_bonds": {
+  "a": 3208,
+  "b": 5082
+ },
+ "shared_parameter_tensors": 70,
+ "official_inactive_not_built": [
+  "block0.re_shape.bias",
+  "block0.re_shape.weight",
+  "block1.re_shape.bias",
+  "block1.re_shape.weight",
+  "fdmer.merge_fd.0.bias",
+  "fdmer.merge_fd.0.weight",
+  "fdmer.reduction_desc.0.bias",
+  "fdmer.reduction_desc.0.weight",
+  "fdmer.reduction_desc.3.bias",
+  "fdmer.reduction_desc.3.weight",
+  "fdmer.reduction_fp.0.bias",
+  "fdmer.reduction_fp.0.weight",
+  "fdmer.reduction_fp.3.bias",
+  "fdmer.reduction_fp.3.weight"
+ ],
+ "forward_bitwise_equal": true,
+ "forward_max_abs_diff": 0.0,
+ "gradient_none_pattern_equal": true,
+ "parameters_without_gradient": [
+  "blocks.0.readout.select.weight",
+  "blocks.1.norm2.bias",
+  "blocks.1.norm2.weight",
+  "blocks.1.readout.select.weight"
+ ],
+ "gradients_bitwise_equal": true,
+ "gradient_max_abs_diff": 0.0,
+ "negative_control_dsn_cse_max_abs_diff": 0.40563300251960754,
+ "model_parameter_names_removed_vs_no_path_comparator": [
+  "cse.blocks.0.interAtt.inter.att_dst",
+  "cse.blocks.0.interAtt.inter.att_src",
+  "cse.blocks.0.interAtt.inter.bias",
+  "cse.blocks.0.interAtt.inter.lin_dst.weight",
+  "cse.blocks.0.interAtt.inter.lin_src.weight",
+  "cse.blocks.0.inter_projection.bias",
+  "cse.blocks.0.inter_projection.weight",
+  "cse.blocks.1.interAtt.inter.att_dst",
+  "cse.blocks.1.interAtt.inter.att_src",
+  "cse.blocks.1.interAtt.inter.bias",
+  "cse.blocks.1.interAtt.inter.lin_dst.weight",
+  "cse.blocks.1.interAtt.inter.lin_src.weight",
+  "cse.blocks.1.inter_projection.bias",
+  "cse.blocks.1.inter_projection.weight"
+ ],
+ "model_parameter_names_added_vs_no_path_comparator": [],
+ "nai_pvr_classifier_fin_same_names_and_shapes": true,
+ "forward_shapes": {
+  "cse_head": [
+   60,
+   128
+  ],
+  "cse_tail": [
+   60,
+   128
+  ],
+  "logits": [
+   60,
+   85
+  ],
+  "rec": [],
+  "kl": []
+ },
+ "inventory": {
+  "parameters": 13123801,
+  "trainable_parameters": 13123799,
+  "groups": {
+   "fin_entities": 12386048,
+   "fin_relations": 13440,
+   "cse": 340356,
+   "nai": 98432,
+   "pvr": 230400,
+   "classifier": 55125
+  },
+  "frozen": [
+   "cse.blocks.0.readout.select.weight",
+   "cse.blocks.1.readout.select.weight"
+  ],
+  "forbidden_name_matches": [],
+  "dsn_inter_attention_present": false,
+  "inter_projection_present": false,
+  "path_modules_present": false,
+  "molecular_transformer_convs": {
+   "blocks.0.feature_conv": "TransformerConv",
+   "blocks.0.feature_conv2": "TransformerConv",
+   "blocks.1.feature_conv": "TransformerConv",
+   "blocks.1.feature_conv2": "TransformerConv"
+  },
+  "fin_trainable": true,
+  "pair_input": 256,
+  "latent": 128,
+  "classifier": [
+   "LayerNorm((128,), eps=1e-05, elementwise_affine=True)",
+   "Linear(in_features=128, out_features=256, bias=True)",
+   "GELU(approximate='none')",
+   "Dropout(p=0.2, inplace=False)",
+   "Linear(in_features=256, out_features=85, bias=True)"
+  ]
+ },
+ "passed": true
+}

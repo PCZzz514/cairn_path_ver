@@ -1,0 +1,22 @@
+{
+  "arm": "pairout",
+  "gpu": 6,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791803160.2685444,
+  "config": "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+  "mode": "--fresh",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/pairout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/pairout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "pairout_cellout.dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+    "--fresh"
+  ],
+  "pid": 3253530,
+  "process_start": "1271289520"
+}

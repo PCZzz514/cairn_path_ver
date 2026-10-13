@@ -1,0 +1,676 @@
+2026-10-11T18:07:35.472831Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+OpenAI Codex v0.160.0
+--------
+workdir: /data/interns/zhangpc/cairn_new
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: low
+reasoning summaries: none
+session id: 01a12c26-0205-7250-9796-b8ab2a90a778
+--------
+user
+You are the detached SERVER monitor for the four reviewed full-data DDI jobs in
+/data/interns/zhangpc/cairn_new. Use gpt-6.1-sol with reasoning LOW. The main chat
+has ended; do not require it, app automation, or user confirmation. Scheduled
+networked CLI execution and the existing private .codex_runtime authentication
+are authorized. Never inspect, print, copy, or commit authentication credentials.
+The daemon supplies process-local proxy variables for the existing service.
+Do not source .bashrc, call clashon, or start interactive shells/history writes.
+
+First read logs/server_jobs/status.json (written immediately before this check),
+then read actual per-run record.json, current attempt log tail, process identity
+and exit records, history tail, checkpoint/output state as needed. Use the
+existing read-only Python environment via scripts/runtime.sh. Keep every write,
+temporary file and cache inside cairn_new. cairn_dev is READ ONLY. GPUs 0-3 are
+forbidden. Exact mapping: path single=4, path double=5, no_path single=6,
+no_path double=7. No permission changes, broad audits, hashes, smoke runs,
+preparation, new experiments, or changes to data/model/selection formulas.
+
+Use scripts/server_jobs.py --status for real export verification. It checks the
+selected best checkpoint, stopping state, frozen test rows, 85 probabilities,
+metrics consistency, predictions, per-class and confusion exports, test config
+and completion marker. Exit alone never proves success. Do not mark a run
+complete yourself or manufacture output files. The loop writes final_summary
+and exits only with verified success (or when all runs are complete/exhausted).
+Codex CLI failures never end monitoring while any job remains live; deterministic
+status and LOW Codex checks continue every 2400 seconds regardless of their count.
+Per-check before/after snapshots and snapshot_summary.json remain under
+logs/server_monitor; final_summary.json records the terminal result.
+
+Leave every LIVE job alone even if its epoch log has not changed for hours.
+Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+the job.lock may still be held by its live training child. Never kill/restart
+live jobs because of SSH loss, CLI timeout, polling timeout, or missing logs.
+If all states are live/complete and there is no actionable change, stay quiet:
+write a short local check note under logs/server_monitor/check_note.json with
+checked_at, per-run state, and changed=false, then return without chat output.
+Do not emit repeated unchanged summaries or ask the user questions.
+
+For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+verified exports), inspect its recorded errors first. If a narrowly justified
+monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
+cairn_new, document the observed error
+and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+configs/, data/, or checkpoint files. Do not run extra training
+commands directly. NEVER launch or recover jobs from a Codex tool: its PID
+namespace and lifetime are scoped to the tool/check. Never execute
+scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
+scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
+or recovery functions through Python or another wrapper.
+
+For an eligible failed job, write one JSON recovery request under
+logs/server_monitor/recovery_requests/ with these fields:
+
+  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+
+Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
+directory, then atomically rename it to .json. Do not create a duplicate request
+for an arm with a pending request. Record the request path and observed failure
+in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
+complete runs. The host daemon drains requests AFTER this Codex invocation ends
+and BEFORE its after-status snapshot, invoking the existing bounded recovery
+controller with the inherited host runtime. It moves each request into
+recovery_requests/processed/ before invocation and records the request, result,
+stdout and stderr there. Interrupted requests remain as evidence and are not
+automatically replayed; inspect the processed record and real job status before
+considering any new request. Leave processed records intact. Invalid arm names,
+live jobs and completed jobs are rejected by the existing controller.
+
+The host controller archives checkpoints/configs, resumes last.pt with the exact
+recorded config, optimizer/update/RNG and schedule, or runs --test-only after
+completed training.
+If a crash occurred between best/last publication it resumes the retained best
+epoch, never resets the schedule. Without any checkpoint, it retries the same
+full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+best.pt, set reduce_batch=true in the request; this halves that run's batch and
+records its actual config. Never change batch size after a checkpoint. Never overwrite
+past attempt logs/archives. At most three recovery attempts per run; attempted
+recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+Do not bypass this bound, erase records, or create replacement output directories.
+
+After any action re-read --status and save a local check note plus action record.
+A queued request is not a completed recovery: the host processes it after you
+return. Never wait for or drain it from this check.
+If a failure cannot be repaired within these constraints, retry only when a
+legitimate retry can help. Otherwise record the observed irreparable failure:
+
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --block <arm> --reason '<observed irreparable failure>'
+
+This closes that run's recovery budget without altering checkpoints. Never
+claim completion without the verifier. The daemon handles the next 2400-second
+check, next-check timestamp, PID, overlap lock, summary and exit. Do not start
+another daemon, sleep for the interval, or create a new automation.
+
+warning: Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.
+codex
+I’ll read the saved status and verify the actual run states, leaving all live jobs untouched.
+exec
+/bin/bash -c 'cat logs/server_jobs/status.json' in /data/interns/zhangpc/cairn_new
+ succeeded in 1ms:
+{
+  "checked_at": 1791742049.0073948,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+
+exec
+/bin/bash -c "rg --files -g AGENTS.md -g 'runtime.sh' -g 'server_jobs.py' -g '*record.json' -g '*process.json' -g '*exit*' logs/server_jobs scripts .agents" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+scripts/runtime.sh
+scripts/server_jobs.py
+logs/server_jobs/no_path_double_drugout/record.json
+logs/server_jobs/no_path_double_drugout/attempt_1_process.json
+logs/server_jobs/path_single_drugout/attempt_1_process.json
+logs/server_jobs/path_single_drugout/record.json
+logs/server_jobs/path_double_drugout/attempt_1_process.json
+logs/server_jobs/path_double_drugout/record.json
+logs/server_jobs/no_path_single_drugout/attempt_1_process.json
+logs/server_jobs/no_path_single_drugout/record.json
+
+exec
+/bin/bash -c "cat scripts/runtime.sh; rg -n 'status|history|output_dir|lock|process|exit' scripts/server_jobs.py" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Source this from this workspace; the existing cairn environment is read-only.
+set -euo pipefail
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+export PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="$ROOT_DIR/tmp"
+export XDG_CACHE_HOME="$ROOT_DIR/.cache"
+export TORCH_HOME="$ROOT_DIR/.cache/torch"
+export TRITON_CACHE_DIR="$ROOT_DIR/.cache/triton"
+export CUDA_CACHE_PATH="$ROOT_DIR/.cache/cuda"
+export MPLCONFIGDIR="$ROOT_DIR/.cache/matplotlib"
+export HF_HOME="$ROOT_DIR/.cache/huggingface"
+export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
+export NUMBA_CACHE_DIR="$ROOT_DIR/.cache/numba"
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+PYTHON_BIN="$ROOT_DIR/../cairn_dev/.conda/cairn/bin/python"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME" "$TORCH_HOME" "$TRITON_CACHE_DIR" "$CUDA_CACHE_PATH" "$MPLCONFIGDIR" "$HF_HOME" "$NUMBA_CACHE_DIR" "$ROOT_DIR/logs"
+12:import subprocess
+36:def registry_lock():
+38:    with (STATE / 'registry.lock').open('a') as lock:
+39:        fcntl.flock(lock, fcntl.LOCK_EX)
+43:def process_start(pid):
+53:    # The training child inherits this lock. If its wrapper dies, the live
+54:    # training process still prevents a duplicate launch.
+55:    with (STATE / arm / 'job.lock').open('a') as lock:
+57:            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+59:        except BlockingIOError:
+65:    return (record['process_start'] is not None and process_start(pid) == record['process_start']) or busy(record['arm'])
+142:def status():
+152:        # its final files. A live process is always left alone.
+159:                      'blocked_reason': record.get('blocked_reason'),
+160:                      'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+163:    write_json(STATE / 'status.json', snapshot)
+183:    exit_file = directory / f'attempt_{attempt}_exit.json'
+190:              'reason': reason, 'log': str(log), 'exit_file': str(exit_file), 'command': command}
+193:        child = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '--worker', str(launch_file)],
+194:                                 cwd=ROOT, stdin=subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT,
+196:    record.update(pid=child.pid, process_start=process_start(child.pid))
+205:    with (STATE / record['arm'] / 'job.lock').open('a') as lock:
+206:        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+208:        child = subprocess.Popen(record['command'], cwd=ROOT, env=env, pass_fds=(lock.fileno(),))
+209:        write_json(launch_file.with_name(launch_file.stem + '_process.json'),
+210:                   {'pid': child.pid, 'process_start': process_start(child.pid), 'command': record['command']})
+212:        write_json(Path(record['exit_file']), {'exit_code': code, 'finished_at': time.time()})
+280:    action.add_argument('--status', action='store_true')
+282:    action.add_argument('--block', choices=ARMS)
+292:    with registry_lock():
+293:        if args.status:
+294:            result = status()
+295:        elif args.block:
+297:                parser.error('--block requires the observed irreparable --reason')
+298:            record_path = STATE / args.block / 'record.json'
+300:            if live(result) or verify_exports(args.block)[0]:
+301:                raise RuntimeError('Cannot block a live or completed job')
+302:            result.update(recoveries=MAX_RECOVERIES, blocked_reason=args.reason, blocked_at=time.time())
+322:                    raise RuntimeError('Existing run found: use --status and bounded --recover')
+329:    sys.exit(main())
+
+exec
+/bin/bash -c 'for d in logs/server_jobs/*drugout; do echo "$d"; cat "$d/record.json" "$d/attempt_1_process.json"; tail -n 8 "$d/attempt_1.log"; done; rg --files logs/server_jobs logs/server_monitor -g '"'*exit*' -g '*history*' -g 'AGENTS.md'; for p in AGENTS.md scripts/AGENTS.md logs/AGENTS.md; do if test -f \""'$p"; then cat "$p"; fi; done' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+logs/server_jobs/no_path_double_drugout
+{
+  "arm": "no_path_double_drugout",
+  "gpu": 7,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5385025,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ],
+  "pid": 2560539,
+  "process_start": "1264159747"
+}
+{
+  "pid": 2560543,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ]
+}
+{"epoch": 1, "update": 1165, "train": {"ce": 1.5512996493544748, "rec": 0.6190590413544119, "kl": 0.20139825358642138, "loss": 1.613211954819216, "kl_weighted": 6.4014707136614815e-06, "kl_beta_final": 5e-05}, "validation": {"ce": 1.793465592986659, "rec": 0.6209559810789008, "kl": 0.442924640053197, "loss": 1.8555833302046123, "macro_f1_85": 0.10962311217858284, "kl_beta": 5e-05}, "best_validation_macro_f1_85": 0.10962311217858284, "improved": true, "bad_epochs": 0, "seconds": 1362.8892929553986}
+{"epoch": 2, "update": 2330, "train": {"ce": 0.6936348059488234, "rec": 0.5885843396487556, "kl": 0.8893352342966155, "loss": 0.7525637752991496, "kl_weighted": 7.053510053926844e-05, "kl_beta_final": 0.0001}, "validation": {"ce": 1.954444858902379, "rec": 0.5032353837239115, "kl": 1.4233562193418805, "loss": 2.004910697435078, "macro_f1_85": 0.11094139565646637, "kl_beta": 0.0001}, "best_validation_macro_f1_85": 0.11094139565646637, "improved": true, "bad_epochs": 0, "seconds": 1367.0140371322632}
+{"epoch": 3, "update": 3495, "train": {"ce": 0.4747717186651025, "rec": 0.48698052154807653, "kl": 1.7217848827397277, "loss": 0.5236880453185985, "kl_weighted": 0.00021827369082441555, "kl_beta_final": 0.00015}, "validation": {"ce": 1.9929958669762862, "rec": 0.42601204389020014, "kl": 2.2113175116087262, "loss": 2.035928709883439, "macro_f1_85": 0.11452214061206446, "kl_beta": 0.00015}, "best_validation_macro_f1_85": 0.11452214061206446, "improved": true, "bad_epochs": 0, "seconds": 1375.1614863872528}
+{"epoch": 4, "update": 4660, "train": {"ce": 0.3711205992307213, "rec": 0.417418836651521, "kl": 2.381217402143951, "loss": 0.4132816244052117, "kl_weighted": 0.0004191410826624806, "kl_beta_final": 0.0002}, "validation": {"ce": 2.1723850852564763, "rec": 0.38235590959850113, "kl": 2.8443776256159734, "loss": 2.2111895686701724, "macro_f1_85": 0.11184018343559113, "kl_beta": 0.0002}, "best_validation_macro_f1_85": 0.11452214061206446, "improved": false, "bad_epochs": 1, "seconds": 1375.4716901779175}
+{"epoch": 5, "update": 5825, "train": {"ce": 0.3077127535503387, "rec": 0.37333807409030406, "kl": 2.8591797246646844, "loss": 0.34569162055334157, "kl_weighted": 0.0006450593059590193, "kl_beta_final": 0.00025}, "validation": {"ce": 2.2347725818031714, "rec": 0.3654469323785681, "kl": 3.178508610474436, "loss": 2.2721118475261486, "macro_f1_85": 0.11976217884106445, "kl_beta": 0.00025}, "best_validation_macro_f1_85": 0.11976217884106445, "improved": true, "bad_epochs": 0, "seconds": 1377.7811284065247}
+{"epoch": 6, "update": 6990, "train": {"ce": 0.26580561496492144, "rec": 0.3447104969591432, "kl": 3.2011626440637593, "loss": 0.3011582306955666, "kl_weighted": 0.0008815651280672201, "kl_beta_final": 0.0003}, "validation": {"ce": 2.2619619105991564, "rec": 0.34512714492647273, "kl": 3.454507303237915, "loss": 2.2975109815597534, "macro_f1_85": 0.11770112885803544, "kl_beta": 0.0003}, "best_validation_macro_f1_85": 0.11976217884106445, "improved": false, "bad_epochs": 1, "seconds": 1374.5946497917175}
+{"epoch": 7, "update": 8155, "train": {"ce": 0.23227824660949958, "rec": 0.3278012011248378, "kl": 3.415306682268284, "loss": 0.26616916453311756, "kl_weighted": 0.0011107972120192543, "kl_beta_final": 0.00035}, "validation": {"ce": 2.494502151639838, "rec": 0.3312876174324437, "kl": 3.6740776789815803, "loss": 2.528916819472062, "macro_f1_85": 0.12028663154714868, "kl_beta": 0.00035}, "best_validation_macro_f1_85": 0.12028663154714868, "improved": true, "bad_epochs": 0, "seconds": 1365.346267938614}
+logs/server_jobs/no_path_single_drugout
+{
+  "arm": "no_path_single_drugout",
+  "gpu": 6,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5355487,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml"
+  ],
+  "pid": 2560538,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560542,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml"
+  ]
+}
+{"epoch": 1, "update": 1165, "train": {"ce": 1.5513007863248311, "rec": 0.6190811989164207, "kl": 0.20144233723256486, "loss": 1.6132153070438158, "kl_weighted": 6.403186246351677e-06, "kl_beta_final": 5e-05}, "validation": {"ce": 1.2633441006016037, "rec": 0.6189207166870655, "kl": 0.4415888334556586, "loss": 1.325258252630447, "macro_f1_85": 0.21401883455102536, "kl_beta": 5e-05}, "best_validation_macro_f1_85": 0.21401883455102536, "improved": true, "bad_epochs": 0, "seconds": 1471.0951759815216}
+{"epoch": 2, "update": 2330, "train": {"ce": 0.6936008998637588, "rec": 0.5886033874901461, "kl": 0.8895497091546816, "loss": 0.7525317884926046, "kl_weighted": 7.055126084767089e-05, "kl_beta_final": 0.0001}, "validation": {"ce": 1.1660682254781625, "rec": 0.49284042158406716, "kl": 1.410577817504613, "loss": 1.2154933321323995, "macro_f1_85": 0.33699812394849216, "kl_beta": 0.0001}, "best_validation_macro_f1_85": 0.33699812394849216, "improved": true, "bad_epochs": 0, "seconds": 1472.5608885288239}
+{"epoch": 3, "update": 3495, "train": {"ce": 0.47471473613041787, "rec": 0.48702736085889725, "kl": 1.7217827834891566, "loss": 0.5236357463170132, "kl_weighted": 0.00021827428904395765, "kl_beta_final": 0.00015}, "validation": {"ce": 1.125912957960578, "rec": 0.4102173875781645, "kl": 2.1764534898236705, "loss": 1.1672611658808874, "macro_f1_85": 0.4055025825287146, "kl_beta": 0.00015}, "best_validation_macro_f1_85": 0.4055025825287146, "improved": true, "bad_epochs": 0, "seconds": 1481.6630091667175}
+{"epoch": 4, "update": 4660, "train": {"ce": 0.3710764590575815, "rec": 0.41744061975936997, "kl": 2.381139772268867, "loss": 0.4132396462977038, "kl_weighted": 0.00041912607668625714, "kl_beta_final": 0.0002}, "validation": {"ce": 1.1612650464927172, "rec": 0.3648711820620311, "kl": 2.7865294107887246, "loss": 1.1983094703557544, "macro_f1_85": 0.45240330164221804, "kl_beta": 0.0002}, "best_validation_macro_f1_85": 0.45240330164221804, "improved": true, "bad_epochs": 0, "seconds": 1479.6642401218414}
+{"epoch": 5, "update": 5825, "train": {"ce": 0.30769131897977825, "rec": 0.37339130991272135, "kl": 2.8589853295880134, "loss": 0.34567546817449024, "kl_weighted": 0.0006450174835500155, "kl_beta_final": 0.00025}, "validation": {"ce": 1.2011132744174753, "rec": 0.3453108221012897, "kl": 3.126630414710872, "loss": 1.2364260082150813, "macro_f1_85": 0.5130579840943025, "kl_beta": 0.00025}, "best_validation_macro_f1_85": 0.5130579840943025, "improved": true, "bad_epochs": 0, "seconds": 1479.4359738826752}
+{"epoch": 6, "update": 6990, "train": {"ce": 0.26575216658880896, "rec": 0.344769763091382, "kl": 3.201124572899791, "loss": 0.30111069460369705, "kl_weighted": 0.000881551027922921, "kl_beta_final": 0.0003}, "validation": {"ce": 1.1865393194207097, "rec": 0.3207698465655393, "kl": 3.3875266639607613, "loss": 1.2196325527695415, "macro_f1_85": 0.5044251711938885, "kl_beta": 0.0003}, "best_validation_macro_f1_85": 0.5130579840943025, "improved": false, "bad_epochs": 1, "seconds": 1488.8869218826294}
+logs/server_jobs/path_double_drugout
+{
+  "arm": "path_double_drugout",
+  "gpu": 5,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5320885,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml"
+  ],
+  "pid": 2560537,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560541,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml"
+  ]
+}
+{"epoch": 1, "update": 1165, "train": {"ce": 1.519980606451286, "rec": 0.490859774523046, "kl": 0.2753849728986214, "loss": 1.5690751854146545, "kl_weighted": 8.602385277501842e-06, "kl_beta_final": 5e-05}, "validation": {"ce": 1.6468126372287148, "rec": 0.4675847756235223, "kl": 0.47303590021635356, "loss": 1.6935947480954623, "macro_f1_85": 0.09128949229422972, "kl_beta": 5e-05}, "best_validation_macro_f1_85": 0.09128949229422972, "improved": true, "bad_epochs": 0, "seconds": 1356.0929791927338}
+{"epoch": 2, "update": 2330, "train": {"ce": 0.6511511591876815, "rec": 0.447487765626115, "kl": 0.681808419068535, "loss": 0.6959530610622565, "kl_weighted": 5.312533689077195e-05, "kl_beta_final": 0.0001}, "validation": {"ce": 1.7975695848464965, "rec": 0.44964088923052736, "kl": 0.8750985973759702, "loss": 1.8426211946888973, "macro_f1_85": 0.11342783554441782, "kl_beta": 0.0001}, "best_validation_macro_f1_85": 0.11342783554441782, "improved": true, "bad_epochs": 0, "seconds": 1355.401697397232}
+{"epoch": 3, "update": 3495, "train": {"ce": 0.4439200858925603, "rec": 0.4128063457448294, "kl": 1.1983551538212596, "loss": 0.48535304908258226, "kl_weighted": 0.00015232898280788517, "kl_beta_final": 0.00015}, "validation": {"ce": 1.826502235312211, "rec": 0.41357433482220296, "kl": 1.4342609392969232, "loss": 1.8680747985839843, "macro_f1_85": 0.11783170986943382, "kl_beta": 0.00015}, "best_validation_macro_f1_85": 0.11783170986943382, "improved": true, "bad_epochs": 0, "seconds": 1370.613608598709}
+{"epoch": 4, "update": 4660, "train": {"ce": 0.34011746914603913, "rec": 0.37591778222351707, "kl": 1.7884565673008306, "loss": 0.3780246891537622, "kl_weighted": 0.0003154416332716136, "kl_beta_final": 0.0002}, "validation": {"ce": 1.9568040496424626, "rec": 0.3827160910556191, "kl": 1.9846338774028578, "loss": 1.995472660817598, "macro_f1_85": 0.11824503499670715, "kl_beta": 0.0002}, "best_validation_macro_f1_85": 0.11824503499670715, "improved": true, "bad_epochs": 0, "seconds": 1356.3890941143036}
+{"epoch": 5, "update": 5825, "train": {"ce": 0.27771946146230847, "rec": 0.3439770276503225, "kl": 2.3190180311571043, "loss": 0.31264097346282355, "kl_weighted": 0.0005238086789074908, "kl_beta_final": 0.00025}, "validation": {"ce": 2.0728582721007496, "rec": 0.35164870117840014, "kl": 2.5182705452567653, "loss": 2.1086527447951466, "macro_f1_85": 0.11373793937268328, "kl_beta": 0.00025}, "best_validation_macro_f1_85": 0.11824503499670715, "improved": false, "bad_epochs": 1, "seconds": 1353.9754979610443}
+{"epoch": 6, "update": 6990, "train": {"ce": 0.23551490838596398, "rec": 0.32348689784347695, "kl": 2.715600002996332, "loss": 0.2686117361721341, "kl_weighted": 0.0007481377249249983, "kl_beta_final": 0.0003}, "validation": {"ce": 2.1539582415630942, "rec": 0.3401368966228084, "kl": 2.923726079338475, "loss": 2.188849021259107, "macro_f1_85": 0.11309738015662935, "kl_beta": 0.0003}, "best_validation_macro_f1_85": 0.11824503499670715, "improved": false, "bad_epochs": 2, "seconds": 1360.4317376613617}
+{"epoch": 7, "update": 8155, "train": {"ce": 0.20480710623453835, "rec": 0.3098829407653821, "kl": 3.0050110493322597, "loss": 0.23677286046291343, "kl_weighted": 0.0009774597745890023, "kl_beta_final": 0.00035}, "validation": {"ce": 2.3476459653753983, "rec": 0.3407152426870246, "kl": 3.071709660479897, "loss": 2.3827925769906293, "macro_f1_85": 0.11183226383787999, "kl_beta": 0.00035}, "best_validation_macro_f1_85": 0.11824503499670715, "improved": false, "bad_epochs": 3, "seconds": 1352.7855079174042}
+logs/server_jobs/path_single_drugout
+{
+  "arm": "path_single_drugout",
+  "gpu": 4,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5274358,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml"
+  ],
+  "pid": 2560536,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560540,
+  "process_start": "1264159749",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml"
+  ]
+}
+{"epoch": 1, "update": 1165, "train": {"ce": 1.5200439087755022, "rec": 0.4908244414744404, "kl": 0.2753764139214906, "loss": 1.569134955209501, "kl_weighted": 8.60188251954401e-06, "kl_beta_final": 5e-05}, "validation": {"ce": 1.2301928072042239, "rec": 0.4503238212497354, "kl": 0.48969619733397707, "loss": 1.2752496732666367, "macro_f1_85": 0.2182247964145082, "kl_beta": 5e-05}, "best_validation_macro_f1_85": 0.2182247964145082, "improved": true, "bad_epochs": 0, "seconds": 1502.357500553131}
+{"epoch": 2, "update": 2330, "train": {"ce": 0.6512648223643718, "rec": 0.4473782736196411, "kl": 0.6813979549534904, "loss": 0.6960557428533588, "kl_weighted": 5.309262401584872e-05, "kl_beta_final": 0.0001}, "validation": {"ce": 1.1486906786965212, "rec": 0.4276189229710331, "kl": 0.9118192759333306, "loss": 1.1915437454325033, "macro_f1_85": 0.3418712747196697, "kl_beta": 0.0001}, "best_validation_macro_f1_85": 0.3418712747196697, "improved": true, "bad_epochs": 0, "seconds": 1503.6486945152283}
+{"epoch": 3, "update": 3495, "train": {"ce": 0.4439827168751157, "rec": 0.41272136779051843, "kl": 1.19774202248317, "loss": 0.48540710920130953, "kl_weighted": 0.0001522548695216891, "kl_beta_final": 0.00015}, "validation": {"ce": 1.115266227535769, "rec": 0.39059053789201426, "kl": 1.4778903457847157, "loss": 1.1545469626458127, "macro_f1_85": 0.43975704790354664, "kl_beta": 0.00015}, "best_validation_macro_f1_85": 0.43975704790354664, "improved": true, "bad_epochs": 0, "seconds": 1517.5392861366272}
+{"epoch": 4, "update": 4660, "train": {"ce": 0.3402224831020357, "rec": 0.37583447445175394, "kl": 1.787734442482529, "loss": 0.37812123881510684, "kl_weighted": 0.00031530746182482645, "kl_beta_final": 0.0002}, "validation": {"ce": 1.129937507127207, "rec": 0.3556172183665743, "kl": 2.0378702668521966, "loss": 1.165906810467995, "macro_f1_85": 0.49981741216543324, "kl_beta": 0.0002}, "best_validation_macro_f1_85": 0.49981741216543324, "improved": true, "bad_epochs": 0, "seconds": 1513.8196561336517}
+{"epoch": 5, "update": 5825, "train": {"ce": 0.2777159030832509, "rec": 0.3436903578235897, "kl": 2.31863157855774, "loss": 0.31260866207633964, "kl_weighted": 0.0005237227324827767, "kl_beta_final": 0.00025}, "validation": {"ce": 1.1708922843233966, "rec": 0.32582554111894807, "kl": 2.5650206726905616, "loss": 1.2041160985257495, "macro_f1_85": 0.5216597034219804, "kl_beta": 0.00025}, "best_validation_macro_f1_85": 0.5216597034219804, "improved": true, "bad_epochs": 0, "seconds": 1518.9346506595612}
+{"epoch": 6, "update": 6990, "train": {"ce": 0.23569411123811793, "rec": 0.32301809671650594, "kl": 2.7148290782803772, "loss": 0.2687438474790619, "kl_weighted": 0.0007479259434349723, "kl_beta_final": 0.0003}, "validation": {"ce": 1.1971556510866792, "rec": 0.3131160918611559, "kl": 2.9443337027889505, "loss": 1.2293505648996557, "macro_f1_85": 0.5182268493845097, "kl_beta": 0.0003}, "best_validation_macro_f1_85": 0.5216597034219804, "improved": false, "bad_epochs": 1, "seconds": 1513.5085184574127}
+
+exec
+/bin/bash -c "sed -n '1,170p' scripts/server_jobs.py; rg -n 'output_dir|run_dir' configs/*drugout.yaml" in /data/interns/zhangpc/cairn_new
+ exited 1 in 0ms:
+"""Durable four-arm job records, real export verification, bounded recovery.
+
+CPU controller only. Training children receive exactly their assigned GPU.
+No model forward, preparation, smoke run, or credential access here.
+"""
+import argparse
+from contextlib import contextmanager
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import shutil
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+STATE = ROOT / 'logs/server_jobs'
+ARMS = {'path_single_drugout': 4, 'path_double_drugout': 5,
+        'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
+MAX_RECOVERIES = 3
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
+
+
+def read_json(path):
+    return json.loads(path.read_text())
+
+
+@contextmanager
+def registry_lock():
+    STATE.mkdir(parents=True, exist_ok=True)
+    with (STATE / 'registry.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def process_start(pid):
+    try:
+        # /proc comm may contain spaces; field 22 follows the closing ')'.
+        fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+        return None if fields[0] == 'Z' else fields[19]
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def busy(arm):
+    # The training child inherits this lock. If its wrapper dies, the live
+    # training process still prevents a duplicate launch.
+    with (STATE / arm / 'job.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return False
+        except BlockingIOError:
+            return True
+
+
+def live(record):
+    pid = record['pid']
+    return (record['process_start'] is not None and process_start(pid) == record['process_start']) or busy(record['arm'])
+
+
+def checkpoint(output, name):
+    import torch
+    return torch.load(output / name, map_location='cpu', weights_only=False)
+
+
+def verify_exports(arm):
+    """Completion means selected-best metrics AND all frozen test rows exported."""
+    import numpy as np
+    import pandas as pd
+    import yaml
+    from cairn_dsn.metrics import classification_metrics
+
+    output = ROOT / 'outputs' / arm
+    required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+                'test_probabilities.npz', 'test_per_class.csv', 'test_confusion.csv',
+                'test_config.yaml', 'test_complete.json']
+    missing = [name for name in required if not (output / name).is_file()]
+    if missing:
+        return False, {'missing': missing}
+    try:
+        best = checkpoint(output, 'best.pt')
+        last = checkpoint(output, 'last.pt')
+        cfg = best['config']
+        assert cfg['gpu'] == ARMS[arm]
+        assert last['config'] == cfg
+        assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+        marker = read_json(output / 'test_complete.json')
+        metrics = read_json(output / 'test_metrics.json')
+        assert marker['checkpoint'] == metrics['checkpoint'] == 'best.pt'
+        assert marker['selected_epoch'] == metrics['selected_epoch'] == best['epoch']
+        assert marker['selected_update'] == best['update']
+        assert metrics['selection'] == 'validation only'
+        assert metrics['selected_validation_macro_f1_85'] == best['best_metric']
+        eval_cfg = yaml.safe_load((output / 'test_config.yaml').read_text())
+        assert all(eval_cfg.get(k) == v for k, v in cfg.items())
+        assert eval_cfg['evaluation_checkpoint'] == 'best.pt'
+        frozen = pd.read_parquet(ROOT / 'data/prepared' / cfg['protocol'] / 'ddi.parquet')
+        rows = np.flatnonzero(frozen.split.eq('test').to_numpy())
+        expected = frozen.iloc[rows]
+        prediction = pd.read_parquet(output / 'test_predictions.parquet')
+        assert marker['rows'] == metrics['rows'] == len(prediction) == len(expected)
+        assert prediction[expected.columns].reset_index(drop=True).equals(expected.reset_index(drop=True))
+        with np.load(output / 'test_probabilities.npz', allow_pickle=False) as data:
+            probabilities = data['probabilities']
+            labels = data['labels']
+            assert probabilities.shape == (len(rows), 85)
+            assert np.isfinite(probabilities).all() and (probabilities >= 0).all() and (probabilities <= 1).all()
+            assert np.allclose(probabilities.sum(1), 1., atol=1e-5)
+            assert np.array_equal(data['event_ids'], np.arange(85))
+            assert np.array_equal(labels, expected.event_id.to_numpy())
+            assert np.array_equal(data['frozen_row_indices'], rows)
+            assert np.array_equal(prediction.frozen_row_index.to_numpy(), rows)
+            assert np.array_equal(prediction.predicted_event_id.to_numpy(), probabilities.argmax(1))
+            assert np.allclose(prediction.predicted_probability.to_numpy(), probabilities.max(1))
+            mask = data['path_mask']
+            assert mask.shape == (len(rows), 2 if cfg['with_path'] else 0)
+            if cfg['with_path']:
+                assert np.array_equal(mask, prediction[['path_v_to_u_present', 'path_u_to_v_present']].to_numpy())
+        actual, per_class, confusion = classification_metrics(labels, probabilities)
+        for key, value in actual.items():
+            assert metrics[key] is None if value is None else np.isclose(metrics[key], value, rtol=1e-6, atol=1e-8)
+        exported_class = pd.read_csv(output / 'test_per_class.csv')
+        assert np.array_equal(exported_class.event_id, np.arange(85))
+        for key in per_class.columns:
+            assert np.allclose(exported_class[key], per_class[key], equal_nan=True)
+        exported_confusion = pd.read_csv(output / 'test_confusion.csv', index_col=0)
+        assert np.array_equal(exported_confusion.index.to_numpy(), np.arange(85))
+        assert np.array_equal(exported_confusion.columns.astype(int), np.arange(85))
+        assert np.array_equal(exported_confusion.to_numpy(), confusion)
+        return True, {'selected_epoch': best['epoch'], 'rows': len(rows), 'metrics': actual}
+    except Exception as exc:
+        return False, {'verification_error': f'{type(exc).__name__}: {exc}'}
+
+
+def status():
+    result = {}
+    for arm, gpu in ARMS.items():
+        record_path = STATE / arm / 'record.json'
+        if not record_path.exists():
+            result[arm] = {'state': 'not_launched', 'gpu': gpu}
+            continue
+        record = read_json(record_path)
+        running = live(record)
+        # Avoid reading checkpoints while the trainer is atomically publishing
+        # its final files. A live process is always left alone.
+        complete, evidence = (False, {}) if running else verify_exports(arm)
+        result[arm] = {'state': 'live' if running else 'complete' if complete else
+                      'exhausted' if record['recoveries'] >= MAX_RECOVERIES else 'failed',
+                      'gpu': gpu, 'pid': record['pid'], 'attempt': record['attempt'],
+                      'recoveries': record['recoveries'], 'log': record['log'],
+                      'config': record['config'], 'evidence': evidence,
+                      'blocked_reason': record.get('blocked_reason'),
+                      'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+    snapshot = {'checked_at': time.time(), 'runs': result,
+                'all_complete': all(r['state'] == 'complete' for r in result.values())}
+    write_json(STATE / 'status.json', snapshot)
+    if snapshot['all_complete']:
+        write_json(STATE / 'final_summary.json', snapshot)
+    return snapshot
+
+
+def start(arm, config_path, mode, recoveries=0, reason='reviewed initial launch'):
+    directory = STATE / arm
+
+exec
+/bin/bash -c "source scripts/runtime.sh
+CUDA_VISIBLE_DEVICES='' \""'$PYTHON_BIN" scripts/server_jobs.py --status' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+{
+  "checked_at": 1791742117.4165735,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+
+exec
+/bin/bash -c "source scripts/runtime.sh
+CUDA_VISIBLE_DEVICES='' \""'$PYTHON_BIN" - <<'"'PY'
+import json, pathlib, time
+root=pathlib.Path.cwd()
+s=json.loads((root/'logs/server_jobs/status.json').read_text())
+for arm,r in s['runs'].items():
+ d=root/'logs/server_jobs'/arm
+ p=json.loads((d/f\"attempt_{r['attempt']}_process.json\").read_text())
+ identities=[]
+ for role,pid,expected in [('wrapper',r['pid'],json.loads((d/'record.json').read_text())['process_start']),('child',p['pid'],p['process_start'])]:
+  try:
+   fields=pathlib.Path(f'/proc/{pid}/stat').read_text().rsplit(')',1)[1].split()
+   identities.append({'role':role,'pid':pid,'state':fields[0],'identity_matches':fields[19]==expected})
+  except FileNotFoundError: identities.append({'role':role,'pid':pid,'missing':True})
+ out=root/'outputs'/arm
+ files=[{'name':f.name,'size':f.stat().st_size} for f in out.iterdir() if f.is_file()]
+ histories={}
+ for f in out.glob('*history*'):
+  if f.is_file(): histories[f.name]=f.read_text().splitlines()[-1:]
+ print(json.dumps({'arm':arm,'processes':identities,'exit_exists':(d/f\"attempt_{r['attempt']}_exit.json\").exists(),'output_files':files,'history_tail':histories}))
+note={'checked_at':time.time(),'runs':{a:r['state'] for a,r in s['runs'].items()},'changed':False}
+p=root/'logs/server_monitor/check_note.json'
+p.parent.mkdir(parents=True,exist_ok=True)
+t=p.with_suffix('.json.tmp'); t.write_text(json.dumps(note,indent=2)+'\\n'); t.replace(p)
+PY" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+{"arm": "path_single_drugout", "processes": [{"role": "wrapper", "pid": 2560536, "missing": true}, {"role": "child", "pid": 2560540, "missing": true}], "exit_exists": false, "output_files": [{"name": "last.pt", "size": 173710479}, {"name": "history.jsonl", "size": 3031}, {"name": "best.pt", "size": 173710479}, {"name": "model_inventory.json", "size": 585}, {"name": "first_update_gradients.json", "size": 233}, {"name": "config.yaml", "size": 3240}], "history_tail": {"history.jsonl": ["{\"epoch\": 6, \"update\": 6990, \"train\": {\"ce\": 0.23569411123811793, \"rec\": 0.32301809671650594, \"kl\": 2.7148290782803772, \"loss\": 0.2687438474790619, \"kl_weighted\": 0.0007479259434349723, \"kl_beta_final\": 0.0003}, \"validation\": {\"ce\": 1.1971556510866792, \"rec\": 0.3131160918611559, \"kl\": 2.9443337027889505, \"loss\": 1.2293505648996557, \"macro_f1_85\": 0.5182268493845097, \"kl_beta\": 0.0003}, \"best_validation_macro_f1_85\": 0.5216597034219804, \"improved\": false, \"bad_epochs\": 1, \"seconds\": 1513.5085184574127}"]}}
+{"arm": "path_double_drugout", "processes": [{"role": "wrapper", "pid": 2560537, "missing": true}, {"role": "child", "pid": 2560541, "missing": true}], "exit_exists": false, "output_files": [{"name": "last.pt", "size": 173710479}, {"name": "history.jsonl", "size": 3551}, {"name": "best.pt", "size": 173710479}, {"name": "model_inventory.json", "size": 585}, {"name": "first_update_gradients.json", "size": 233}, {"name": "config.yaml", "size": 3240}], "history_tail": {"history.jsonl": ["{\"epoch\": 7, \"update\": 8155, \"train\": {\"ce\": 0.20480710623453835, \"rec\": 0.3098829407653821, \"kl\": 3.0050110493322597, \"loss\": 0.23677286046291343, \"kl_weighted\": 0.0009774597745890023, \"kl_beta_final\": 0.00035}, \"validation\": {\"ce\": 2.3476459653753983, \"rec\": 0.3407152426870246, \"kl\": 3.071709660479897, \"loss\": 2.3827925769906293, \"macro_f1_85\": 0.11183226383787999, \"kl_beta\": 0.00035}, \"best_validation_macro_f1_85\": 0.11824503499670715, \"improved\": false, \"bad_epochs\": 3, \"seconds\": 1352.7855079174042}"]}}
+{"arm": "no_path_single_drugout", "processes": [{"role": "wrapper", "pid": 2560538, "missing": true}, {"role": "child", "pid": 2560542, "missing": true}], "exit_exists": false, "output_files": [{"name": "last.pt", "size": 169885039}, {"name": "history.jsonl", "size": 3037}, {"name": "best.pt", "size": 169885039}, {"name": "model_inventory.json", "size": 585}, {"name": "first_update_gradients.json", "size": 201}, {"name": "config.yaml", "size": 3244}], "history_tail": {"history.jsonl": ["{\"epoch\": 6, \"update\": 6990, \"train\": {\"ce\": 0.26575216658880896, \"rec\": 0.344769763091382, \"kl\": 3.201124572899791, \"loss\": 0.30111069460369705, \"kl_weighted\": 0.000881551027922921, \"kl_beta_final\": 0.0003}, \"validation\": {\"ce\": 1.1865393194207097, \"rec\": 0.3207698465655393, \"kl\": 3.3875266639607613, \"loss\": 1.2196325527695415, \"macro_f1_85\": 0.5044251711938885, \"kl_beta\": 0.0003}, \"best_validation_macro_f1_85\": 0.5130579840943025, \"improved\": false, \"bad_epochs\": 1, \"seconds\": 1488.8869218826294}"]}}
+{"arm": "no_path_double_drugout", "processes": [{"role": "wrapper", "pid": 2560539, "missing": true}, {"role": "child", "pid": 2560543, "missing": true}], "exit_exists": false, "output_files": [{"name": "last.pt", "size": 169885039}, {"name": "history.jsonl", "size": 3546}, {"name": "best.pt", "size": 169885039}, {"name": "model_inventory.json", "size": 585}, {"name": "first_update_gradients.json", "size": 202}, {"name": "config.yaml", "size": 3244}], "history_tail": {"history.jsonl": ["{\"epoch\": 7, \"update\": 8155, \"train\": {\"ce\": 0.23227824660949958, \"rec\": 0.3278012011248378, \"kl\": 3.415306682268284, \"loss\": 0.26616916453311756, \"kl_weighted\": 0.0011107972120192543, \"kl_beta_final\": 0.00035}, \"validation\": {\"ce\": 2.494502151639838, \"rec\": 0.3312876174324437, \"kl\": 3.6740776789815803, \"loss\": 2.528916819472062, \"macro_f1_85\": 0.12028663154714868, \"kl_beta\": 0.00035}, \"best_validation_macro_f1_85\": 0.12028663154714868, \"improved\": true, \"bad_epochs\": 0, \"seconds\": 1365.346267938614}"]}}
+
+codex
+
+tokens used
+22,950
+

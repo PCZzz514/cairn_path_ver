@@ -1,0 +1,97 @@
+{
+  "checked_at": 1791795139.0919347,
+  "runs": {
+    "single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 3096026,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 3096029,
+        "process_start": "1269993470",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "rareddie_control.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 57,
+      "history_best_validation_macro_f1_85": 0.6097096387532088,
+      "history_bad_epochs": 13,
+      "last_log_event": {
+        "epoch": 57,
+        "update": 66405,
+        "seconds": 86.69816088676453,
+        "bad_epochs": 13,
+        "best_validation_macro_f1_85": 0.6097096387532088
+      },
+      "blocked_reason": null,
+      "exit": null
+    },
+    "double_drugout": {
+      "state": "complete",
+      "gpu": 7,
+      "pid": 3096027,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/rareddie_control/jobs/double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml",
+      "evidence": {
+        "selected_epoch": 17,
+        "last_epoch": 32,
+        "bad_epochs": 15,
+        "rows": 534,
+        "metrics": {
+          "rows": 534,
+          "accuracy": 0.4419475655430712,
+          "macro_f1_85": 0.0822424109292936,
+          "macro_precision_85": 0.09408602079075054,
+          "macro_recall_85": 0.08374097536450478,
+          "weighted_f1": 0.4164143879543579,
+          "micro_f1": 0.4419475655430712,
+          "mcc": 0.3501233459960015,
+          "kappa": 0.3480280893812634,
+          "classes_present": 28,
+          "macro_roc_auc_supported_classes": 0.8366219227385444,
+          "roc_auc_classes": 28,
+          "macro_ap_supported_classes": 0.34435712227367354,
+          "ap_classes": 28,
+          "top5_accuracy": 0.7677902621722846
+        }
+      },
+      "train_process": {
+        "pid": 3096030,
+        "process_start": "1269993471",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "rareddie_control.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/rareddie_control/configs/double_drugout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": 32,
+      "history_best_validation_macro_f1_85": 0.1355267162339031,
+      "history_bad_epochs": 15,
+      "last_log_event": {
+        "phase": "best_checkpoint_test"
+      },
+      "blocked_reason": null,
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791792755.102016
+      }
+    }
+  },
+  "all_complete": false
+}

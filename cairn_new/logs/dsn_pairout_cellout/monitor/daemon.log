@@ -1,0 +1,5 @@
+20261012T133403Z_3338772 model=gpt-6.1-sol reasoning=low interval_seconds=2400
+20261012T141403Z_3338772 model=gpt-6.1-sol reasoning=low interval_seconds=2400
+20261012T145403Z_3338772 model=gpt-6.1-sol reasoning=low interval_seconds=2400
+20261012T153403Z_3338772 model=gpt-6.1-sol reasoning=low interval_seconds=2400
+Both selected-best checkpoint tests and complete exports verified.

@@ -1,0 +1,54 @@
+{
+  "checked_at": 1791737248.7125118,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}

@@ -1,0 +1,146 @@
+{
+  "checked_at": 1791778321.8958707,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2968281,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--resume",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/accelerated_four/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 2968282,
+        "process_start": "1268801959",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "accelerated_four.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/accelerated_four/configs/path_single_drugout.yaml",
+          "--resume"
+        ]
+      },
+      "history_last_epoch": 29,
+      "history_best_validation_macro_f1_85": 0.5696434336070745,
+      "history_bad_epochs": 9,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 30,
+        "update": 34000,
+        "epoch_rows": 27520,
+        "epoch_seconds": 23.60423469543457
+      },
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2968292,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--resume",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/accelerated_four/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 2968293,
+        "process_start": "1268801986",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "accelerated_four.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/accelerated_four/configs/path_double_drugout.yaml",
+          "--resume"
+        ]
+      },
+      "history_last_epoch": 33,
+      "history_best_validation_macro_f1_85": 0.12370885015909452,
+      "history_bad_epochs": 5,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 34,
+        "update": 38700,
+        "epoch_rows": 32640,
+        "epoch_seconds": 26.072216033935547
+      },
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2968296,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--resume",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/accelerated_four/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 2968297,
+        "process_start": "1268802012",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "accelerated_four.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/accelerated_four/configs/no_path_single_drugout.yaml",
+          "--resume"
+        ]
+      },
+      "history_last_epoch": 30,
+      "history_best_validation_macro_f1_85": 0.5667568308804323,
+      "history_bad_epochs": 14,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 31,
+        "update": 35200,
+        "epoch_rows": 32000,
+        "epoch_seconds": 22.210517168045044
+      },
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2968307,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--resume",
+      "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/accelerated_four/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 2968308,
+        "process_start": "1268802036",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "accelerated_four.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/accelerated_four/configs/no_path_double_drugout.yaml",
+          "--resume"
+        ]
+      },
+      "history_last_epoch": 32,
+      "history_best_validation_macro_f1_85": 0.1259564026908654,
+      "history_bad_epochs": 8,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 33,
+        "update": 37400,
+        "epoch_rows": 15360,
+        "epoch_seconds": 11.281419038772583
+      },
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}

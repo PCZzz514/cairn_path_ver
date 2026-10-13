@@ -1,0 +1,3 @@
+Check blocked before execution: the sandbox reported `app-server socket directory must be a user-owned directory with mode 0700`.
+
+Could not read status, verify exports, or write a local note. No jobs or files were changed. Leave the existing daemon running for the next scheduled check.

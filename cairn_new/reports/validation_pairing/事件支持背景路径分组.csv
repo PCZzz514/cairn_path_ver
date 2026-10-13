@@ -1,0 +1,579 @@
+﻿划分,分组维度,分组值,样本数,修正_错对,退化_对错,未解决_错错,保持_对对,基础Accuracy,含路径Accuracy,净修正数,净Accuracy变化,基础错误修正率,基础正确退化率,event_id,真实事件模板,训练支持
+pairout,真实事件,0,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,0.0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37.0
+pairout,真实事件,1,47,0,0,0,47,1.0,1.0,0,0.0,,0.0,1.0,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,372.0
+pairout,真实事件,2,2,0,0,1,1,0.5,0.5,0,0.0,0.0,0.0,2.0,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,7.0
+pairout,真实事件,3,3469,60,101,55,3253,0.9668492360910924,0.9550302680887864,-41,-0.0118189680023061,0.5217391304347826,0.030113297555158,3.0,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,27258.0
+pairout,真实事件,4,418,2,38,16,362,0.9569377990430622,0.8708133971291866,-36,-0.0861244019138756,0.1111111111111111,0.095,4.0,The metabolism of {drug_B} can be increased when combined with {drug_A}.,4005.0
+pairout,真实事件,5,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,5.0,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,7.0
+pairout,真实事件,6,3,0,0,0,3,1.0,1.0,0,0.0,,0.0,6.0,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,22.0
+pairout,真实事件,7,47,2,3,3,39,0.8936170212765957,0.8723404255319149,-1,-0.0212765957446808,0.4,0.0714285714285714,7.0,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,344.0
+pairout,真实事件,8,6098,55,82,69,5892,0.9796654640865856,0.9752377828796328,-27,-0.0044276812069531,0.4435483870967742,0.0137261466354201,8.0,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,48226.0
+pairout,真实事件,9,12,2,0,0,10,0.8333333333333334,1.0,2,0.1666666666666666,1.0,0.0,9.0,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,100.0
+pairout,真实事件,10,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,10.0,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20.0
+pairout,真实事件,12,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,12.0,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,11.0
+pairout,真实事件,13,4,0,0,1,3,0.75,0.75,0,0.0,0.0,0.0,13.0,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,21.0
+pairout,真实事件,14,52,1,2,7,42,0.8461538461538461,0.8269230769230769,-1,-0.0192307692307692,0.125,0.0454545454545454,14.0,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,427.0
+pairout,真实事件,15,26,4,3,2,17,0.7692307692307693,0.8076923076923077,1,0.0384615384615384,0.6666666666666666,0.15,15.0,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,242.0
+pairout,真实事件,16,907,39,24,41,803,0.9117971334068358,0.928335170893054,15,0.0165380374862183,0.4875,0.0290205562273276,16.0,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7310.0
+pairout,真实事件,17,2324,80,71,101,2072,0.9221170395869192,0.9259896729776248,9,0.0038726333907056,0.4419889502762431,0.0331311245916938,17.0,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,18836.0
+pairout,真实事件,18,752,12,15,13,712,0.9667553191489362,0.9627659574468084,-3,-0.0039893617021276,0.48,0.0206327372764786,18.0,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,6096.0
+pairout,真实事件,19,27,0,0,2,25,0.925925925925926,0.925925925925926,0,0.0,0.0,0.0,19.0,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,182.0
+pairout,真实事件,20,69,0,1,1,67,0.9855072463768116,0.9710144927536232,-1,-0.0144927536231884,0.0,0.0147058823529411,20.0,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,677.0
+pairout,真实事件,21,12,0,2,0,10,1.0,0.8333333333333334,-2,-0.1666666666666666,,0.1666666666666666,21.0,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,57.0
+pairout,真实事件,22,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,22.0,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,29.0
+pairout,真实事件,23,2,0,1,0,1,1.0,0.5,-1,-0.5,,0.5,23.0,{drug_A} may decrease the analgesic activities of {drug_B}.,7.0
+pairout,真实事件,24,28,0,1,2,25,0.9285714285714286,0.8928571428571429,-1,-0.0357142857142857,0.0,0.0384615384615384,24.0,{drug_A} may decrease the anticoagulant activities of {drug_B}.,191.0
+pairout,真实事件,25,304,0,9,1,294,0.9967105263157896,0.9671052631578948,-9,-0.0296052631578947,0.0,0.0297029702970297,25.0,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2429.0
+pairout,真实事件,27,38,0,3,0,35,1.0,0.9210526315789472,-3,-0.0789473684210526,,0.0789473684210526,27.0,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,286.0
+pairout,真实事件,28,97,0,0,0,97,1.0,1.0,0,0.0,,0.0,28.0,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,809.0
+pairout,真实事件,29,32,0,0,0,32,1.0,1.0,0,0.0,,0.0,29.0,{drug_A} may decrease the diuretic activities of {drug_B}.,254.0
+pairout,真实事件,30,181,1,4,2,174,0.9834254143646408,0.9668508287292816,-3,-0.0165745856353591,0.3333333333333333,0.0224719101123595,30.0,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1425.0
+pairout,真实事件,31,7,0,0,0,7,1.0,1.0,0,0.0,,0.0,31.0,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,69.0
+pairout,真实事件,32,49,1,0,2,46,0.9387755102040816,0.9591836734693876,1,0.0204081632653061,0.3333333333333333,0.0,32.0,{drug_A} may decrease the sedative activities of {drug_B}.,438.0
+pairout,真实事件,33,47,0,1,0,46,1.0,0.9787234042553192,-1,-0.0212765957446808,,0.0212765957446808,33.0,{drug_A} may decrease the stimulatory activities of {drug_B}.,411.0
+pairout,真实事件,34,30,1,0,2,27,0.9,0.9333333333333332,1,0.0333333333333333,0.3333333333333333,0.0,34.0,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,249.0
+pairout,真实事件,35,626,9,23,18,576,0.9568690095846646,0.9345047923322684,-14,-0.0223642172523961,0.3333333333333333,0.0383973288814691,35.0,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4766.0
+pairout,真实事件,36,8,0,0,0,8,1.0,1.0,0,0.0,,0.0,36.0,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,77.0
+pairout,真实事件,37,21,0,0,0,21,1.0,1.0,0,0.0,,0.0,37.0,{drug_A} may increase the analgesic activities of {drug_B}.,224.0
+pairout,真实事件,38,30,0,0,0,30,1.0,1.0,0,0.0,,0.0,38.0,{drug_A} may increase the anticholinergic activities of {drug_B}.,248.0
+pairout,真实事件,39,308,5,9,6,288,0.9642857142857144,0.9512987012987012,-4,-0.0129870129870129,0.4545454545454545,0.0303030303030303,39.0,{drug_A} may increase the anticoagulant activities of {drug_B}.,2497.0
+pairout,真实事件,40,72,0,1,2,69,0.9722222222222222,0.9583333333333334,-1,-0.0138888888888888,0.0,0.0142857142857142,40.0,{drug_A} may increase the antihypertensive activities of {drug_B}.,486.0
+pairout,真实事件,41,41,3,3,5,30,0.8048780487804879,0.8048780487804879,0,0.0,0.375,0.0909090909090909,41.0,{drug_A} may increase the antiplatelet activities of {drug_B}.,253.0
+pairout,真实事件,42,11,0,0,0,11,1.0,1.0,0,0.0,,0.0,42.0,{drug_A} may increase the antipsychotic activities of {drug_B}.,77.0
+pairout,真实事件,43,30,2,0,4,24,0.8,0.8666666666666667,2,0.0666666666666666,0.3333333333333333,0.0,43.0,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,280.0
+pairout,真实事件,44,67,0,0,0,67,1.0,1.0,0,0.0,,0.0,44.0,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,571.0
+pairout,真实事件,45,106,4,7,4,91,0.9245283018867924,0.8962264150943396,-3,-0.0283018867924528,0.5,0.0714285714285714,45.0,{drug_A} may increase the bradycardic activities of {drug_B}.,1013.0
+pairout,真实事件,46,3,0,0,0,3,1.0,1.0,0,0.0,,0.0,46.0,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,20.0
+pairout,真实事件,47,15,0,1,1,13,0.9333333333333332,0.8666666666666667,-1,-0.0666666666666666,0.0,0.0714285714285714,47.0,{drug_A} may increase the cardiotoxic activities of {drug_B}.,163.0
+pairout,真实事件,48,524,1,4,2,517,0.9942748091603052,0.9885496183206108,-3,-0.0057251908396946,0.3333333333333333,0.0076775431861804,48.0,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4331.0
+pairout,真实事件,49,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,49.0,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,25.0
+pairout,真实事件,50,3,0,1,0,2,1.0,0.6666666666666666,-1,-0.3333333333333333,,0.3333333333333333,50.0,{drug_A} may increase the central neurotoxic activities of {drug_B}.,10.0
+pairout,真实事件,51,9,0,0,0,9,1.0,1.0,0,0.0,,0.0,51.0,{drug_A} may increase the constipating activities of {drug_B}.,115.0
+pairout,真实事件,52,3,0,0,2,1,0.3333333333333333,0.3333333333333333,0,0.0,0.0,0.0,52.0,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,8.0
+pairout,真实事件,53,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,53.0,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,23.0
+pairout,真实事件,54,56,0,0,0,56,1.0,1.0,0,0.0,,0.0,54.0,{drug_A} may increase the fluid retaining activities of {drug_B}.,324.0
+pairout,真实事件,55,5,0,1,3,1,0.4,0.2,-1,-0.2,0.0,0.5,55.0,{drug_A} may increase the hepatotoxic activities of {drug_B}.,40.0
+pairout,真实事件,56,8,0,0,0,8,1.0,1.0,0,0.0,,0.0,56.0,{drug_A} may increase the hypercalcemic activities of {drug_B}.,64.0
+pairout,真实事件,57,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,57.0,{drug_A} may increase the hyperglycemic activities of {drug_B}.,22.0
+pairout,真实事件,58,26,2,0,0,24,0.9230769230769232,1.0,2,0.0769230769230769,1.0,0.0,58.0,{drug_A} may increase the hyperkalemic activities of {drug_B}.,219.0
+pairout,真实事件,59,60,1,0,2,57,0.95,0.9666666666666668,1,0.0166666666666666,0.3333333333333333,0.0,59.0,{drug_A} may increase the hypertensive activities of {drug_B}.,530.0
+pairout,真实事件,60,16,0,0,0,16,1.0,1.0,0,0.0,,0.0,60.0,{drug_A} may increase the hypocalcemic activities of {drug_B}.,147.0
+pairout,真实事件,61,222,3,4,1,214,0.981981981981982,0.9774774774774776,-1,-0.0045045045045045,0.75,0.018348623853211,61.0,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1659.0
+pairout,真实事件,62,118,0,0,0,118,1.0,1.0,0,0.0,,0.0,62.0,{drug_A} may increase the hypokalemic activities of {drug_B}.,979.0
+pairout,真实事件,63,10,0,0,0,10,1.0,1.0,0,0.0,,0.0,63.0,{drug_A} may increase the hyponatremic activities of {drug_B}.,96.0
+pairout,真实事件,64,834,13,16,19,786,0.9616306954436452,0.9580335731414868,-3,-0.0035971223021582,0.40625,0.0199501246882793,64.0,{drug_A} may increase the hypotensive activities of {drug_B}.,6603.0
+pairout,真实事件,66,30,1,0,0,29,0.9666666666666668,1.0,1,0.0333333333333333,1.0,0.0,66.0,{drug_A} may increase the immunosuppressive activities of {drug_B}.,247.0
+pairout,真实事件,67,3,0,0,1,2,0.6666666666666666,0.6666666666666666,0,0.0,0.0,0.0,67.0,{drug_A} may increase the myelosuppressive activities of {drug_B}.,27.0
+pairout,真实事件,68,7,0,1,1,5,0.8571428571428571,0.7142857142857143,-1,-0.1428571428571428,0.0,0.1666666666666666,68.0,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,55.0
+pairout,真实事件,69,59,0,0,0,59,1.0,1.0,0,0.0,,0.0,69.0,{drug_A} may increase the nephrotoxic activities of {drug_B}.,544.0
+pairout,真实事件,70,96,0,1,0,95,1.0,0.9895833333333334,-1,-0.0104166666666666,,0.0104166666666666,70.0,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,731.0
+pairout,真实事件,71,44,1,0,0,43,0.9772727272727272,1.0,1,0.0227272727272727,1.0,0.0,71.0,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,297.0
+pairout,真实事件,72,7,1,0,0,6,0.8571428571428571,1.0,1,0.1428571428571428,1.0,0.0,72.0,{drug_A} may increase the neurotoxic activities of {drug_B}.,54.0
+pairout,真实事件,73,54,1,3,1,49,0.9629629629629628,0.925925925925926,-2,-0.037037037037037,0.5,0.0576923076923076,73.0,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,500.0
+pairout,真实事件,74,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,74.0,{drug_A} may increase the ototoxic activities of {drug_B}.,17.0
+pairout,真实事件,75,26,0,0,0,26,1.0,1.0,0,0.0,,0.0,75.0,{drug_A} may increase the respiratory depressant activities of {drug_B}.,220.0
+pairout,真实事件,76,109,0,0,1,108,0.9908256880733946,0.9908256880733946,0,0.0,0.0,0.0,76.0,{drug_A} may increase the sedative activities of {drug_B}.,805.0
+pairout,真实事件,77,94,2,3,0,89,0.9787234042553192,0.9680851063829788,-1,-0.0106382978723404,1.0,0.0326086956521739,77.0,{drug_A} may increase the serotonergic activities of {drug_B}.,627.0
+pairout,真实事件,78,8,0,1,0,7,1.0,0.875,-1,-0.125,,0.125,78.0,{drug_A} may increase the stimulatory activities of {drug_B}.,42.0
+pairout,真实事件,79,34,1,1,0,32,0.9705882352941176,0.9705882352941176,0,0.0,1.0,0.0303030303030303,79.0,{drug_A} may increase the tachycardic activities of {drug_B}.,297.0
+pairout,真实事件,80,9,0,0,0,9,1.0,1.0,0,0.0,,0.0,80.0,{drug_A} may increase the thrombogenic activities of {drug_B}.,92.0
+pairout,真实事件,81,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,81.0,{drug_A} may increase the ulcerogenic activities of {drug_B}.,34.0
+pairout,真实事件,82,14,0,1,0,13,1.0,0.9285714285714286,-1,-0.0714285714285714,,0.0714285714285714,82.0,{drug_A} may increase the vasoconstricting activities of {drug_B}.,91.0
+pairout,真实事件,83,3,0,0,0,3,1.0,1.0,0,0.0,,0.0,83.0,{drug_A} may increase the vasodilatory activities of {drug_B}.,24.0
+pairout,真实事件,84,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,84.0,{drug_A} may increase the vasopressor activities of {drug_B}.,57.0
+pairout,训练支持,100–999,1708,25,27,37,1619,0.9637002341920374,0.9625292740046838,-2,-0.0011709601873536,0.4032258064516129,0.0164034021871202,,,
+pairout,训练支持,10–99,150,1,7,6,136,0.9533333333333334,0.9133333333333332,-6,-0.04,0.1428571428571428,0.0489510489510489,,,
+pairout,训练支持,1–9,8,0,1,3,4,0.625,0.5,-1,-0.125,0.0,0.2,,,
+pairout,训练支持,≥1000,17073,284,407,348,16034,0.9629824869677268,0.9557781292098636,-123,-0.0072043577578632,0.4493670886075949,0.0247551852077124,,,
+pairout,单药背景是否存在,仅A侧NAI有背景,188,1,3,0,184,0.9946808510638298,0.9840425531914894,-2,-0.0106382978723404,1.0,0.0160427807486631,,,
+pairout,单药背景是否存在,仅B侧NAI有背景,172,0,4,3,165,0.9825581395348836,0.9593023255813954,-4,-0.0232558139534883,0.0,0.0236686390532544,,,
+pairout,单药背景是否存在,双侧NAI无背景,9,0,0,1,8,0.8888888888888888,0.8888888888888888,0,0.0,0.0,0.0,,,
+pairout,单药背景是否存在,双侧NAI有背景,18570,309,435,390,17436,0.9623586429725364,0.9555735056542812,-126,-0.0067851373182552,0.4420600858369098,0.024341111297633,,,
+pairout,单药原始关系覆盖A,0,181,0,4,4,173,0.9779005524861878,0.9558011049723756,-4,-0.0220994475138121,0.0,0.0225988700564971,,,
+pairout,单药原始关系覆盖A,1–5,2459,33,26,26,2374,0.9760065067100449,0.9788531923546157,7,0.0028466856445709,0.559322033898305,0.0108333333333333,,,
+pairout,单药原始关系覆盖A,6–30,9606,157,226,167,9056,0.9662710805746408,0.9590880699562774,-69,-0.0071830106183635,0.4845679012345679,0.024348200818789,,,
+pairout,单药原始关系覆盖A,>30,6693,120,186,197,6190,0.9526370835200956,0.9427760346630808,-66,-0.0098610488570147,0.3785488958990536,0.0291718946047678,,,
+pairout,单药原始关系覆盖B,0,197,1,3,1,192,0.9898477157360406,0.9796954314720812,-2,-0.0101522842639593,0.5,0.0153846153846153,,,
+pairout,单药原始关系覆盖B,1–5,3102,35,44,32,2991,0.978401031592521,0.9754996776273372,-9,-0.0029013539651837,0.5223880597014925,0.014497528830313,,,
+pairout,单药原始关系覆盖B,6–30,9912,163,244,208,9297,0.9625706214689266,0.9543987086359969,-81,-0.0081719128329297,0.4393530997304582,0.0255738392202075,,,
+pairout,单药原始关系覆盖B,>30,5728,111,151,153,5313,0.9539106145251396,0.946927374301676,-40,-0.0069832402234636,0.4204545454545454,0.0276354319180087,,,
+pairout,单药原始覆盖配对,0 / 0,9,0,0,1,8,0.8888888888888888,0.8888888888888888,0,0.0,0.0,0.0,,,
+pairout,单药原始覆盖配对,0 / 1–5,29,0,1,0,28,1.0,0.9655172413793104,-1,-0.0344827586206896,,0.0344827586206896,,,
+pairout,单药原始覆盖配对,0 / 6–30,93,0,1,3,89,0.967741935483871,0.956989247311828,-1,-0.010752688172043,0.0,0.0111111111111111,,,
+pairout,单药原始覆盖配对,0 / >30,50,0,2,0,48,1.0,0.96,-2,-0.04,,0.04,,,
+pairout,单药原始覆盖配对,1–5 / 0,21,0,0,0,21,1.0,1.0,0,0.0,,0.0,,,
+pairout,单药原始覆盖配对,1–5 / 1–5,453,8,5,3,437,0.9757174392935982,0.9823399558498896,3,0.0066225165562913,0.7272727272727273,0.0113122171945701,,,
+pairout,单药原始覆盖配对,1–5 / 6–30,1272,17,12,12,1231,0.9772012578616353,0.981132075471698,5,0.0039308176100628,0.5862068965517241,0.0096540627514078,,,
+pairout,单药原始覆盖配对,1–5 / >30,713,8,9,11,685,0.9733520336605892,0.9719495091164096,-1,-0.0014025245441795,0.4210526315789473,0.0129682997118155,,,
+pairout,单药原始覆盖配对,6–30 / 0,107,1,0,0,106,0.9906542056074766,1.0,1,0.0093457943925233,1.0,0.0,,,
+pairout,单药原始覆盖配对,6–30 / 1–5,1557,13,19,11,1514,0.9845857418111752,0.9807321772639692,-6,-0.0038535645472061,0.5416666666666666,0.0123939986953685,,,
+pairout,单药原始覆盖配对,6–30 / 6–30,5099,87,128,89,4795,0.9654834281231616,0.9574426358109434,-41,-0.008040792312218,0.4943181818181818,0.0260004062563477,,,
+pairout,单药原始覆盖配对,6–30 / >30,2843,56,79,67,2641,0.9567358424199788,0.9486457966936336,-23,-0.0080900457263454,0.4552845528455284,0.0290441176470588,,,
+pairout,单药原始覆盖配对,>30 / 0,60,0,3,0,57,1.0,0.95,-3,-0.05,,0.05,,,
+pairout,单药原始覆盖配对,>30 / 1–5,1063,14,19,18,1012,0.9698965192850424,0.9651928504233304,-5,-0.0047036688617121,0.4375,0.0184287099903006,,,
+pairout,单药原始覆盖配对,>30 / 6–30,3448,59,103,104,3182,0.9527262180974478,0.9399651972157772,-44,-0.0127610208816705,0.3619631901840491,0.0313546423135464,,,
+pairout,单药原始覆盖配对,>30 / >30,2122,47,61,75,1939,0.942507068803016,0.9359095193213948,-14,-0.0065975494816211,0.3852459016393442,0.0305,,,
+pairout,单药模型邻域覆盖A,0,181,0,4,4,173,0.9779005524861878,0.9558011049723756,-4,-0.0220994475138121,0.0,0.0225988700564971,,,
+pairout,单药模型邻域覆盖A,16–30,11281,211,308,284,10478,0.9561209112667316,0.9475223827674852,-97,-0.0085985284992465,0.4262626262626263,0.0285555349527164,,,
+pairout,单药模型邻域覆盖A,1–5,2459,33,26,26,2374,0.9760065067100449,0.9788531923546157,7,0.0028466856445709,0.559322033898305,0.0108333333333333,,,
+pairout,单药模型邻域覆盖A,6–15,5018,66,104,80,4768,0.9709047429254684,0.963332004782782,-38,-0.0075727381426863,0.4520547945205479,0.0213464696223316,,,
+pairout,单药模型邻域覆盖B,0,197,1,3,1,192,0.9898477157360406,0.9796954314720812,-2,-0.0101522842639593,0.5,0.0153846153846153,,,
+pairout,单药模型邻域覆盖B,16–30,10252,200,287,260,9505,0.9551307062036676,0.9466445571595786,-87,-0.0084861490440889,0.4347826086956521,0.0293096405228758,,,
+pairout,单药模型邻域覆盖B,1–5,3102,35,44,32,2991,0.978401031592521,0.9754996776273372,-9,-0.0029013539651837,0.5223880597014925,0.014497528830313,,,
+pairout,单药模型邻域覆盖B,6–15,5388,74,108,101,5105,0.9675204157386784,0.9612100965107646,-34,-0.0063103192279138,0.4228571428571429,0.02071743717629,,,
+pairout,单药模型邻域覆盖配对,0 / 0,9,0,0,1,8,0.8888888888888888,0.8888888888888888,0,0.0,0.0,0.0,,,
+pairout,单药模型邻域覆盖配对,0 / 16–30,90,0,3,0,87,1.0,0.9666666666666668,-3,-0.0333333333333333,,0.0333333333333333,,,
+pairout,单药模型邻域覆盖配对,0 / 1–5,29,0,1,0,28,1.0,0.9655172413793104,-1,-0.0344827586206896,,0.0344827586206896,,,
+pairout,单药模型邻域覆盖配对,0 / 6–15,53,0,0,3,50,0.9433962264150944,0.9433962264150944,0,0.0,0.0,0.0,,,
+pairout,单药模型邻域覆盖配对,16–30 / 0,117,1,3,0,113,0.9914529914529916,0.9743589743589745,-2,-0.017094017094017,1.0,0.0258620689655172,,,
+pairout,单药模型邻域覆盖配对,16–30 / 16–30,6249,148,199,191,5711,0.9457513202112338,0.9375900144023044,-51,-0.0081613058089294,0.4365781710914454,0.0336717428087986,,,
+pairout,单药模型邻域覆盖配对,16–30 / 1–5,1751,21,28,21,1681,0.9760137064534552,0.9720159908623645,-7,-0.0039977155910908,0.5,0.0163838502047981,,,
+pairout,单药模型邻域覆盖配对,16–30 / 6–15,3164,41,78,72,2973,0.9642857142857144,0.9525916561314792,-37,-0.0116940581542351,0.3628318584070796,0.0255653883972468,,,
+pairout,单药模型邻域覆盖配对,1–5 / 0,21,0,0,0,21,1.0,1.0,0,0.0,,0.0,,,
+pairout,单药模型邻域覆盖配对,1–5 / 16–30,1286,17,16,18,1235,0.9727838258164851,0.973561430793157,1,0.0007776049766718,0.4857142857142857,0.0127897681854516,,,
+pairout,单药模型邻域覆盖配对,1–5 / 1–5,453,8,5,3,437,0.9757174392935982,0.9823399558498896,3,0.0066225165562913,0.7272727272727273,0.0113122171945701,,,
+pairout,单药模型邻域覆盖配对,1–5 / 6–15,699,8,5,5,681,0.9814020028612304,0.9856938483547926,3,0.0042918454935622,0.6153846153846154,0.0072886297376093,,,
+pairout,单药模型邻域覆盖配对,6–15 / 0,50,0,0,0,50,1.0,1.0,0,0.0,,0.0,,,
+pairout,单药模型邻域覆盖配对,6–15 / 16–30,2627,35,69,51,2472,0.9672630376855728,0.9543205177007994,-34,-0.0129425199847735,0.4069767441860465,0.0271546635182998,,,
+pairout,单药模型邻域覆盖配对,6–15 / 1–5,869,6,10,8,845,0.9838895281933256,0.9792865362485615,-4,-0.004602991944764,0.4285714285714285,0.0116959064327485,,,
+pairout,单药模型邻域覆盖配对,6–15 / 6–15,1472,25,25,21,1401,0.96875,0.96875,0,0.0,0.5434782608695652,0.017531556802244,,,
+pairout,路径是否存在,双向存在,18881,310,441,393,17737,0.9627668026057942,0.9558286107727344,-131,-0.0069381918330596,0.4409672830725462,0.0242600946198701,,,
+pairout,路径是否存在,双向缺失,58,0,1,1,56,0.9827586206896552,0.9655172413793104,-1,-0.0172413793103448,0.0,0.0175438596491228,,,
+pairout,路径长度A→B,2,15975,284,408,380,14903,0.958435054773083,0.9506729264475744,-124,-0.0077621283255086,0.4277108433734939,0.0266475083273463,,,
+pairout,路径长度A→B,3,1365,12,16,6,1331,0.9868131868131867,0.9838827838827838,-4,-0.0029304029304029,0.6666666666666666,0.0118782479584261,,,
+pairout,路径长度A→B,4,1541,14,17,7,1503,0.9863724853990916,0.9844256975989616,-3,-0.0019467878001297,0.6666666666666666,0.0111842105263157,,,
+pairout,路径长度A→B,无连接路径,58,0,1,1,56,0.9827586206896552,0.9655172413793104,-1,-0.0172413793103448,0.0,0.0175438596491228,,,
+pairout,路径长度B→A,2,15975,284,408,380,14903,0.958435054773083,0.9506729264475744,-124,-0.0077621283255086,0.4277108433734939,0.0266475083273463,,,
+pairout,路径长度B→A,3,1365,12,16,6,1331,0.9868131868131867,0.9838827838827838,-4,-0.0029304029304029,0.6666666666666666,0.0118782479584261,,,
+pairout,路径长度B→A,4,1541,14,17,7,1503,0.9863724853990916,0.9844256975989616,-3,-0.0019467878001297,0.6666666666666666,0.0111842105263157,,,
+pairout,路径长度B→A,无连接路径,58,0,1,1,56,0.9827586206896552,0.9655172413793104,-1,-0.0172413793103448,0.0,0.0175438596491228,,,
+cellout,真实事件,0,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,0.0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37.0
+cellout,真实事件,1,47,0,0,0,47,1.0,1.0,0,0.0,,0.0,1.0,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,372.0
+cellout,真实事件,2,2,0,0,1,1,0.5,0.5,0,0.0,0.0,0.0,2.0,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,7.0
+cellout,真实事件,3,3469,73,86,43,3267,0.9665609685788412,0.9628134909195734,-13,-0.0037474776592678,0.6293103448275862,0.0256486728303012,3.0,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,27258.0
+cellout,真实事件,4,418,27,5,13,373,0.9043062200956936,0.9569377990430622,22,0.0526315789473684,0.675,0.0132275132275132,4.0,The metabolism of {drug_B} can be increased when combined with {drug_A}.,4005.0
+cellout,真实事件,5,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,5.0,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,7.0
+cellout,真实事件,6,3,0,0,0,3,1.0,1.0,0,0.0,,0.0,6.0,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,22.0
+cellout,真实事件,7,47,3,9,1,34,0.9148936170212766,0.7872340425531915,-6,-0.1276595744680851,0.75,0.2093023255813953,7.0,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,344.0
+cellout,真实事件,8,6098,67,80,71,5880,0.977369629386684,0.9752377828796328,-13,-0.0021318465070514,0.4855072463768116,0.0134228187919463,8.0,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,48226.0
+cellout,真实事件,9,12,1,0,0,11,0.9166666666666666,1.0,1,0.0833333333333333,1.0,0.0,9.0,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,100.0
+cellout,真实事件,10,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,10.0,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20.0
+cellout,真实事件,12,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,12.0,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,11.0
+cellout,真实事件,13,4,0,1,1,2,0.75,0.5,-1,-0.25,0.0,0.3333333333333333,13.0,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,21.0
+cellout,真实事件,14,52,0,3,5,44,0.903846153846154,0.8461538461538461,-3,-0.0576923076923076,0.0,0.0638297872340425,14.0,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,427.0
+cellout,真实事件,15,26,1,6,4,15,0.8076923076923077,0.6153846153846154,-5,-0.1923076923076923,0.2,0.2857142857142857,15.0,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,242.0
+cellout,真实事件,16,907,22,46,43,796,0.928335170893054,0.9018743109151048,-24,-0.0264608599779492,0.3384615384615385,0.0546318289786223,16.0,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7310.0
+cellout,真实事件,17,2324,61,110,71,2082,0.9432013769363168,0.9221170395869192,-49,-0.0210843373493975,0.4621212121212121,0.0501824817518248,17.0,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,18836.0
+cellout,真实事件,18,752,14,18,15,705,0.961436170212766,0.9561170212765956,-4,-0.0053191489361702,0.4827586206896552,0.0248962655601659,18.0,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,6096.0
+cellout,真实事件,19,27,0,0,0,27,1.0,1.0,0,0.0,,0.0,19.0,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,182.0
+cellout,真实事件,20,69,0,2,1,66,0.9855072463768116,0.9565217391304348,-2,-0.0289855072463768,0.0,0.0294117647058823,20.0,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,677.0
+cellout,真实事件,21,12,0,2,0,10,1.0,0.8333333333333334,-2,-0.1666666666666666,,0.1666666666666666,21.0,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,57.0
+cellout,真实事件,22,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,22.0,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,29.0
+cellout,真实事件,23,2,0,1,0,1,1.0,0.5,-1,-0.5,,0.5,23.0,{drug_A} may decrease the analgesic activities of {drug_B}.,7.0
+cellout,真实事件,24,28,0,3,1,24,0.9642857142857144,0.8571428571428571,-3,-0.1071428571428571,0.0,0.1111111111111111,24.0,{drug_A} may decrease the anticoagulant activities of {drug_B}.,191.0
+cellout,真实事件,25,304,2,4,0,298,0.993421052631579,0.986842105263158,-2,-0.006578947368421,1.0,0.0132450331125827,25.0,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2429.0
+cellout,真实事件,27,38,0,1,1,36,0.9736842105263158,0.9473684210526316,-1,-0.0263157894736842,0.0,0.027027027027027,27.0,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,286.0
+cellout,真实事件,28,97,1,0,0,96,0.9896907216494846,1.0,1,0.0103092783505154,1.0,0.0,28.0,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,809.0
+cellout,真实事件,29,32,0,0,0,32,1.0,1.0,0,0.0,,0.0,29.0,{drug_A} may decrease the diuretic activities of {drug_B}.,254.0
+cellout,真实事件,30,181,1,2,2,176,0.9834254143646408,0.9779005524861878,-1,-0.005524861878453,0.3333333333333333,0.0112359550561797,30.0,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1425.0
+cellout,真实事件,31,7,0,0,0,7,1.0,1.0,0,0.0,,0.0,31.0,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,69.0
+cellout,真实事件,32,49,0,1,0,48,1.0,0.979591836734694,-1,-0.0204081632653061,,0.0204081632653061,32.0,{drug_A} may decrease the sedative activities of {drug_B}.,438.0
+cellout,真实事件,33,47,0,1,0,46,1.0,0.9787234042553192,-1,-0.0212765957446808,,0.0212765957446808,33.0,{drug_A} may decrease the stimulatory activities of {drug_B}.,411.0
+cellout,真实事件,34,30,1,0,1,28,0.9333333333333332,0.9666666666666668,1,0.0333333333333333,0.5,0.0,34.0,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,249.0
+cellout,真实事件,35,626,17,14,17,578,0.9456869009584664,0.950479233226837,3,0.0047923322683706,0.5,0.0236486486486486,35.0,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4766.0
+cellout,真实事件,36,8,0,0,0,8,1.0,1.0,0,0.0,,0.0,36.0,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,77.0
+cellout,真实事件,37,21,0,0,0,21,1.0,1.0,0,0.0,,0.0,37.0,{drug_A} may increase the analgesic activities of {drug_B}.,224.0
+cellout,真实事件,38,30,1,0,0,29,0.9666666666666668,1.0,1,0.0333333333333333,1.0,0.0,38.0,{drug_A} may increase the anticholinergic activities of {drug_B}.,248.0
+cellout,真实事件,39,308,2,9,4,293,0.9805194805194806,0.9577922077922078,-7,-0.0227272727272727,0.3333333333333333,0.0298013245033112,39.0,{drug_A} may increase the anticoagulant activities of {drug_B}.,2497.0
+cellout,真实事件,40,72,0,0,2,70,0.9722222222222222,0.9722222222222222,0,0.0,0.0,0.0,40.0,{drug_A} may increase the antihypertensive activities of {drug_B}.,486.0
+cellout,真实事件,41,41,1,6,6,28,0.8292682926829268,0.7073170731707317,-5,-0.1219512195121951,0.1428571428571428,0.1764705882352941,41.0,{drug_A} may increase the antiplatelet activities of {drug_B}.,253.0
+cellout,真实事件,42,11,0,0,0,11,1.0,1.0,0,0.0,,0.0,42.0,{drug_A} may increase the antipsychotic activities of {drug_B}.,77.0
+cellout,真实事件,43,30,2,1,5,22,0.7666666666666667,0.8,1,0.0333333333333333,0.2857142857142857,0.0434782608695652,43.0,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,280.0
+cellout,真实事件,44,67,0,0,1,66,0.9850746268656716,0.9850746268656716,0,0.0,0.0,0.0,44.0,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,571.0
+cellout,真实事件,45,106,3,6,4,93,0.9339622641509434,0.9056603773584906,-3,-0.0283018867924528,0.4285714285714285,0.0606060606060606,45.0,{drug_A} may increase the bradycardic activities of {drug_B}.,1013.0
+cellout,真实事件,46,3,0,0,0,3,1.0,1.0,0,0.0,,0.0,46.0,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,20.0
+cellout,真实事件,47,15,0,0,1,14,0.9333333333333332,0.9333333333333332,0,0.0,0.0,0.0,47.0,{drug_A} may increase the cardiotoxic activities of {drug_B}.,163.0
+cellout,真实事件,48,524,1,11,2,510,0.9942748091603052,0.9751908396946564,-10,-0.0190839694656488,0.3333333333333333,0.0211132437619961,48.0,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4331.0
+cellout,真实事件,49,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,49.0,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,25.0
+cellout,真实事件,50,3,0,1,0,2,1.0,0.6666666666666666,-1,-0.3333333333333333,,0.3333333333333333,50.0,{drug_A} may increase the central neurotoxic activities of {drug_B}.,10.0
+cellout,真实事件,51,9,0,0,0,9,1.0,1.0,0,0.0,,0.0,51.0,{drug_A} may increase the constipating activities of {drug_B}.,115.0
+cellout,真实事件,52,3,0,0,2,1,0.3333333333333333,0.3333333333333333,0,0.0,0.0,0.0,52.0,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,8.0
+cellout,真实事件,53,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,53.0,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,23.0
+cellout,真实事件,54,56,0,0,0,56,1.0,1.0,0,0.0,,0.0,54.0,{drug_A} may increase the fluid retaining activities of {drug_B}.,324.0
+cellout,真实事件,55,5,0,0,2,3,0.6,0.6,0,0.0,0.0,0.0,55.0,{drug_A} may increase the hepatotoxic activities of {drug_B}.,40.0
+cellout,真实事件,56,8,0,0,0,8,1.0,1.0,0,0.0,,0.0,56.0,{drug_A} may increase the hypercalcemic activities of {drug_B}.,64.0
+cellout,真实事件,57,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,57.0,{drug_A} may increase the hyperglycemic activities of {drug_B}.,22.0
+cellout,真实事件,58,26,2,0,1,23,0.8846153846153846,0.9615384615384616,2,0.0769230769230769,0.6666666666666666,0.0,58.0,{drug_A} may increase the hyperkalemic activities of {drug_B}.,219.0
+cellout,真实事件,59,60,0,2,2,56,0.9666666666666668,0.9333333333333332,-2,-0.0333333333333333,0.0,0.0344827586206896,59.0,{drug_A} may increase the hypertensive activities of {drug_B}.,530.0
+cellout,真实事件,60,16,0,0,0,16,1.0,1.0,0,0.0,,0.0,60.0,{drug_A} may increase the hypocalcemic activities of {drug_B}.,147.0
+cellout,真实事件,61,222,1,4,3,214,0.981981981981982,0.9684684684684683,-3,-0.0135135135135135,0.25,0.018348623853211,61.0,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1659.0
+cellout,真实事件,62,118,0,0,0,118,1.0,1.0,0,0.0,,0.0,62.0,{drug_A} may increase the hypokalemic activities of {drug_B}.,979.0
+cellout,真实事件,63,10,0,0,0,10,1.0,1.0,0,0.0,,0.0,63.0,{drug_A} may increase the hyponatremic activities of {drug_B}.,96.0
+cellout,真实事件,64,834,12,24,8,790,0.9760191846522782,0.9616306954436452,-12,-0.014388489208633,0.6,0.0294840294840294,64.0,{drug_A} may increase the hypotensive activities of {drug_B}.,6603.0
+cellout,真实事件,66,30,0,0,0,30,1.0,1.0,0,0.0,,0.0,66.0,{drug_A} may increase the immunosuppressive activities of {drug_B}.,247.0
+cellout,真实事件,67,3,0,0,1,2,0.6666666666666666,0.6666666666666666,0,0.0,0.0,0.0,67.0,{drug_A} may increase the myelosuppressive activities of {drug_B}.,27.0
+cellout,真实事件,68,7,0,0,1,6,0.8571428571428571,0.8571428571428571,0,0.0,0.0,0.0,68.0,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,55.0
+cellout,真实事件,69,59,0,0,0,59,1.0,1.0,0,0.0,,0.0,69.0,{drug_A} may increase the nephrotoxic activities of {drug_B}.,544.0
+cellout,真实事件,70,96,0,1,0,95,1.0,0.9895833333333334,-1,-0.0104166666666666,,0.0104166666666666,70.0,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,731.0
+cellout,真实事件,71,44,0,1,0,43,1.0,0.9772727272727272,-1,-0.0227272727272727,,0.0227272727272727,71.0,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,297.0
+cellout,真实事件,72,7,0,0,1,6,0.8571428571428571,0.8571428571428571,0,0.0,0.0,0.0,72.0,{drug_A} may increase the neurotoxic activities of {drug_B}.,54.0
+cellout,真实事件,73,54,0,4,2,48,0.9629629629629628,0.8888888888888888,-4,-0.074074074074074,0.0,0.0769230769230769,73.0,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,500.0
+cellout,真实事件,74,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,74.0,{drug_A} may increase the ototoxic activities of {drug_B}.,17.0
+cellout,真实事件,75,26,0,0,0,26,1.0,1.0,0,0.0,,0.0,75.0,{drug_A} may increase the respiratory depressant activities of {drug_B}.,220.0
+cellout,真实事件,76,109,0,0,1,108,0.9908256880733946,0.9908256880733946,0,0.0,0.0,0.0,76.0,{drug_A} may increase the sedative activities of {drug_B}.,805.0
+cellout,真实事件,77,94,1,1,1,91,0.9787234042553192,0.9787234042553192,0,0.0,0.5,0.0108695652173913,77.0,{drug_A} may increase the serotonergic activities of {drug_B}.,627.0
+cellout,真实事件,78,8,0,0,0,8,1.0,1.0,0,0.0,,0.0,78.0,{drug_A} may increase the stimulatory activities of {drug_B}.,42.0
+cellout,真实事件,79,34,1,0,0,33,0.9705882352941176,1.0,1,0.0294117647058823,1.0,0.0,79.0,{drug_A} may increase the tachycardic activities of {drug_B}.,297.0
+cellout,真实事件,80,9,0,0,0,9,1.0,1.0,0,0.0,,0.0,80.0,{drug_A} may increase the thrombogenic activities of {drug_B}.,92.0
+cellout,真实事件,81,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,81.0,{drug_A} may increase the ulcerogenic activities of {drug_B}.,34.0
+cellout,真实事件,82,14,0,0,0,14,1.0,1.0,0,0.0,,0.0,82.0,{drug_A} may increase the vasoconstricting activities of {drug_B}.,91.0
+cellout,真实事件,83,3,0,1,0,2,1.0,0.6666666666666666,-1,-0.3333333333333333,,0.3333333333333333,83.0,{drug_A} may increase the vasodilatory activities of {drug_B}.,24.0
+cellout,真实事件,84,4,0,0,0,4,1.0,1.0,0,0.0,,0.0,84.0,{drug_A} may increase the vasopressor activities of {drug_B}.,57.0
+cellout,训练支持,100–999,1708,15,42,36,1615,0.9701405152224823,0.9543325526932084,-27,-0.015807962529274,0.2941176470588235,0.0253470126735063,,,
+cellout,训练支持,10–99,150,0,5,6,139,0.96,0.9266666666666666,-5,-0.0333333333333333,0.0,0.0347222222222222,,,
+cellout,训练支持,1–9,8,0,1,3,4,0.625,0.5,-1,-0.125,0.0,0.2,,,
+cellout,训练支持,≥1000,17073,303,419,296,16055,0.9649153634393488,0.9581210097815264,-116,-0.0067943536578222,0.5058430717863105,0.0254340172392861,,,
+cellout,单药背景是否存在,仅A侧NAI有背景,188,3,4,0,181,0.9840425531914894,0.9787234042553192,-1,-0.0053191489361702,1.0,0.0216216216216216,,,
+cellout,单药背景是否存在,仅B侧NAI有背景,172,0,2,2,168,0.9883720930232558,0.9767441860465116,-2,-0.0116279069767441,0.0,0.0117647058823529,,,
+cellout,单药背景是否存在,双侧NAI无背景,9,0,1,0,8,1.0,0.8888888888888888,-1,-0.1111111111111111,,0.1111111111111111,,,
+cellout,单药背景是否存在,双侧NAI有背景,18570,315,460,339,17456,0.9647819063004848,0.9569736133548734,-145,-0.0078082929456112,0.481651376146789,0.0256753739674034,,,
+cellout,单药原始关系覆盖A,0,181,0,3,2,176,0.988950276243094,0.9723756906077348,-3,-0.0165745856353591,0.0,0.0167597765363128,,,
+cellout,单药原始关系覆盖A,1–5,2459,27,31,22,2379,0.9800732004880032,0.97844652297682,-4,-0.0016266775111834,0.5510204081632653,0.012863070539419,,,
+cellout,单药原始关系覆盖A,6–30,9606,139,225,160,9082,0.968873620653758,0.9599208827815948,-86,-0.0089527378721632,0.4648829431438127,0.0241753518856774,,,
+cellout,单药原始关系覆盖A,>30,6693,152,208,157,6176,0.9538323621694308,0.9454654116240848,-56,-0.0083669505453458,0.4919093851132686,0.0325814536340852,,,
+cellout,单药原始关系覆盖B,0,197,3,5,0,189,0.9847715736040608,0.9746192893401016,-2,-0.0101522842639593,1.0,0.0257731958762886,,,
+cellout,单药原始关系覆盖B,1–5,3102,24,54,31,2993,0.9822695035460992,0.9725983236621536,-30,-0.0096711798839458,0.4363636363636363,0.0177223498523137,,,
+cellout,单药原始关系覆盖B,6–30,9912,168,249,182,9313,0.9646892655367232,0.9565173527037932,-81,-0.0081719128329297,0.48,0.0260405772850868,,,
+cellout,单药原始关系覆盖B,>30,5728,123,159,128,5318,0.9561801675977654,0.949895251396648,-36,-0.0062849162011173,0.4900398406374502,0.0290304911447872,,,
+cellout,单药原始覆盖配对,0 / 0,9,0,1,0,8,1.0,0.8888888888888888,-1,-0.1111111111111111,,0.1111111111111111,,,
+cellout,单药原始覆盖配对,0 / 1–5,29,0,0,0,29,1.0,1.0,0,0.0,,0.0,,,
+cellout,单药原始覆盖配对,0 / 6–30,93,0,2,2,89,0.978494623655914,0.956989247311828,-2,-0.021505376344086,0.0,0.0219780219780219,,,
+cellout,单药原始覆盖配对,0 / >30,50,0,0,0,50,1.0,1.0,0,0.0,,0.0,,,
+cellout,单药原始覆盖配对,1–5 / 0,21,0,0,0,21,1.0,1.0,0,0.0,,0.0,,,
+cellout,单药原始覆盖配对,1–5 / 1–5,453,5,3,4,441,0.9801324503311258,0.9845474613686536,2,0.0044150110375275,0.5555555555555556,0.0067567567567567,,,
+cellout,单药原始覆盖配对,1–5 / 6–30,1272,12,18,12,1230,0.981132075471698,0.9764150943396226,-6,-0.0047169811320754,0.5,0.0144230769230769,,,
+cellout,单药原始覆盖配对,1–5 / >30,713,10,10,6,687,0.9775596072931276,0.9775596072931276,0,0.0,0.625,0.0143472022955523,,,
+cellout,单药原始覆盖配对,6–30 / 0,107,2,1,0,104,0.9813084112149532,0.9906542056074766,1,0.0093457943925233,1.0,0.0095238095238095,,,
+cellout,单药原始覆盖配对,6–30 / 1–5,1557,5,30,11,1511,0.989723827874117,0.9736673089274244,-25,-0.0160565189466923,0.3125,0.0194678780012978,,,
+cellout,单药原始覆盖配对,6–30 / 6–30,5099,80,105,86,4828,0.9674445969798,0.9625416748382036,-25,-0.0049029221415963,0.4819277108433735,0.0212852219744577,,,
+cellout,单药原始覆盖配对,6–30 / >30,2843,52,89,63,2639,0.9595497713682728,0.946535349982413,-37,-0.01301442138586,0.4521739130434782,0.032624633431085,,,
+cellout,单药原始覆盖配对,>30 / 0,60,1,3,0,56,0.9833333333333332,0.95,-2,-0.0333333333333333,1.0,0.0508474576271186,,,
+cellout,单药原始覆盖配对,>30 / 1–5,1063,14,21,16,1012,0.9717779868297272,0.9651928504233304,-7,-0.0065851364063969,0.4666666666666667,0.0203291384317521,,,
+cellout,单药原始覆盖配对,>30 / 6–30,3448,76,124,82,3166,0.9541763341067284,0.9402552204176334,-48,-0.0139211136890951,0.4810126582278481,0.0376899696048632,,,
+cellout,单药原始覆盖配对,>30 / >30,2122,61,60,59,1942,0.943449575871819,0.9439208294062206,1,0.0004712535344015,0.5083333333333333,0.0299700299700299,,,
+cellout,单药模型邻域覆盖A,0,181,0,3,2,176,0.988950276243094,0.9723756906077348,-3,-0.0165745856353591,0.0,0.0167597765363128,,,
+cellout,单药模型邻域覆盖A,16–30,11281,238,337,242,10464,0.9574505806222852,0.9486747628756316,-99,-0.0087758177466536,0.4958333333333333,0.0312008147393759,,,
+cellout,单药模型邻域覆盖A,1–5,2459,27,31,22,2379,0.9800732004880032,0.97844652297682,-4,-0.0016266775111834,0.5510204081632653,0.012863070539419,,,
+cellout,单药模型邻域覆盖A,6–15,5018,53,96,75,4794,0.9744918294141092,0.9659226783579116,-43,-0.0085691510561976,0.4140625,0.0196319018404908,,,
+cellout,单药模型邻域覆盖B,0,197,3,5,0,189,0.9847715736040608,0.9746192893401016,-2,-0.0101522842639593,1.0,0.0257731958762886,,,
+cellout,单药模型邻域覆盖B,16–30,10252,206,292,228,9526,0.9576667967225908,0.9492781896215372,-86,-0.0083886071010534,0.4746543778801843,0.0297412915053982,,,
+cellout,单药模型邻域覆盖B,1–5,3102,24,54,31,2993,0.9822695035460992,0.9725983236621536,-30,-0.0096711798839458,0.4363636363636363,0.0177223498523137,,,
+cellout,单药模型邻域覆盖B,6–15,5388,85,116,82,5105,0.9690051967334818,0.9632516703786193,-31,-0.0057535263548626,0.5089820359281437,0.0222179659069143,,,
+cellout,单药模型邻域覆盖配对,0 / 0,9,0,1,0,8,1.0,0.8888888888888888,-1,-0.1111111111111111,,0.1111111111111111,,,
+cellout,单药模型邻域覆盖配对,0 / 16–30,90,0,1,0,89,1.0,0.9888888888888888,-1,-0.0111111111111111,,0.0111111111111111,,,
+cellout,单药模型邻域覆盖配对,0 / 1–5,29,0,0,0,29,1.0,1.0,0,0.0,,0.0,,,
+cellout,单药模型邻域覆盖配对,0 / 6–15,53,0,1,2,50,0.9622641509433962,0.9433962264150944,-1,-0.0188679245283018,0.0,0.0196078431372549,,,
+cellout,单药模型邻域覆盖配对,16–30 / 0,117,3,3,0,111,0.9743589743589745,0.9743589743589745,0,0.0,1.0,0.0263157894736842,,,
+cellout,单药模型邻域覆盖配对,16–30 / 16–30,6249,155,218,163,5713,0.9491118578972636,0.9390302448391744,-63,-0.0100816130580892,0.4874213836477987,0.0367560276513235,,,
+cellout,单药模型邻域覆盖配对,16–30 / 1–5,1751,16,32,23,1680,0.9777270131353512,0.9685893774985722,-16,-0.0091376356367789,0.4102564102564102,0.0186915887850467,,,
+cellout,单药模型邻域覆盖配对,16–30 / 6–15,3164,64,84,56,2960,0.9620733249051832,0.9557522123893806,-20,-0.0063211125158027,0.5333333333333333,0.0275952693823915,,,
+cellout,单药模型邻域覆盖配对,1–5 / 0,21,0,0,0,21,1.0,1.0,0,0.0,,0.0,,,
+cellout,单药模型邻域覆盖配对,1–5 / 16–30,1286,16,17,14,1239,0.9766718506998444,0.9758942457231726,-1,-0.0007776049766718,0.5333333333333333,0.0135350318471337,,,
+cellout,单药模型邻域覆盖配对,1–5 / 1–5,453,5,3,4,441,0.9801324503311258,0.9845474613686536,2,0.0044150110375275,0.5555555555555556,0.0067567567567567,,,
+cellout,单药模型邻域覆盖配对,1–5 / 6–15,699,6,11,4,678,0.9856938483547926,0.9785407725321889,-5,-0.0071530758226037,0.6,0.0159651669085631,,,
+cellout,单药模型邻域覆盖配对,6–15 / 0,50,0,1,0,49,1.0,0.98,-1,-0.02,,0.02,,,
+cellout,单药模型邻域覆盖配对,6–15 / 16–30,2627,35,56,51,2485,0.9672630376855728,0.9592691282832128,-21,-0.0079939094023601,0.4069767441860465,0.0220385674931129,,,
+cellout,单药模型邻域覆盖配对,6–15 / 1–5,869,3,19,4,843,0.9919447640966628,0.9735327963176064,-16,-0.0184119677790563,0.4285714285714285,0.0220417633410672,,,
+cellout,单药模型邻域覆盖配对,6–15 / 6–15,1472,15,20,20,1417,0.9762228260869564,0.9728260869565216,-5,-0.0033967391304347,0.4285714285714285,0.0139178844815588,,,
+cellout,路径是否存在,双向存在,18881,318,465,341,17757,0.9650971876489592,0.9573115830729304,-147,-0.0077856045760288,0.4825493171471927,0.0255186038854132,,,
+cellout,路径是否存在,双向缺失,58,0,2,0,56,1.0,0.9655172413793104,-2,-0.0344827586206896,,0.0344827586206896,,,
+cellout,路径长度A→B,2,15975,292,431,332,14920,0.9609389671361502,0.9522378716744914,-139,-0.0087010954616588,0.4679487179487179,0.0280763468177968,,,
+cellout,路径长度A→B,3,1365,9,18,6,1332,0.989010989010989,0.9824175824175824,-9,-0.0065934065934065,0.6,0.0133333333333333,,,
+cellout,路径长度A→B,4,1541,17,16,3,1505,0.9870214146658014,0.9876703439325114,1,0.0006489292667099,0.85,0.0105193951347797,,,
+cellout,路径长度A→B,无连接路径,58,0,2,0,56,1.0,0.9655172413793104,-2,-0.0344827586206896,,0.0344827586206896,,,
+cellout,路径长度B→A,2,15975,292,431,332,14920,0.9609389671361502,0.9522378716744914,-139,-0.0087010954616588,0.4679487179487179,0.0280763468177968,,,
+cellout,路径长度B→A,3,1365,9,18,6,1332,0.989010989010989,0.9824175824175824,-9,-0.0065934065934065,0.6,0.0133333333333333,,,
+cellout,路径长度B→A,4,1541,17,16,3,1505,0.9870214146658014,0.9876703439325114,1,0.0006489292667099,0.85,0.0105193951347797,,,
+cellout,路径长度B→A,无连接路径,58,0,2,0,56,1.0,0.9655172413793104,-2,-0.0344827586206896,,0.0344827586206896,,,
+single_drugout,真实事件,0,3,0,0,0,3,1.0,1.0,0,0.0,,0.0,0.0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37.0
+single_drugout,真实事件,1,10,0,0,0,10,1.0,1.0,0,0.0,,0.0,1.0,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,451.0
+single_drugout,真实事件,3,4281,251,639,812,2579,0.7516935295491708,0.6610604998832048,-388,-0.0906330296659659,0.2361241768579492,0.1985705407085146,3.0,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,25693.0
+single_drugout,真实事件,4,389,38,37,94,220,0.6606683804627249,0.6632390745501285,1,0.0025706940874035,0.2878787878787879,0.1439688715953307,4.0,The metabolism of {drug_B} can be increased when combined with {drug_A}.,3794.0
+single_drugout,真实事件,5,2,1,0,0,1,0.5,1.0,1,0.5,1.0,0.0,5.0,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,9.0
+single_drugout,真实事件,6,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,6.0,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,24.0
+single_drugout,真实事件,7,69,9,2,38,20,0.3188405797101449,0.4202898550724637,7,0.1014492753623188,0.1914893617021276,0.0909090909090909,7.0,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,346.0
+single_drugout,真实事件,8,5698,462,379,602,4255,0.8132678132678133,0.8278343278343279,83,0.0145665145665145,0.4342105263157895,0.0817867932671558,8.0,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,49295.0
+single_drugout,真实事件,9,13,0,0,2,11,0.8461538461538461,0.8461538461538461,0,0.0,0.0,0.0,9.0,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,109.0
+single_drugout,真实事件,10,5,0,2,0,3,1.0,0.6,-2,-0.4,,0.4,10.0,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20.0
+single_drugout,真实事件,13,2,0,1,0,1,1.0,0.5,-1,-0.5,,0.5,13.0,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,30.0
+single_drugout,真实事件,14,35,3,2,5,25,0.7714285714285715,0.8,1,0.0285714285714285,0.375,0.074074074074074,14.0,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,454.0
+single_drugout,真实事件,15,42,3,0,32,7,0.1666666666666666,0.238095238095238,3,0.0714285714285714,0.0857142857142857,0.0,15.0,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,194.0
+single_drugout,真实事件,16,882,108,35,194,545,0.6575963718820862,0.7403628117913832,73,0.082766439909297,0.3576158940397351,0.0603448275862069,16.0,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7154.0
+single_drugout,真实事件,17,3266,707,139,556,1864,0.6132884262094305,0.7872014696876913,568,0.1739130434782608,0.5597783056215361,0.0693959061407888,17.0,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,17471.0
+single_drugout,真实事件,18,1258,84,71,237,866,0.7448330683624801,0.7551669316375199,13,0.0103338632750397,0.2616822429906542,0.0757737459978655,18.0,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,5624.0
+single_drugout,真实事件,19,11,1,0,3,7,0.6363636363636364,0.7272727272727273,1,0.0909090909090909,0.25,0.0,19.0,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,222.0
+single_drugout,真实事件,20,22,5,6,1,10,0.7272727272727273,0.6818181818181818,-1,-0.0454545454545454,0.8333333333333334,0.375,20.0,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,765.0
+single_drugout,真实事件,21,3,1,0,2,0,0.0,0.3333333333333333,1,0.3333333333333333,0.3333333333333333,,21.0,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,69.0
+single_drugout,真实事件,24,37,12,0,10,15,0.4054054054054054,0.7297297297297297,12,0.3243243243243243,0.5454545454545454,0.0,24.0,{drug_A} may decrease the anticoagulant activities of {drug_B}.,185.0
+single_drugout,真实事件,25,363,11,15,51,286,0.8292011019283747,0.8181818181818182,-4,-0.0110192837465564,0.1774193548387097,0.0498338870431893,25.0,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2382.0
+single_drugout,真实事件,27,20,0,0,1,19,0.95,0.95,0,0.0,0.0,0.0,27.0,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,290.0
+single_drugout,真实事件,28,82,0,0,0,82,1.0,1.0,0,0.0,,0.0,28.0,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,634.0
+single_drugout,真实事件,29,94,2,0,68,24,0.2553191489361702,0.2765957446808511,2,0.0212765957446808,0.0285714285714285,0.0,29.0,{drug_A} may decrease the diuretic activities of {drug_B}.,201.0
+single_drugout,真实事件,30,281,4,35,3,239,0.9750889679715302,0.8647686832740213,-31,-0.1103202846975089,0.5714285714285714,0.1277372262773722,30.0,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1272.0
+single_drugout,真实事件,31,17,0,6,6,5,0.6470588235294118,0.2941176470588235,-6,-0.3529411764705882,0.0,0.5454545454545454,31.0,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,61.0
+single_drugout,真实事件,32,20,0,6,0,14,1.0,0.7,-6,-0.3,,0.3,32.0,{drug_A} may decrease the sedative activities of {drug_B}.,513.0
+single_drugout,真实事件,33,16,0,0,0,16,1.0,1.0,0,0.0,,0.0,33.0,{drug_A} may decrease the stimulatory activities of {drug_B}.,452.0
+single_drugout,真实事件,34,9,2,0,6,1,0.1111111111111111,0.3333333333333333,2,0.2222222222222222,0.25,0.0,34.0,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,295.0
+single_drugout,真实事件,35,806,173,43,340,250,0.3635235732009925,0.5248138957816377,130,0.1612903225806451,0.3372319688109161,0.1467576791808873,35.0,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4432.0
+single_drugout,真实事件,36,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,36.0,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,90.0
+single_drugout,真实事件,38,15,0,5,0,10,1.0,0.6666666666666666,-5,-0.3333333333333333,,0.3333333333333333,38.0,{drug_A} may increase the anticholinergic activities of {drug_B}.,254.0
+single_drugout,真实事件,39,493,86,36,116,255,0.59026369168357,0.691683569979716,50,0.101419878296146,0.4257425742574257,0.1237113402061855,39.0,{drug_A} may increase the anticoagulant activities of {drug_B}.,2496.0
+single_drugout,真实事件,40,41,0,2,0,39,1.0,0.951219512195122,-2,-0.048780487804878,,0.048780487804878,40.0,{drug_A} may increase the antihypertensive activities of {drug_B}.,571.0
+single_drugout,真实事件,41,48,5,3,30,10,0.2708333333333333,0.3125,2,0.0416666666666666,0.1428571428571428,0.2307692307692307,41.0,{drug_A} may increase the antiplatelet activities of {drug_B}.,279.0
+single_drugout,真实事件,42,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,42.0,{drug_A} may increase the antipsychotic activities of {drug_B}.,45.0
+single_drugout,真实事件,43,13,0,1,3,9,0.7692307692307693,0.6923076923076923,-1,-0.0769230769230769,0.0,0.1,43.0,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,256.0
+single_drugout,真实事件,44,26,1,0,0,25,0.9615384615384616,1.0,1,0.0384615384615384,1.0,0.0,44.0,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,589.0
+single_drugout,真实事件,45,76,3,1,14,58,0.7763157894736842,0.8026315789473685,2,0.0263157894736842,0.1764705882352941,0.0169491525423728,45.0,{drug_A} may increase the bradycardic activities of {drug_B}.,1061.0
+single_drugout,真实事件,46,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,46.0,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,24.0
+single_drugout,真实事件,48,393,15,20,235,123,0.3638676844783715,0.3511450381679389,-5,-0.0127226463104325,0.06,0.1398601398601398,48.0,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4526.0
+single_drugout,真实事件,51,6,0,0,0,6,1.0,1.0,0,0.0,,0.0,51.0,{drug_A} may increase the constipating activities of {drug_B}.,138.0
+single_drugout,真实事件,52,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,52.0,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,9.0
+single_drugout,真实事件,53,1,0,0,1,0,0.0,0.0,0,0.0,0.0,,53.0,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,31.0
+single_drugout,真实事件,54,52,1,0,0,51,0.9807692307692308,1.0,1,0.0192307692307692,1.0,0.0,54.0,{drug_A} may increase the fluid retaining activities of {drug_B}.,314.0
+single_drugout,真实事件,55,2,1,0,1,0,0.0,0.5,1,0.5,0.5,,55.0,{drug_A} may increase the hepatotoxic activities of {drug_B}.,36.0
+single_drugout,真实事件,56,6,0,0,0,6,1.0,1.0,0,0.0,,0.0,56.0,{drug_A} may increase the hypercalcemic activities of {drug_B}.,65.0
+single_drugout,真实事件,58,8,1,0,0,7,0.875,1.0,1,0.125,1.0,0.0,58.0,{drug_A} may increase the hyperkalemic activities of {drug_B}.,259.0
+single_drugout,真实事件,59,22,2,1,17,2,0.1363636363636363,0.1818181818181818,1,0.0454545454545454,0.1052631578947368,0.3333333333333333,59.0,{drug_A} may increase the hypertensive activities of {drug_B}.,643.0
+single_drugout,真实事件,60,18,0,0,0,18,1.0,1.0,0,0.0,,0.0,60.0,{drug_A} may increase the hypocalcemic activities of {drug_B}.,144.0
+single_drugout,真实事件,61,469,92,58,38,281,0.7228144989339019,0.7953091684434968,34,0.0724946695095948,0.7076923076923077,0.1710914454277286,61.0,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1359.0
+single_drugout,真实事件,62,159,5,0,0,154,0.9685534591194968,1.0,5,0.0314465408805031,1.0,0.0,62.0,{drug_A} may increase the hypokalemic activities of {drug_B}.,1026.0
+single_drugout,真实事件,63,10,0,0,0,10,1.0,1.0,0,0.0,,0.0,63.0,{drug_A} may increase the hyponatremic activities of {drug_B}.,97.0
+single_drugout,真实事件,64,757,58,44,63,592,0.8401585204755614,0.8586525759577279,14,0.0184940554821664,0.4793388429752066,0.0691823899371069,64.0,{drug_A} may increase the hypotensive activities of {drug_B}.,7137.0
+single_drugout,真实事件,66,22,0,0,0,22,1.0,1.0,0,0.0,,0.0,66.0,{drug_A} may increase the immunosuppressive activities of {drug_B}.,164.0
+single_drugout,真实事件,67,8,1,1,6,0,0.125,0.125,0,0.0,0.1428571428571428,1.0,67.0,{drug_A} may increase the myelosuppressive activities of {drug_B}.,20.0
+single_drugout,真实事件,68,13,2,5,6,0,0.3846153846153846,0.1538461538461538,-3,-0.2307692307692307,0.25,1.0,68.0,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,47.0
+single_drugout,真实事件,69,50,0,3,2,45,0.96,0.9,-3,-0.06,0.0,0.0625,69.0,{drug_A} may increase the nephrotoxic activities of {drug_B}.,438.0
+single_drugout,真实事件,70,89,1,1,8,79,0.898876404494382,0.898876404494382,0,0.0,0.1111111111111111,0.0125,70.0,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,715.0
+single_drugout,真实事件,71,28,0,0,0,28,1.0,1.0,0,0.0,,0.0,71.0,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,356.0
+single_drugout,真实事件,72,3,0,0,1,2,0.6666666666666666,0.6666666666666666,0,0.0,0.0,0.0,72.0,{drug_A} may increase the neurotoxic activities of {drug_B}.,60.0
+single_drugout,真实事件,73,27,0,2,3,22,0.8888888888888888,0.8148148148148148,-2,-0.074074074074074,0.0,0.0833333333333333,73.0,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,427.0
+single_drugout,真实事件,74,17,0,0,17,0,0.0,0.0,0,0.0,0.0,,74.0,{drug_A} may increase the ototoxic activities of {drug_B}.,0.0
+single_drugout,真实事件,75,42,0,1,0,41,1.0,0.9761904761904762,-1,-0.0238095238095238,,0.0238095238095238,75.0,{drug_A} may increase the respiratory depressant activities of {drug_B}.,208.0
+single_drugout,真实事件,76,35,4,5,3,23,0.8,0.7714285714285715,-1,-0.0285714285714285,0.5714285714285714,0.1785714285714285,76.0,{drug_A} may increase the sedative activities of {drug_B}.,931.0
+single_drugout,真实事件,77,52,4,3,28,17,0.3846153846153846,0.4038461538461538,1,0.0192307692307692,0.125,0.15,77.0,{drug_A} may increase the serotonergic activities of {drug_B}.,657.0
+single_drugout,真实事件,78,5,0,0,5,0,0.0,0.0,0,0.0,0.0,,78.0,{drug_A} may increase the stimulatory activities of {drug_B}.,51.0
+single_drugout,真实事件,79,10,2,0,2,6,0.6,0.8,2,0.2,0.5,0.0,79.0,{drug_A} may increase the tachycardic activities of {drug_B}.,311.0
+single_drugout,真实事件,80,13,1,1,0,11,0.9230769230769232,0.9230769230769232,0,0.0,1.0,0.0833333333333333,80.0,{drug_A} may increase the thrombogenic activities of {drug_B}.,80.0
+single_drugout,真实事件,81,3,0,0,0,3,1.0,1.0,0,0.0,,0.0,81.0,{drug_A} may increase the ulcerogenic activities of {drug_B}.,38.0
+single_drugout,真实事件,82,6,0,1,1,4,0.8333333333333334,0.6666666666666666,-1,-0.1666666666666666,0.0,0.2,82.0,{drug_A} may increase the vasoconstricting activities of {drug_B}.,95.0
+single_drugout,真实事件,84,5,3,1,1,0,0.2,0.6,2,0.4,0.75,1.0,84.0,{drug_A} may increase the vasopressor activities of {drug_B}.,55.0
+single_drugout,训练支持,0,17,0,0,17,0,0.0,0.0,0,0.0,0.0,,,,
+single_drugout,训练支持,100–999,1084,58,43,262,721,0.7047970479704797,0.7186346863468634,15,0.0138376383763837,0.18125,0.056282722513089,,,
+single_drugout,训练支持,10–99,110,9,18,30,53,0.6454545454545455,0.5636363636363636,-9,-0.0818181818181818,0.2307692307692307,0.2535211267605634,,,
+single_drugout,训练支持,1–9,3,1,0,0,2,0.6666666666666666,1.0,1,0.3333333333333333,1.0,0.0,,,
+single_drugout,训练支持,≥1000,19571,2097,1552,3355,12567,0.7214245567421185,0.7492718818660262,545,0.0278473251239078,0.3846294937637564,0.1099227990650896,,,
+single_drugout,单药背景是否存在,仅A侧NAI有背景,95,11,11,8,65,0.8,0.8,0,0.0,0.5789473684210527,0.1447368421052631,,,
+single_drugout,单药背景是否存在,仅B侧NAI有背景,86,7,4,10,65,0.8023255813953488,0.8372093023255814,3,0.0348837209302325,0.4117647058823529,0.0579710144927536,,,
+single_drugout,单药背景是否存在,双侧NAI有背景,20604,2147,1598,3646,13213,0.7188410017472335,0.745486313337216,549,0.0266453115899825,0.3706197134472639,0.1078927823914658,,,
+single_drugout,单药原始关系覆盖A,0,86,7,4,10,65,0.8023255813953488,0.8372093023255814,3,0.0348837209302325,0.4117647058823529,0.0579710144927536,,,
+single_drugout,单药原始关系覆盖A,1–5,2079,158,68,233,1620,0.8119288119288119,0.8552188552188552,90,0.0432900432900432,0.4040920716112532,0.0402843601895734,,,
+single_drugout,单药原始关系覆盖A,6–30,11955,1316,910,2100,7629,0.7142618151401088,0.7482225010455876,406,0.0339606859054788,0.3852459016393442,0.1065698559550298,,,
+single_drugout,单药原始关系覆盖A,>30,6665,684,631,1321,4029,0.6991747936984246,0.7071267816954239,53,0.0079519879969992,0.341147132169576,0.1354077253218884,,,
+single_drugout,单药原始关系覆盖B,0,95,11,11,8,65,0.8,0.8,0,0.0,0.5789473684210527,0.1447368421052631,,,
+single_drugout,单药原始关系覆盖B,1–5,2448,154,120,266,1908,0.8284313725490197,0.8423202614379085,34,0.0138888888888888,0.3666666666666666,0.059171597633136,,,
+single_drugout,单药原始关系覆盖B,6–30,13039,1492,972,2320,8255,0.7076462918935501,0.7475266508167804,520,0.0398803589232303,0.391395592864638,0.1053430150644846,,,
+single_drugout,单药原始关系覆盖B,>30,5203,508,510,1070,3115,0.6967134345569863,0.6963290409379205,-2,-0.0003843936190659,0.3219264892268694,0.1406896551724138,,,
+single_drugout,单药原始覆盖配对,0 / 1–5,10,1,1,1,7,0.8,0.8,0,0.0,0.5,0.125,,,
+single_drugout,单药原始覆盖配对,0 / 6–30,55,3,3,9,40,0.7818181818181819,0.7818181818181819,0,0.0,0.25,0.0697674418604651,,,
+single_drugout,单药原始覆盖配对,0 / >30,21,3,0,0,18,0.8571428571428571,1.0,3,0.1428571428571428,1.0,0.0,,,
+single_drugout,单药原始覆盖配对,1–5 / 0,10,0,0,0,10,1.0,1.0,0,0.0,,0.0,,,
+single_drugout,单药原始覆盖配对,1–5 / 1–5,260,4,3,12,241,0.9384615384615383,0.9423076923076924,1,0.0038461538461538,0.25,0.0122950819672131,,,
+single_drugout,单药原始覆盖配对,1–5 / 6–30,1352,123,50,165,1014,0.7869822485207101,0.8409763313609467,73,0.0539940828402366,0.4270833333333333,0.0469924812030075,,,
+single_drugout,单药原始覆盖配对,1–5 / >30,457,31,15,56,355,0.8096280087527352,0.8446389496717724,16,0.0350109409190372,0.3563218390804598,0.0405405405405405,,,
+single_drugout,单药原始覆盖配对,6–30 / 0,58,8,5,8,37,0.7241379310344828,0.7758620689655172,3,0.0517241379310344,0.5,0.119047619047619,,,
+single_drugout,单药原始覆盖配对,6–30 / 1–5,1505,98,78,187,1142,0.8106312292358804,0.8239202657807309,20,0.0132890365448504,0.343859649122807,0.0639344262295081,,,
+single_drugout,单药原始覆盖配对,6–30 / 6–30,7367,880,526,1285,4676,0.7061218949368807,0.7541740192751459,354,0.0480521243382652,0.4064665127020785,0.101114955786236,,,
+single_drugout,单药原始覆盖配对,6–30 / >30,3025,330,301,620,1774,0.6859504132231405,0.6955371900826446,29,0.0095867768595041,0.3473684210526316,0.1450602409638554,,,
+single_drugout,单药原始覆盖配对,>30 / 0,27,3,6,0,18,0.8888888888888888,0.7777777777777778,-3,-0.1111111111111111,1.0,0.25,,,
+single_drugout,单药原始覆盖配对,>30 / 1–5,673,51,38,66,518,0.826151560178306,0.8454680534918276,13,0.0193164933135215,0.4358974358974359,0.0683453237410072,,,
+single_drugout,单药原始覆盖配对,>30 / 6–30,4265,486,393,861,2525,0.6841735052754983,0.705978898007034,93,0.0218053927315357,0.3608017817371937,0.1346812885538039,,,
+single_drugout,单药原始覆盖配对,>30 / >30,1700,144,194,394,968,0.6835294117647058,0.6541176470588236,-50,-0.0294117647058823,0.2676579925650557,0.1669535283993115,,,
+single_drugout,单药模型邻域覆盖A,0,86,7,4,10,65,0.8023255813953488,0.8372093023255814,3,0.0348837209302325,0.4117647058823529,0.0579710144927536,,,
+single_drugout,单药模型邻域覆盖A,16–30,12219,1405,1021,2401,7392,0.6885178819870693,0.719944348964727,384,0.0314264669776577,0.3691539674198634,0.1213598003090455,,,
+single_drugout,单药模型邻域覆盖A,1–5,2079,158,68,233,1620,0.8119288119288119,0.8552188552188552,90,0.0432900432900432,0.4040920716112532,0.0402843601895734,,,
+single_drugout,单药模型邻域覆盖A,6–15,6401,595,520,1020,4266,0.7476956725511639,0.759412591782534,75,0.01171691923137,0.3684210526315789,0.1086502298370246,,,
+single_drugout,单药模型邻域覆盖B,0,95,11,11,8,65,0.8,0.8,0,0.0,0.5789473684210527,0.1447368421052631,,,
+single_drugout,单药模型邻域覆盖B,16–30,10933,1063,995,2055,6820,0.7148083783042166,0.721028080124394,68,0.0062197018201774,0.3409236690186016,0.127319257837492,,,
+single_drugout,单药模型邻域覆盖B,1–5,2448,154,120,266,1908,0.8284313725490197,0.8423202614379085,34,0.0138888888888888,0.3666666666666666,0.059171597633136,,,
+single_drugout,单药模型邻域覆盖B,6–15,7309,937,487,1335,4550,0.6891503625666986,0.750718292516076,450,0.0615679299493774,0.4124119718309859,0.0966845344451062,,,
+single_drugout,单药模型邻域覆盖配对,0 / 16–30,42,3,2,2,35,0.8809523809523809,0.9047619047619048,1,0.0238095238095238,0.6,0.054054054054054,,,
+single_drugout,单药模型邻域覆盖配对,0 / 1–5,10,1,1,1,7,0.8,0.8,0,0.0,0.5,0.125,,,
+single_drugout,单药模型邻域覆盖配对,0 / 6–15,34,3,1,7,23,0.7058823529411765,0.7647058823529411,2,0.0588235294117647,0.3,0.0416666666666666,,,
+single_drugout,单药模型邻域覆盖配对,16–30 / 0,55,9,8,5,33,0.7454545454545455,0.7636363636363637,1,0.0181818181818181,0.6428571428571429,0.1951219512195122,,,
+single_drugout,单药模型邻域覆盖配对,16–30 / 16–30,6500,684,644,1368,3804,0.6843076923076923,0.6904615384615385,40,0.0061538461538461,0.3333333333333333,0.1447841726618705,,,
+single_drugout,单药模型邻域覆盖配对,16–30 / 1–5,1335,115,57,162,1001,0.7925093632958802,0.8359550561797753,58,0.0434456928838951,0.4151624548736462,0.053875236294896,,,
+single_drugout,单药模型邻域覆盖配对,16–30 / 6–15,4329,597,312,866,2554,0.6620466620466621,0.7278817278817279,285,0.0658350658350658,0.4080656185919343,0.1088625261688764,,,
+single_drugout,单药模型邻域覆盖配对,1–5 / 0,10,0,0,0,10,1.0,1.0,0,0.0,,0.0,,,
+single_drugout,单药模型邻域覆盖配对,1–5 / 16–30,1060,72,37,122,829,0.8169811320754717,0.85,35,0.0330188679245283,0.3711340206185567,0.0427251732101616,,,
+single_drugout,单药模型邻域覆盖配对,1–5 / 1–5,260,4,3,12,241,0.9384615384615383,0.9423076923076924,1,0.0038461538461538,0.25,0.0122950819672131,,,
+single_drugout,单药模型邻域覆盖配对,1–5 / 6–15,749,82,28,99,540,0.7583444592790387,0.8304405874499332,54,0.0720961281708945,0.4530386740331492,0.0492957746478873,,,
+single_drugout,单药模型邻域覆盖配对,6–15 / 0,30,2,3,3,22,0.8333333333333334,0.8,-1,-0.0333333333333333,0.4,0.12,,,
+single_drugout,单药模型邻域覆盖配对,6–15 / 16–30,3331,304,312,563,2152,0.7397178024617233,0.7373161212848994,-8,-0.0024016811768237,0.3506343713956171,0.1266233766233766,,,
+single_drugout,单药模型邻域覆盖配对,6–15 / 1–5,843,34,59,91,659,0.8517200474495848,0.8220640569395018,-25,-0.029655990510083,0.272,0.0821727019498607,,,
+single_drugout,单药模型邻域覆盖配对,6–15 / 6–15,2197,255,146,363,1433,0.7187073281747838,0.7683204369594903,109,0.0496131087847064,0.4126213592233009,0.0924635845471817,,,
+single_drugout,路径是否存在,双向存在,20742,2163,1612,3658,13309,0.7193616816121878,0.7459261401986308,551,0.0265644585864429,0.3715856382064937,0.1080356544467529,,,
+single_drugout,路径是否存在,双向缺失,43,2,1,6,34,0.813953488372093,0.8372093023255814,1,0.0232558139534883,0.25,0.0285714285714285,,,
+single_drugout,路径长度A→B,2,18255,1977,1443,3311,11524,0.7103259380991509,0.73957819775404,534,0.029252259654889,0.3738653555219364,0.1112824863114058,,,
+single_drugout,路径长度A→B,3,1185,82,60,134,909,0.8177215189873418,0.8362869198312236,22,0.0185654008438818,0.3796296296296296,0.0619195046439628,,,
+single_drugout,路径长度A→B,4,1302,104,109,213,876,0.7565284178187404,0.7526881720430108,-5,-0.0038402457757296,0.3280757097791798,0.1106598984771573,,,
+single_drugout,路径长度A→B,无连接路径,43,2,1,6,34,0.813953488372093,0.8372093023255814,1,0.0232558139534883,0.25,0.0285714285714285,,,
+single_drugout,路径长度B→A,2,18255,1977,1443,3311,11524,0.7103259380991509,0.73957819775404,534,0.029252259654889,0.3738653555219364,0.1112824863114058,,,
+single_drugout,路径长度B→A,3,1185,82,60,134,909,0.8177215189873418,0.8362869198312236,22,0.0185654008438818,0.3796296296296296,0.0619195046439628,,,
+single_drugout,路径长度B→A,4,1302,104,109,213,876,0.7565284178187404,0.7526881720430108,-5,-0.0038402457757296,0.3280757097791798,0.1106598984771573,,,
+single_drugout,路径长度B→A,无连接路径,43,2,1,6,34,0.813953488372093,0.8372093023255814,1,0.0232558139534883,0.25,0.0285714285714285,,,
+double_drugout,真实事件,3,170,30,22,65,53,0.4411764705882353,0.488235294117647,8,0.0470588235294117,0.3157894736842105,0.2933333333333333,3.0,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,25693.0
+double_drugout,真实事件,4,9,0,0,9,0,0.0,0.0,0,0.0,0.0,,4.0,The metabolism of {drug_B} can be increased when combined with {drug_A}.,3794.0
+double_drugout,真实事件,7,3,0,0,3,0,0.0,0.0,0,0.0,0.0,,7.0,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,346.0
+double_drugout,真实事件,8,177,12,26,58,81,0.6045197740112994,0.5254237288135594,-14,-0.0790960451977401,0.1714285714285714,0.2429906542056074,8.0,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,49295.0
+double_drugout,真实事件,15,1,0,0,1,0,0.0,0.0,0,0.0,0.0,,15.0,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,194.0
+double_drugout,真实事件,16,27,9,0,13,5,0.1851851851851851,0.5185185185185185,9,0.3333333333333333,0.4090909090909091,0.0,16.0,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7154.0
+double_drugout,真实事件,17,156,28,26,39,63,0.5705128205128205,0.5833333333333334,2,0.0128205128205128,0.417910447761194,0.2921348314606741,17.0,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,17471.0
+double_drugout,真实事件,18,73,9,7,10,47,0.7397260273972602,0.7671232876712328,2,0.0273972602739726,0.4736842105263157,0.1296296296296296,18.0,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,5624.0
+double_drugout,真实事件,25,9,1,0,2,6,0.6666666666666666,0.7777777777777778,1,0.1111111111111111,0.3333333333333333,0.0,25.0,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2382.0
+double_drugout,真实事件,29,9,0,0,9,0,0.0,0.0,0,0.0,0.0,,29.0,{drug_A} may decrease the diuretic activities of {drug_B}.,201.0
+double_drugout,真实事件,30,18,1,1,3,13,0.7777777777777778,0.7777777777777778,0,0.0,0.25,0.0714285714285714,30.0,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1272.0
+double_drugout,真实事件,31,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,31.0,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,61.0
+double_drugout,真实事件,35,27,3,2,19,3,0.1851851851851851,0.2222222222222222,1,0.037037037037037,0.1363636363636363,0.4,35.0,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4432.0
+double_drugout,真实事件,39,23,7,2,14,0,0.0869565217391304,0.3043478260869565,5,0.217391304347826,0.3333333333333333,1.0,39.0,{drug_A} may increase the anticoagulant activities of {drug_B}.,2496.0
+double_drugout,真实事件,41,2,0,0,2,0,0.0,0.0,0,0.0,0.0,,41.0,{drug_A} may increase the antiplatelet activities of {drug_B}.,279.0
+double_drugout,真实事件,45,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,45.0,{drug_A} may increase the bradycardic activities of {drug_B}.,1061.0
+double_drugout,真实事件,48,8,0,0,7,1,0.125,0.125,0,0.0,0.0,0.0,48.0,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4526.0
+double_drugout,真实事件,54,1,0,0,0,1,1.0,1.0,0,0.0,,0.0,54.0,{drug_A} may increase the fluid retaining activities of {drug_B}.,314.0
+double_drugout,真实事件,61,20,5,2,5,8,0.5,0.65,3,0.15,0.5,0.2,61.0,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1359.0
+double_drugout,真实事件,62,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,62.0,{drug_A} may increase the hypokalemic activities of {drug_B}.,1026.0
+double_drugout,真实事件,64,18,2,1,2,13,0.7777777777777778,0.8333333333333334,1,0.0555555555555555,0.5,0.0714285714285714,64.0,{drug_A} may increase the hypotensive activities of {drug_B}.,7137.0
+double_drugout,真实事件,67,1,0,0,1,0,0.0,0.0,0,0.0,0.0,,67.0,{drug_A} may increase the myelosuppressive activities of {drug_B}.,20.0
+double_drugout,真实事件,74,2,0,0,2,0,0.0,0.0,0,0.0,0.0,,74.0,{drug_A} may increase the ototoxic activities of {drug_B}.,0.0
+double_drugout,真实事件,75,2,0,0,0,2,1.0,1.0,0,0.0,,0.0,75.0,{drug_A} may increase the respiratory depressant activities of {drug_B}.,208.0
+double_drugout,训练支持,0,2,0,0,2,0,0.0,0.0,0,0.0,0.0,,,,
+double_drugout,训练支持,100–999,18,0,0,15,3,0.1666666666666666,0.1666666666666666,0,0.0,0.0,0.0,,,
+double_drugout,训练支持,10–99,2,0,0,1,1,0.5,0.5,0,0.0,0.0,0.0,,,
+double_drugout,训练支持,≥1000,738,107,89,246,296,0.521680216802168,0.5460704607046071,18,0.024390243902439,0.3031161473087819,0.2311688311688311,,,
+double_drugout,单药背景是否存在,双侧NAI有背景,760,107,89,264,300,0.5118421052631579,0.5355263157894737,18,0.0236842105263157,0.2884097035040431,0.2287917737789203,,,
+double_drugout,单药原始关系覆盖A,1–5,33,3,3,4,23,0.7878787878787878,0.7878787878787878,0,0.0,0.4285714285714285,0.1153846153846153,,,
+double_drugout,单药原始关系覆盖A,6–30,483,73,55,176,179,0.484472049689441,0.5217391304347826,18,0.0372670807453416,0.2931726907630522,0.235042735042735,,,
+double_drugout,单药原始关系覆盖A,>30,244,31,31,84,98,0.5286885245901639,0.5286885245901639,0,0.0,0.2695652173913043,0.2403100775193798,,,
+double_drugout,单药原始关系覆盖B,1–5,50,8,1,4,37,0.76,0.9,7,0.14,0.6666666666666666,0.0263157894736842,,,
+double_drugout,单药原始关系覆盖B,6–30,545,83,65,188,209,0.5027522935779817,0.5357798165137615,18,0.0330275229357798,0.3062730627306273,0.2372262773722627,,,
+double_drugout,单药原始关系覆盖B,>30,165,16,23,72,54,0.4666666666666667,0.4242424242424242,-7,-0.0424242424242424,0.1818181818181818,0.2987012987012987,,,
+double_drugout,单药原始覆盖配对,1–5 / 1–5,5,1,0,0,4,0.8,1.0,1,0.2,1.0,0.0,,,
+double_drugout,单药原始覆盖配对,1–5 / 6–30,19,2,0,3,14,0.7368421052631579,0.8421052631578947,2,0.1052631578947368,0.4,0.0,,,
+double_drugout,单药原始覆盖配对,1–5 / >30,9,0,3,1,5,0.8888888888888888,0.5555555555555556,-3,-0.3333333333333333,0.0,0.375,,,
+double_drugout,单药原始覆盖配对,6–30 / 1–5,33,6,1,3,23,0.7272727272727273,0.8787878787878788,5,0.1515151515151515,0.6666666666666666,0.0416666666666666,,,
+double_drugout,单药原始覆盖配对,6–30 / 6–30,348,55,40,127,126,0.4770114942528735,0.5201149425287356,15,0.043103448275862,0.3021978021978022,0.2409638554216867,,,
+double_drugout,单药原始覆盖配对,6–30 / >30,102,12,14,46,30,0.4313725490196078,0.4117647058823529,-2,-0.0196078431372549,0.2068965517241379,0.3181818181818182,,,
+double_drugout,单药原始覆盖配对,>30 / 1–5,12,1,0,1,10,0.8333333333333334,0.9166666666666666,1,0.0833333333333333,0.5,0.0,,,
+double_drugout,单药原始覆盖配对,>30 / 6–30,178,26,25,58,69,0.5280898876404494,0.5337078651685393,1,0.0056179775280898,0.3095238095238095,0.2659574468085106,,,
+double_drugout,单药原始覆盖配对,>30 / >30,54,4,6,25,19,0.4629629629629629,0.4259259259259259,-2,-0.037037037037037,0.1379310344827586,0.24,,,
+double_drugout,单药模型邻域覆盖A,16–30,466,72,57,157,180,0.5085836909871244,0.5407725321888412,15,0.0321888412017167,0.314410480349345,0.240506329113924,,,
+double_drugout,单药模型邻域覆盖A,1–5,33,3,3,4,23,0.7878787878787878,0.7878787878787878,0,0.0,0.4285714285714285,0.1153846153846153,,,
+double_drugout,单药模型邻域覆盖A,6–15,261,32,29,103,97,0.4827586206896552,0.4942528735632184,3,0.0114942528735632,0.237037037037037,0.2301587301587301,,,
+double_drugout,单药模型邻域覆盖B,16–30,391,46,42,174,129,0.4373401534526854,0.4475703324808184,4,0.0102301790281329,0.209090909090909,0.2456140350877192,,,
+double_drugout,单药模型邻域覆盖B,1–5,50,8,1,4,37,0.76,0.9,7,0.14,0.6666666666666666,0.0263157894736842,,,
+double_drugout,单药模型邻域覆盖B,6–15,319,53,46,86,134,0.5642633228840125,0.5862068965517241,7,0.0219435736677116,0.381294964028777,0.2555555555555555,,,
+double_drugout,单药模型邻域覆盖配对,16–30 / 16–30,237,31,24,104,78,0.430379746835443,0.459915611814346,7,0.0295358649789029,0.2296296296296296,0.2352941176470588,,,
+double_drugout,单药模型邻域覆盖配对,16–30 / 1–5,27,5,0,2,20,0.7407407407407407,0.925925925925926,5,0.1851851851851851,0.7142857142857143,0.0,,,
+double_drugout,单药模型邻域覆盖配对,16–30 / 6–15,202,36,33,51,82,0.5693069306930693,0.5841584158415841,3,0.0148514851485148,0.4137931034482758,0.2869565217391304,,,
+double_drugout,单药模型邻域覆盖配对,1–5 / 16–30,16,0,3,4,9,0.75,0.5625,-3,-0.1875,0.0,0.25,,,
+double_drugout,单药模型邻域覆盖配对,1–5 / 1–5,5,1,0,0,4,0.8,1.0,1,0.2,1.0,0.0,,,
+double_drugout,单药模型邻域覆盖配对,1–5 / 6–15,12,2,0,0,10,0.8333333333333334,1.0,2,0.1666666666666666,1.0,0.0,,,
+double_drugout,单药模型邻域覆盖配对,6–15 / 16–30,138,15,15,66,42,0.4130434782608695,0.4130434782608695,0,0.0,0.1851851851851851,0.2631578947368421,,,
+double_drugout,单药模型邻域覆盖配对,6–15 / 1–5,18,2,1,2,13,0.7777777777777778,0.8333333333333334,1,0.0555555555555555,0.5,0.0714285714285714,,,
+double_drugout,单药模型邻域覆盖配对,6–15 / 6–15,105,15,13,35,42,0.5238095238095238,0.5428571428571428,2,0.019047619047619,0.3,0.2363636363636363,,,
+double_drugout,路径是否存在,双向存在,760,107,89,264,300,0.5118421052631579,0.5355263157894737,18,0.0236842105263157,0.2884097035040431,0.2287917737789203,,,
+double_drugout,路径长度A→B,2,701,102,81,242,276,0.5092724679029957,0.5392296718972895,21,0.0299572039942938,0.2965116279069767,0.226890756302521,,,
+double_drugout,路径长度A→B,3,24,1,4,4,15,0.7916666666666666,0.6666666666666666,-3,-0.125,0.2,0.2105263157894736,,,
+double_drugout,路径长度A→B,4,35,4,4,18,9,0.3714285714285714,0.3714285714285714,0,0.0,0.1818181818181818,0.3076923076923077,,,
+double_drugout,路径长度B→A,2,701,102,81,242,276,0.5092724679029957,0.5392296718972895,21,0.0299572039942938,0.2965116279069767,0.226890756302521,,,
+double_drugout,路径长度B→A,3,24,1,4,4,15,0.7916666666666666,0.6666666666666666,-3,-0.125,0.2,0.2105263157894736,,,
+double_drugout,路径长度B→A,4,35,4,4,18,9,0.3714285714285714,0.3714285714285714,0,0.0,0.1818181818181818,0.3076923076923077,,,
+pairout,真实事件,65,0,0,0,0,0,,,0,,,,65.0,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,13.0
+pairout,真实事件,26,0,0,0,0,0,,,0,,,,26.0,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6.0
+pairout,真实事件,11,0,0,0,0,0,,,0,,,,11.0,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,4.0
+cellout,真实事件,65,0,0,0,0,0,,,0,,,,65.0,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,13.0
+cellout,真实事件,26,0,0,0,0,0,,,0,,,,26.0,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6.0
+cellout,真实事件,11,0,0,0,0,0,,,0,,,,11.0,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,4.0
+single_drugout,真实事件,65,0,0,0,0,0,,,0,,,,65.0,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,14.0
+single_drugout,真实事件,2,0,0,0,0,0,,,0,,,,2.0,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,10.0
+single_drugout,真实事件,37,0,0,0,0,0,,,0,,,,37.0,{drug_A} may increase the analgesic activities of {drug_B}.,278.0
+single_drugout,真实事件,11,0,0,0,0,0,,,0,,,,11.0,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,6.0
+single_drugout,真实事件,12,0,0,0,0,0,,,0,,,,12.0,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,14.0
+single_drugout,真实事件,47,0,0,0,0,0,,,0,,,,47.0,{drug_A} may increase the cardiotoxic activities of {drug_B}.,0.0
+single_drugout,真实事件,49,0,0,0,0,0,,,0,,,,49.0,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,27.0
+single_drugout,真实事件,50,0,0,0,0,0,,,0,,,,50.0,{drug_A} may increase the central neurotoxic activities of {drug_B}.,13.0
+single_drugout,真实事件,83,0,0,0,0,0,,,0,,,,83.0,{drug_A} may increase the vasodilatory activities of {drug_B}.,33.0
+single_drugout,真实事件,22,0,0,0,0,0,,,0,,,,22.0,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,32.0
+single_drugout,真实事件,23,0,0,0,0,0,,,0,,,,23.0,{drug_A} may decrease the analgesic activities of {drug_B}.,8.0
+single_drugout,真实事件,57,0,0,0,0,0,,,0,,,,57.0,{drug_A} may increase the hyperglycemic activities of {drug_B}.,27.0
+single_drugout,真实事件,26,0,0,0,0,0,,,0,,,,26.0,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6.0
+double_drugout,真实事件,0,0,0,0,0,0,,,0,,,,0.0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37.0
+double_drugout,真实事件,1,0,0,0,0,0,,,0,,,,1.0,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,451.0
+double_drugout,真实事件,2,0,0,0,0,0,,,0,,,,2.0,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,10.0
+double_drugout,真实事件,5,0,0,0,0,0,,,0,,,,5.0,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,9.0
+double_drugout,真实事件,6,0,0,0,0,0,,,0,,,,6.0,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,24.0
+double_drugout,真实事件,9,0,0,0,0,0,,,0,,,,9.0,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,109.0
+double_drugout,真实事件,10,0,0,0,0,0,,,0,,,,10.0,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20.0
+double_drugout,真实事件,11,0,0,0,0,0,,,0,,,,11.0,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,6.0
+double_drugout,真实事件,12,0,0,0,0,0,,,0,,,,12.0,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,14.0
+double_drugout,真实事件,13,0,0,0,0,0,,,0,,,,13.0,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,30.0
+double_drugout,真实事件,14,0,0,0,0,0,,,0,,,,14.0,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,454.0
+double_drugout,真实事件,19,0,0,0,0,0,,,0,,,,19.0,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,222.0
+double_drugout,真实事件,20,0,0,0,0,0,,,0,,,,20.0,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,765.0
+double_drugout,真实事件,21,0,0,0,0,0,,,0,,,,21.0,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,69.0
+double_drugout,真实事件,22,0,0,0,0,0,,,0,,,,22.0,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,32.0
+double_drugout,真实事件,23,0,0,0,0,0,,,0,,,,23.0,{drug_A} may decrease the analgesic activities of {drug_B}.,8.0
+double_drugout,真实事件,24,0,0,0,0,0,,,0,,,,24.0,{drug_A} may decrease the anticoagulant activities of {drug_B}.,185.0
+double_drugout,真实事件,26,0,0,0,0,0,,,0,,,,26.0,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6.0
+double_drugout,真实事件,27,0,0,0,0,0,,,0,,,,27.0,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,290.0
+double_drugout,真实事件,28,0,0,0,0,0,,,0,,,,28.0,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,634.0
+double_drugout,真实事件,32,0,0,0,0,0,,,0,,,,32.0,{drug_A} may decrease the sedative activities of {drug_B}.,513.0
+double_drugout,真实事件,33,0,0,0,0,0,,,0,,,,33.0,{drug_A} may decrease the stimulatory activities of {drug_B}.,452.0
+double_drugout,真实事件,34,0,0,0,0,0,,,0,,,,34.0,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,295.0
+double_drugout,真实事件,36,0,0,0,0,0,,,0,,,,36.0,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,90.0
+double_drugout,真实事件,37,0,0,0,0,0,,,0,,,,37.0,{drug_A} may increase the analgesic activities of {drug_B}.,278.0
+double_drugout,真实事件,38,0,0,0,0,0,,,0,,,,38.0,{drug_A} may increase the anticholinergic activities of {drug_B}.,254.0
+double_drugout,真实事件,40,0,0,0,0,0,,,0,,,,40.0,{drug_A} may increase the antihypertensive activities of {drug_B}.,571.0
+double_drugout,真实事件,42,0,0,0,0,0,,,0,,,,42.0,{drug_A} may increase the antipsychotic activities of {drug_B}.,45.0
+double_drugout,真实事件,43,0,0,0,0,0,,,0,,,,43.0,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,256.0
+double_drugout,真实事件,44,0,0,0,0,0,,,0,,,,44.0,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,589.0
+double_drugout,真实事件,46,0,0,0,0,0,,,0,,,,46.0,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,24.0
+double_drugout,真实事件,47,0,0,0,0,0,,,0,,,,47.0,{drug_A} may increase the cardiotoxic activities of {drug_B}.,0.0
+double_drugout,真实事件,49,0,0,0,0,0,,,0,,,,49.0,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,27.0
+double_drugout,真实事件,50,0,0,0,0,0,,,0,,,,50.0,{drug_A} may increase the central neurotoxic activities of {drug_B}.,13.0
+double_drugout,真实事件,51,0,0,0,0,0,,,0,,,,51.0,{drug_A} may increase the constipating activities of {drug_B}.,138.0
+double_drugout,真实事件,52,0,0,0,0,0,,,0,,,,52.0,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,9.0
+double_drugout,真实事件,53,0,0,0,0,0,,,0,,,,53.0,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,31.0
+double_drugout,真实事件,55,0,0,0,0,0,,,0,,,,55.0,{drug_A} may increase the hepatotoxic activities of {drug_B}.,36.0
+double_drugout,真实事件,56,0,0,0,0,0,,,0,,,,56.0,{drug_A} may increase the hypercalcemic activities of {drug_B}.,65.0
+double_drugout,真实事件,57,0,0,0,0,0,,,0,,,,57.0,{drug_A} may increase the hyperglycemic activities of {drug_B}.,27.0
+double_drugout,真实事件,58,0,0,0,0,0,,,0,,,,58.0,{drug_A} may increase the hyperkalemic activities of {drug_B}.,259.0
+double_drugout,真实事件,59,0,0,0,0,0,,,0,,,,59.0,{drug_A} may increase the hypertensive activities of {drug_B}.,643.0
+double_drugout,真实事件,60,0,0,0,0,0,,,0,,,,60.0,{drug_A} may increase the hypocalcemic activities of {drug_B}.,144.0
+double_drugout,真实事件,63,0,0,0,0,0,,,0,,,,63.0,{drug_A} may increase the hyponatremic activities of {drug_B}.,97.0
+double_drugout,真实事件,65,0,0,0,0,0,,,0,,,,65.0,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,14.0
+double_drugout,真实事件,66,0,0,0,0,0,,,0,,,,66.0,{drug_A} may increase the immunosuppressive activities of {drug_B}.,164.0
+double_drugout,真实事件,68,0,0,0,0,0,,,0,,,,68.0,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,47.0
+double_drugout,真实事件,69,0,0,0,0,0,,,0,,,,69.0,{drug_A} may increase the nephrotoxic activities of {drug_B}.,438.0
+double_drugout,真实事件,70,0,0,0,0,0,,,0,,,,70.0,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,715.0
+double_drugout,真实事件,71,0,0,0,0,0,,,0,,,,71.0,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,356.0
+double_drugout,真实事件,72,0,0,0,0,0,,,0,,,,72.0,{drug_A} may increase the neurotoxic activities of {drug_B}.,60.0
+double_drugout,真实事件,73,0,0,0,0,0,,,0,,,,73.0,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,427.0
+double_drugout,真实事件,76,0,0,0,0,0,,,0,,,,76.0,{drug_A} may increase the sedative activities of {drug_B}.,931.0
+double_drugout,真实事件,77,0,0,0,0,0,,,0,,,,77.0,{drug_A} may increase the serotonergic activities of {drug_B}.,657.0
+double_drugout,真实事件,78,0,0,0,0,0,,,0,,,,78.0,{drug_A} may increase the stimulatory activities of {drug_B}.,51.0
+double_drugout,真实事件,79,0,0,0,0,0,,,0,,,,79.0,{drug_A} may increase the tachycardic activities of {drug_B}.,311.0
+double_drugout,真实事件,80,0,0,0,0,0,,,0,,,,80.0,{drug_A} may increase the thrombogenic activities of {drug_B}.,80.0
+double_drugout,真实事件,81,0,0,0,0,0,,,0,,,,81.0,{drug_A} may increase the ulcerogenic activities of {drug_B}.,38.0
+double_drugout,真实事件,82,0,0,0,0,0,,,0,,,,82.0,{drug_A} may increase the vasoconstricting activities of {drug_B}.,95.0
+double_drugout,真实事件,83,0,0,0,0,0,,,0,,,,83.0,{drug_A} may increase the vasodilatory activities of {drug_B}.,33.0
+double_drugout,真实事件,84,0,0,0,0,0,,,0,,,,84.0,{drug_A} may increase the vasopressor activities of {drug_B}.,55.0

@@ -1,0 +1,16 @@
+step: step1
+protocol: single_drugout
+gpu: 4
+parent_output: accelerated_four/outputs/path_single_drugout
+output: crt_kpaths/outputs/step1_single_drugout
+extract_batch_size: 128
+cpu_threads: 2
+head:
+  dev_seed: 42
+  lr_candidates: [0.01, 0.05, 0.2]
+  seeds: [42, 43, 44]
+  epochs: 10
+  batch_size: 512
+  momentum: 0.9
+  weight_decay: 0.0005
+  num_samples_cls: 4

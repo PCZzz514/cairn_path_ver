@@ -1,0 +1,7 @@
+{
+  "checkpoint": "best.pt",
+  "selected_epoch": 32,
+  "selected_update": 37280,
+  "rows": 16978,
+  "completed_at": 1791780598.9717095
+}

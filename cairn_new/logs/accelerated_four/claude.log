@@ -1,0 +1,47 @@
+I've finished the whole implementation, and the four snapshots and the evidence runs all passed. Nothing is launched and I did not write an approval file. The launch command refuses to run until Codex writes `logs/accelerated_four/review_approval.json`. The original jobs (PIDs 2560540–2560543) and the existing monitor (2568426) are still running, and the original code, configs, outputs and scripts were only read.
+
+**Code** (all under `accelerated_four/`; full write-up in `accelerated_four/review/REVIEW.md`, diffs in `review/implementation.diff` and `review/new_files.diff`):
+- **Model and data:** `dsn/model.py` and `dsn/data.py` are the reviewed GPU3 files, copied byte-for-byte; `dsn/metrics.py` is the original, unchanged.
+- **Trainer:** `dsn/train.py` is the original production trainer, keeping resume, `--test-only`, early stopping and the full test export. The only changes:
+  - New outputs must stay inside `accelerated_four/outputs`.
+  - Four config entries differ from the originals: `output`, `generator`, and two new labels, `namespace` and `optimization`. Resume still requires the config to match the checkpoint exactly.
+  - It prints a start line, a line at the first step, and a flushed progress line every 100 steps.
+  - It records validation accuracy, without touching the random number state.
+  - Max 100 epochs and patience 15 are unchanged; there is no 5-epoch cap.
+- **Configs:** only the output path changes.
+
+**Snapshots** (`tools/snapshot.py`, taken at 11:59, CPU only): each original arm's last/best checkpoints, history and config were read once and checked for consistency. All four were consistent on the first read. Model, optimizer, random state, update, epoch, best metric and bad-epoch count match the originals exactly; the config differs only in those four entries. Each arm has a read-only copy in `snapshot/` and working files beside it.
+
+| arm (GPU) | resumes at epoch | best epoch | best val macro-F1 (85) | bad epochs / patience |
+|---|---|---|---|---|
+| path_single (4) | 30 | 20 | 0.5696 | 9/15 |
+| path_double (5) | 34 | 28 | 0.1237 | 5/15 |
+| no_path_single (6) | 31 | 16 | 0.5668 | 14/15 |
+| no_path_double (7) | 33 | 24 | 0.1260 | 8/15 |
+
+no_path_single will stop after its next epoch unless that epoch improves.
+
+**Evidence** (`accelerated_four/evidence/summary.md`): all four passed, using the snapshot states the jobs will actually resume.
+- **All arms (CPU):** old and new setup match:
+  - The checkpoint loads strictly into both the model and the optimizer.
+  - The schedule recomputes to 116500 updates with 23300 warmup.
+  - Random state is restored after setup, and the next epoch's row order is identical old vs new; the real data loader's first batch matches it.
+  - The packed edges are exact in both directions, including unequal-size pairs.
+- **No-path arms on GPU6 and GPU7:** old per-pair and new packed models, loaded with both the resumed and the best checkpoint, were compared on 3 real next-epoch batches. Worst output difference was 6.5e-7 relative (1.5e-5 absolute, about the same as running the old code twice). Every parameter gradient passed the GPU3-reviewed thresholds.
+- **Speed:** I did not run new timing. The existing 14.62× per-step and 114 s per epoch figures stand, but each replica shares a GPU and the host CPUs with an original job, so both may run somewhat slower.
+
+**Deployment code (not run):**
+- `jobs.py` is a copy of the original job controller. Each arm runs as a detached job with its own state, under a lock its training process inherits. It only ever resumes or runs the test export; it never restarts from scratch or changes the batch size.
+- Recovery is limited to 3 attempts per arm. If a crash leaves `best.pt` newer than `last.pt`, it resumes from `best.pt` and archives the old files, so the historical best is kept.
+- The monitor in `monitor/` is a separate detached daemon. It runs one check at startup, then one every 2400 s, each including one gpt-6.1-sol low-effort Codex call. The Codex call can only read logs and file recovery requests, which the daemon carries out after the call ends. Unchanged checks write only a local note; completions and failures are appended to `notifications.log`.
+- **Untested:** the recovery and final-verification paths were not executed, because smoke runs weren't allowed.
+
+**Commands for Codex, after approval** (also in `logs/accelerated_four/claude_handoff.md`):
+```bash
+cd /data/interns/zhangpc/cairn_new
+bash accelerated_four/launch_four.sh --launch-reviewed   # waits up to 30 min for real progress, writes logs/accelerated_four/launch.json
+source accelerated_four/env.sh; CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" accelerated_four/jobs.py --status
+bash accelerated_four/monitor/start_monitor.sh           # refuses until all four show progress
+```
+
+`logs/accelerated_four/status.json` now reads `implementation_complete_awaiting_codex_review`.

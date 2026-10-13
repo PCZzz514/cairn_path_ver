@@ -1,0 +1,120 @@
+{
+  "checked_at": 1791821326.1323333,
+  "runs": {
+    "path_single_drugout": {
+      "state": "complete",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {
+        "selected_epoch": 37,
+        "rows": 16978,
+        "metrics": {
+          "rows": 16978,
+          "accuracy": 0.7241724584756744,
+          "macro_f1_85": 0.5436382853309766,
+          "macro_precision_85": 0.5777154560919205,
+          "macro_recall_85": 0.5832043886148669,
+          "weighted_f1": 0.7157204442527128,
+          "micro_f1": 0.7241724584756744,
+          "mcc": 0.6749963872942263,
+          "kappa": 0.6741614355867933,
+          "classes_present": 72,
+          "macro_roc_auc_supported_classes": 0.9564062055762401,
+          "roc_auc_classes": 72,
+          "macro_ap_supported_classes": 0.7392476928460446,
+          "ap_classes": 72
+        }
+      },
+      "blocked_reason": null,
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791812222.1277177
+      }
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "complete",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {
+        "selected_epoch": 16,
+        "rows": 16978,
+        "metrics": {
+          "rows": 16978,
+          "accuracy": 0.7157497938508658,
+          "macro_f1_85": 0.5049692356187174,
+          "macro_precision_85": 0.534522344825512,
+          "macro_recall_85": 0.5449319343100237,
+          "weighted_f1": 0.7053535172684428,
+          "micro_f1": 0.7157497938508658,
+          "mcc": 0.662707574879349,
+          "kappa": 0.6615287230903442,
+          "classes_present": 72,
+          "macro_roc_auc_supported_classes": 0.9563113281967713,
+          "roc_auc_classes": 72,
+          "macro_ap_supported_classes": 0.699526326869695,
+          "ap_classes": 72
+        }
+      },
+      "blocked_reason": null,
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791778400.3799424
+      }
+    },
+    "no_path_double_drugout": {
+      "state": "complete",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {
+        "selected_epoch": 24,
+        "rows": 534,
+        "metrics": {
+          "rows": 534,
+          "accuracy": 0.47191011235955055,
+          "macro_f1_85": 0.10994081065621558,
+          "macro_precision_85": 0.12339630792814779,
+          "macro_recall_85": 0.11180060331825037,
+          "weighted_f1": 0.449096719297288,
+          "micro_f1": 0.47191011235955055,
+          "mcc": 0.3866943612173849,
+          "kappa": 0.38325312800769973,
+          "classes_present": 28,
+          "macro_roc_auc_supported_classes": 0.8365844638823784,
+          "roc_auc_classes": 28,
+          "macro_ap_supported_classes": 0.47206687947797776,
+          "ap_classes": 28
+        }
+      },
+      "blocked_reason": null,
+      "exit": {
+        "exit_code": 0,
+        "finished_at": 1791787184.2660089
+      }
+    }
+  },
+  "all_complete": false
+}

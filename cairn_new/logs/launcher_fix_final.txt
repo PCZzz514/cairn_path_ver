@@ -1,0 +1,3 @@
+Removed only the trailing comment and `--keep-launcher-alive` conditional from [scripts/start_monitor.sh](/data/interns/zhangpc/cairn_new/scripts/start_monitor.sh). Standalone daemon spawn and initialization check are preserved.
+
+`bash -n` and inline Python static parsing passed. No other files or running processes changed.

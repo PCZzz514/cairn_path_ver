@@ -1,0 +1,25 @@
+The 150-epoch schedule is in place throughout `pairout_cellout`, with stricter validation added, and the package is ready for server Codex MEDIUM review. Nothing is launched: no training, monitor or forward pass, and no `review_approval.json` exists. I did not write the approval and did not signal PID 3227562 or any other process.
+
+**What was already done.** The earlier Claude process (PID 3230783) read your 150 update before it finished. It had already changed both configs, the trainer, the audit, the controller, launch confirmation, the monitor prompt and the review packet. This follow-up checked that work and closed four gaps.
+
+**Changes in this follow-up**
+- **`jobs.py`:** completion and recovery now check a fixed schedule (150 epochs, patience 15, KL fraction 0.2, 177600 planned, 35520 warmup, 1184 batches), which must also match the trainer's constants. A finished run must also have 1184 updates per epoch in every history line and in both checkpoints, and the run's own `config.yaml` must match. The old 100-epoch schedule (118400/23680) can no longer verify as complete.
+- **`confirm_launch.py`:** a new `schedule_ok` check is part of launch confirmation. It requires the run's written config to match, and the actual KL beta on the first and 100-update progress lines to equal 0.001 × update / 35520. A 23680 warmup would fail this.
+- **`audit.py`:** the configs must have exactly the reviewed keys, so a planned-updates or warmup override can't be slipped in.
+- **Docs and metadata:** updated `REVIEW.md`, regenerated the review diffs, added `review/followup_150_delta.diff` (the actual unified diff of this follow-up's code changes), and updated `status.json` and `implementation_handoff.md`. `source_identity_note.md` was written by Codex, so I left its 100-epoch line as is and appended a note marking it superseded.
+
+Architecture, `train.py`, the configs, losses, metrics, data rows/order/events/split and the prepared cache are unchanged. Preparation was not rerun. `model.py`, `data.py`, `metrics.py` and `paths.py` are still byte-identical to their originals.
+
+**Verification (CPU only, after the last Python edit)**
+- **Syntax and imports:** `bash -n` passes on all 5 shell scripts, all Python files parse, and the imports work.
+- **Full real audit:** rerun in 50 s and passed; its schedule section reads 150 / 15 / 0.2 / 1184 / 177600 / 35520.
+- **Batch count:** the real DataLoader gives 1184 batches for both PairOut and CellOut (151508 rows, last batch 84). The configs therefore give 177600 planned updates and a 35520-update KL warmup (30 epochs).
+- **Old schedule:** the 100-epoch schedule is rejected by the new checks.
+- **Launch gate:** both arms are `not_launched`, and the only refusal is the missing Codex approval. GPU6 and GPU7 were idle when checked.
+- **Leftover 100s:** the only `100` left in current code is the progress interval (a line every 100 updates). 118400/23680 appear only where marked as superseded. `fin.completed_epoch: 100` in the preparation report is the earlier FIN pretraining run, not this schedule.
+
+**Commands for Codex after it writes approval** (run from `cairn_new`):
+1. **Launch:** `bash pairout_cellout/launch.sh --launch-reviewed`. It starts GPU6 PairOut and GPU7 CellOut fresh from seed 42, detached. It then waits up to 1800 s for each arm's start line, its actual first update (finite, nonzero gradients in every group including path), a 100-update line and `schedule_ok`, and writes `launch.json`.
+2. **Monitor:** `bash pairout_cellout/monitor/start_monitor.sh`. It starts a detached gpt-6.1-sol LOW monitor that checks immediately and then every 2400 s. It waits for that first check to succeed and keeps going until both best-checkpoint test exports verify.
+
+Codex should read `logs/pairout_cellout/implementation_handoff.md` first. The approval must be written after `REVIEW.md`, the diffs and `audit_report.json`, because the launch gate compares timestamps.

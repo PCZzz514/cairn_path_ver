@@ -1,0 +1,121 @@
+{
+ "sources": {
+  "pairout": {
+   "path": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet",
+   "resolved": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet"
+  },
+  "cellout": {
+   "path": "/data/interns/zhangpc/cairn_dev/data/experiments/reference85/cellout/ddi.parquet",
+   "resolved": "/data/interns/zhangpc/cairn_dev/data/processed/ddi.parquet"
+  }
+ },
+ "columns": [
+  "drug_a",
+  "drug_b",
+  "event_id",
+  "split",
+  "source_drugbank_a",
+  "source_drugbank_b",
+  "source_y",
+  "source_template",
+  "template",
+  "pair_group"
+ ],
+ "dtypes": [
+  "int64",
+  "int64",
+  "int64",
+  "str",
+  "str",
+  "str",
+  "int64",
+  "str",
+  "str",
+  "str"
+ ],
+ "source_pairout_vs_cellout": {
+  "columns_and_order": true,
+  "dtypes": true,
+  "index": true,
+  "values": true
+ },
+ "prepared_pairout_vs_cellout": {
+  "columns_and_order": true,
+  "dtypes": true,
+  "index": true,
+  "values": true
+ },
+ "pair_indices_pairout_equal_cellout": true,
+ "arms": {
+  "pairout": {
+   "prepared_vs_source": {
+    "columns_and_order": true,
+    "dtypes": true,
+    "index": true,
+    "values": true
+   },
+   "counts": {
+    "train": 151508,
+    "val": 18939,
+    "test": 18938
+   },
+   "counts_exact": true,
+   "classes_present": {
+    "train": 85,
+    "val": 82,
+    "test": 83
+   },
+   "classes_exact": true,
+   "pair_indices_rows": 189385,
+   "pair_indices_rows_exact": true,
+   "drugs": 1666,
+   "all_drugs_have_graph": true,
+   "all_drugs_have_nai_row": true,
+   "event_ids_in_0_84": true
+  },
+  "cellout": {
+   "prepared_vs_source": {
+    "columns_and_order": true,
+    "dtypes": true,
+    "index": true,
+    "values": true
+   },
+   "counts": {
+    "train": 151508,
+    "val": 18939,
+    "test": 18938
+   },
+   "counts_exact": true,
+   "classes_present": {
+    "train": 85,
+    "val": 82,
+    "test": 83
+   },
+   "classes_exact": true,
+   "pair_indices_rows": 189385,
+   "pair_indices_rows_exact": true,
+   "drugs": 1666,
+   "all_drugs_have_graph": true,
+   "all_drugs_have_nai_row": true,
+   "event_ids_in_0_84": true
+  }
+ },
+ "event_names_exact": true,
+ "schedule": {
+  "train_batches": 1184,
+  "planned_updates": 177600,
+  "kl_warmup_updates": 35520,
+  "kl_warmup_epochs": 30.0
+ },
+ "copy": {
+  "model_py_byte_identical_to_rareddie_control": true,
+  "data_py_byte_identical_to_rareddie_control": true,
+  "prior_cse_evidence": "rareddie_control/evidence/cse_equivalence.json",
+  "prior_cse_passed": true,
+  "prior_approval": "logs/rareddie_control/review_approval.json",
+  "prior_approved": true,
+  "note": "model.py/data.py are the verified rareddie_control files; no new CSE benchmark was run"
+ },
+ "ddi_split_note": "same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicates, NOT true cell-cold DDI generalization",
+ "passed": true
+}

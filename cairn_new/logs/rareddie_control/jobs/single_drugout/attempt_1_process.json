@@ -1,0 +1,12 @@
+{
+  "pid": 3096029,
+  "process_start": "1269993470",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "rareddie_control.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/rareddie_control/configs/single_drugout.yaml",
+    "--fresh"
+  ]
+}

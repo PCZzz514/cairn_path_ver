@@ -1,0 +1,196 @@
+{
+  "state": "complete",
+  "task": "Independent GPU3 DSN packed cross-pair attention benchmark; exactly five full path_single_drugout training+validation epochs after review and host launch",
+  "workspace": "/data/interns/zhangpc/cairn_new",
+  "implementation_provider": "claude --dangerously-skip-permissions --model claude-opus-5-5 -p (default effort)",
+  "isolated_code": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed",
+  "logs": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed",
+  "plan": [
+    "Inspect original DSN and installed GATConv",
+    "Claude creates isolated narrow optimization, real numerical and timing comparison, and host-launch scripts",
+    "Codex reads diff and verifies GPU3 evidence",
+    "Codex directly launches independent detached host benchmark after review",
+    "Host runs exactly five full train+validation epochs; record timings and metrics"
+  ],
+  "constraints": {
+    "physical_gpu": 3,
+    "seed": 42,
+    "batch_size": 128,
+    "cpu_threads": 2,
+    "num_workers": 2,
+    "train_rows": 149048,
+    "validation_rows": 20785,
+    "epochs": 5,
+    "preserve_100_epoch_kl_schedule": true,
+    "test_evaluation": false,
+    "original_sources_and_jobs": "read-only"
+  },
+  "historical_original_epoch_seconds": [
+    1498,
+    1534
+  ],
+  "contention": "Four existing GPU4/5/6/7 jobs share CPU resources",
+  "ready_for_host_launch": false,
+  "migration": {
+    "partial_code_present": false,
+    "existing_claude_log_bytes": 0,
+    "previous_logs_preserved": true
+  },
+  "host_launch_authorized": true,
+  "partial_review": {
+    "model": "Only packed inter-pair GAT and explicit local selfloops changed; parameters and remaining model preserved",
+    "runner": "epochs100/cap5, no earlystop, no test, independent output",
+    "pending": [
+      "Verification and timing implementation",
+      "GPU3 evidence",
+      "Detached launcher and completion summarizer"
+    ]
+  },
+  "benchmark": {
+    "evidence": {
+      "json": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/evidence/gpu3_evidence.json",
+      "markdown": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/evidence/gpu3_evidence.md",
+      "finished_at": "2026-10-12T11:34:45+0800",
+      "all_numerical_checks_passed": true,
+      "failed_checks": [],
+      "timing_measured": true,
+      "speed": {
+        "breakdown.transfer": 3.708117128079677,
+        "breakdown.forward": 17.032985696834874,
+        "breakdown.backward": 12.97067530211847,
+        "breakdown.optimizer": 1.80540648982686,
+        "breakdown.fullstep": 14.424683768346657,
+        "fullstep.fullstep": 14.61796210502849,
+        "eval.transfer": 1.9301498751915822,
+        "eval.forward": 7.194881931914661,
+        "eval.fullstep": 7.072032250921699
+      }
+    },
+    "stage": "complete",
+    "updated_at": "2026-10-12T11:45:38+0800",
+    "launch": {
+      "runner_pid": 2941955,
+      "runner_ppid": 1,
+      "ppid_is_1": true,
+      "pgid": 2941955,
+      "sid": 2941955,
+      "setsid_pid_from_launcher": 2941955,
+      "train_pid": 2941968,
+      "runner_alive": true,
+      "training_start_line_seen": true,
+      "log": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/benchmark.log",
+      "launched_at": "2026-10-12T11:35:56+0800",
+      "expected_outputs": [
+        "benchmarks/gpu3_speed/outputs/path_single_drugout/history.jsonl",
+        "logs/gpu3_speed/five_epoch_summary.json",
+        "logs/gpu3_speed/five_epoch_summary.md"
+      ]
+    },
+    "paths": {
+      "isolated_code": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/dsn_gpu3",
+      "config": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/configs/path_single_drugout.yaml",
+      "env": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/env.sh",
+      "detached_runner": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/run_benchmark.sh",
+      "summarizer": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/summarize.py",
+      "launch_gate": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/launch_gate.py",
+      "evidence_script": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py",
+      "evidence_command": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/run_evidence.sh",
+      "launch_command": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/launch_benchmark.sh",
+      "review_notes": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/review/REVIEW.md",
+      "implementation_diff": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/review/implementation.diff",
+      "new_files_diff": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/review/new_files.diff",
+      "diff_generator": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/make_review.sh",
+      "required_approval_file": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/review_approval.json",
+      "benchmark_output": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/outputs/path_single_drugout",
+      "benchmark_log": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/benchmark.log",
+      "launch_record": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/launch.json",
+      "summary": [
+        "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/five_epoch_summary.json",
+        "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/five_epoch_summary.md"
+      ]
+    },
+    "codex_findings_addressed": {
+      "timing_reset_per_block": "each block: fresh seed42 state, fresh AdamW, manual_seed(42); seed/updates recorded",
+      "gradient_gate_all_batches": "every tensor on every batch, G per batch; worst abs/rel aggregated independently",
+      "train_progress": "flushed train_progress line + status every 100 updates; validation phase line; no RNG",
+      "launch": "not launched by Claude; launcher refuses without Codex approval"
+    },
+    "training_run": {
+      "started": false,
+      "note": "no training run executed by Claude"
+    },
+    "run": {
+      "runner_pid": 2941955,
+      "train_pid": 2941968,
+      "log": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/benchmark.log",
+      "started_at": "2026-10-12T11:35:47+08:00"
+    },
+    "progress": {
+      "epochs_completed": 5,
+      "epoch_cap": 5,
+      "last_epoch_seconds": 122.13055419921875
+    },
+    "result": {
+      "summary_json": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/five_epoch_summary.json",
+      "summary_markdown": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/five_epoch_summary.md",
+      "exit_code": 0,
+      "epochs_recorded": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "failure": null
+    }
+  },
+  "codex_verification": {
+    "command": "bash logs/gpu3_speed/run_evidence.sh",
+    "direct_host_execution": true,
+    "source_review_complete": true,
+    "approval_pending": false
+  },
+  "review": {
+    "approved": true,
+    "approval": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/review_approval.json",
+    "independent_verification_finished_at": "2026-10-12T11:34:45+0800",
+    "fullstep_speedup": 14.61796210502849
+  },
+  "detachment_verified": {
+    "verified_at": "2026-10-12T11:37:11+0800",
+    "runner_pid": 2941955,
+    "runner_ppid": 1,
+    "runner_pgid": 2941955,
+    "runner_sid": 2941955,
+    "trainer_pid": 2941968,
+    "runner_uid": 1005,
+    "host_launch": true,
+    "launcher_completed_and_runner_survived": true,
+    "log_progress_seen": {
+      "phase": "train_progress",
+      "epoch": 1,
+      "update": 800,
+      "epoch_rows": 102400,
+      "epoch_seconds": 69.16539859771729,
+      "running_ce": 1.7733219683915378,
+      "running_loss": 1.8235758252441883
+    },
+    "log_bytes": 1871,
+    "startup": {
+      "phase": "start",
+      "train_rows": 149048,
+      "validation_rows": 20785,
+      "train_batches": 1165,
+      "epochs_schedule": 100,
+      "epoch_cap": 5,
+      "planned_updates": 116500,
+      "kl_warmup_updates": 23300,
+      "resume": false
+    },
+    "completion_summarizer": "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/summarize.py",
+    "completion_summary_expected": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/five_epoch_summary.json",
+    "epoch_metrics_status": "No complete epoch metrics claimed; durable summarizer will record actual five-epoch results.",
+    "namespace_inspection_note": "Host init namespace symlink is permission-denied to this account; actual host ps/proc confirms PPID1, independent PGID/SID and uid1005."
+  },
+  "launch_completed": true
+}

@@ -1,0 +1,99 @@
+--- /dev/null	2026-05-18 15:44:45.167941316 +0800
++++ rareddie_pairout_cellout/tools/cohort_evidence.py	2026-10-12 21:06:02.870908477 +0800
+@@ -0,0 +1,96 @@
++"""Small exact frame/source/cohort checks and model/data copy record (CPU, read-only inputs).
++
++No preparation, audit rerun, model forward or benchmark: the full pairout_cellout
++preparation audit and the rareddie_control CSE equivalence evidence/approval are
++reused. Writes rareddie_pairout_cellout/evidence/cohort_copy_evidence.json.
++Usage: source rareddie_pairout_cellout/env.sh; CUDA_VISIBLE_DEVICES='' $PYTHON_BIN -m rareddie_pairout_cellout.tools.cohort_evidence
++"""
++import filecmp
++import json
++import math
++from pathlib import Path
++import numpy as np
++import pandas as pd
++import torch
++
++ROOT = Path(__file__).resolve().parents[2]
++CONTROL = ROOT / 'rareddie_pairout_cellout'
++PREPARED = ROOT / 'pairout_cellout/prepared'
++SOURCES = {'pairout': ROOT.parent / 'cairn_dev/data/processed/ddi.parquet',
++           'cellout': ROOT.parent / 'cairn_dev/data/experiments/reference85/cellout/ddi.parquet'}
++COUNTS = {'train': 151508, 'val': 18939, 'test': 18938}
++CLASSES = {'train': 85, 'val': 82, 'test': 83}
++PRIOR_CSE = ROOT / 'rareddie_control/evidence/cse_equivalence.json'
++PRIOR_APPROVAL = ROOT / 'logs/rareddie_control/review_approval.json'
++
++
++def same_frame(a, b):
++    return {'columns_and_order': a.columns.tolist() == b.columns.tolist(),
++            'dtypes': a.dtypes.astype(str).tolist() == b.dtypes.astype(str).tolist(),
++            'index': a.index.equals(b.index), 'values': a.equals(b)}
++
++
++def main():
++    sources = {arm: pd.read_parquet(path) for arm, path in SOURCES.items()}
++    frames = {arm: pd.read_parquet(PREPARED / arm / 'ddi.parquet') for arm in SOURCES}
++    pairs = {arm: np.load(PREPARED / arm / 'pair_indices.npy') for arm in SOURCES}
++    assets = torch.load(PREPARED / 'assets.pt', map_location='cpu', weights_only=False)
++    events = pd.read_csv(PREPARED / 'ddi_events.csv')
++    report = {'sources': {arm: {'path': str(path), 'resolved': str(path.resolve())} for arm, path in SOURCES.items()},
++              'columns': frames['pairout'].columns.tolist(),
++              'dtypes': frames['pairout'].dtypes.astype(str).tolist(),
++              'source_pairout_vs_cellout': same_frame(sources['pairout'], sources['cellout']),
++              'prepared_pairout_vs_cellout': same_frame(frames['pairout'], frames['cellout']),
++              'pair_indices_pairout_equal_cellout': bool(np.array_equal(pairs['pairout'], pairs['cellout'])),
++              'arms': {}}
++    graphs = assets['graphs']
++    for arm, frame in frames.items():
++        counts = frame.split.value_counts().to_dict()
++        classes = {split: int(frame.event_id[frame.split.eq(split)].nunique()) for split in COUNTS}
++        drugs = np.union1d(frame.drug_a.to_numpy(), frame.drug_b.to_numpy())
++        report['arms'][arm] = {
++            'prepared_vs_source': same_frame(frame, sources[arm]),
++            'counts': counts, 'counts_exact': counts == COUNTS,
++            'classes_present': classes, 'classes_exact': classes == CLASSES,
++            'pair_indices_rows': len(pairs[arm]), 'pair_indices_rows_exact': len(pairs[arm]) == len(frame),
++            'drugs': len(drugs),
++            'all_drugs_have_graph': all(int(d) in graphs for d in drugs),
++            'all_drugs_have_nai_row': bool(drugs.min() >= 0 and drugs.max() < len(assets['neighbor_entities'])),
++            'event_ids_in_0_84': bool(frame.event_id.between(0, 84).all())}
++    report['event_names_exact'] = (events.event_id.tolist() == list(range(85))
++                                   and events.template.tolist() == assets['ddi_event_names']
++                                   and assets['num_classes'] == 85)
++    batches = math.ceil(COUNTS['train'] / 128)
++    report['schedule'] = {'train_batches': batches, 'planned_updates': 150 * batches,
++                          'kl_warmup_updates': math.ceil(.2 * 150 * batches),
++                          'kl_warmup_epochs': math.ceil(.2 * 150 * batches) / batches}
++    cse, approval = json.loads(PRIOR_CSE.read_text()), json.loads(PRIOR_APPROVAL.read_text())
++    report['copy'] = {
++        'model_py_byte_identical_to_rareddie_control': filecmp.cmp(CONTROL / 'model.py', ROOT / 'rareddie_control/model.py', shallow=False),
++        'data_py_byte_identical_to_rareddie_control': filecmp.cmp(CONTROL / 'data.py', ROOT / 'rareddie_control/data.py', shallow=False),
++        'prior_cse_evidence': str(PRIOR_CSE.relative_to(ROOT)),
++        'prior_cse_passed': cse['passed'] is True and cse['forward_bitwise_equal'] is True
++        and cse['gradients_bitwise_equal'] is True,
++        'prior_approval': str(PRIOR_APPROVAL.relative_to(ROOT)), 'prior_approved': approval['approved'] is True,
++        'note': 'model.py/data.py are the verified rareddie_control files; no new CSE benchmark was run'}
++    report['ddi_split_note'] = ('same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh '
++                                'seed42 same-DDI-split replicates, NOT true cell-cold DDI generalization')
++    report['passed'] = bool(
++        all(report['source_pairout_vs_cellout'].values()) and all(report['prepared_pairout_vs_cellout'].values())
++        and report['pair_indices_pairout_equal_cellout'] and report['event_names_exact']
++        and all(all(a['prepared_vs_source'].values()) and a['counts_exact'] and a['classes_exact']
++                and a['pair_indices_rows_exact'] and a['all_drugs_have_graph'] and a['all_drugs_have_nai_row']
++                and a['event_ids_in_0_84'] for a in report['arms'].values())
++        and report['schedule'] == {'train_batches': 1184, 'planned_updates': 177600, 'kl_warmup_updates': 35520,
++                                   'kl_warmup_epochs': 30.}
++        and report['copy']['model_py_byte_identical_to_rareddie_control']
++        and report['copy']['data_py_byte_identical_to_rareddie_control']
++        and report['copy']['prior_cse_passed'] and report['copy']['prior_approved'])
++    output = CONTROL / 'evidence/cohort_copy_evidence.json'
++    output.write_text(json.dumps(report, indent=1, allow_nan=False) + '\n')
++    print(json.dumps({'passed': report['passed'], 'arms': report['arms'], 'schedule': report['schedule']}, indent=1))
++    return 0 if report['passed'] else 1
++
++
++if __name__ == '__main__':
++    raise SystemExit(main())

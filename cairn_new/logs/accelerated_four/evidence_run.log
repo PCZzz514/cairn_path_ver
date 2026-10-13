@@ -1,0 +1,7 @@
+=== evidence start 2026-10-12T12:03:47+08:00 host=su0
+{"arm": "path_single_drugout", "passed": true, "failed": [], "seconds": 9}
+{"arm": "path_double_drugout", "passed": true, "failed": [], "seconds": 6}
+{"arm": "no_path_single_drugout", "passed": true, "failed": [], "seconds": 35}
+{"arm": "no_path_double_drugout", "passed": true, "failed": [], "seconds": 36}
+{"all_passed": true}
+=== evidence exit=0 2026-10-12T12:04:31+08:00

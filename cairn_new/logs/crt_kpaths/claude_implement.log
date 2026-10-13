@@ -1,0 +1,35 @@
+I've implemented Step1, Step2 and Step3 in `crt_kpaths/` and stopped there: no training has been launched and all GPUs are idle. The K-Paths topology cache is already built (CPU only, as the plan allows), and nothing outside `crt_kpaths/` and `logs/crt_kpaths/` was modified. The head-training loop and the Step2 training loop have never actually run, because smoke training is not allowed; they are checked only by reading the code and the diff.
+
+**What each step does**
+- **Step1 (GPU4, single and double at the same time):** loads the original `best.pt` frozen and captures the real 256-d representation just before the last layer. On the full test split this reproduces the original model exactly: every top-1 prediction matches (16,978 / 534 rows) and probabilities differ by at most 3.5e-6. A new last layer is trained two ways (cRT balanced sampling and natural sampling) from identical starting weights with the same budget. One shared learning rate is picked from .01/.05/.2 using validation only, then two more head seeds are run.
+- **Step2 (GPU5 single, GPU6 double):** K-Paths replaces the old path retrieval. The trainer is the original training code with only the authorized differences (diff in `crt_kpaths/review/step2_train_vs_original.diff`). It starts from the same seed-42 setup, saves that initial state, and never loads the original checkpoint.
+- **Step3 (GPU7, one protocol at a time):** after each Step2 finishes, it repeats the Step1 procedure on that Step2's own best model, reusing Step1's learning rate for the same protocol.
+
+**Checks against the official code (results in `crt_kpaths/evidence/`)**
+- **cRT sampler:** my port gives exactly the same sample order as the official sampler for all 10 epochs on the real training labels. Train is missing classes 47 and 74, so the official version can't take the labels directly; my port uses the real class IDs and still outputs all 85 classes.
+- **K-Paths retrieval:** run on the complete DRKG graph, it matches the official functions on 24/24 real connected pairs, on all edge cases (one drug missing, both missing, too far apart, disconnected), and in expanding paths back to the raw DRKG facts.
+- **Cache coverage:** on all 188,105 pairs, a pair is marked as having a path exactly when its endpoints are connected within 4 hops; this is the same set of pairs as the old cache.
+- **Cache numbers:** built in 192 s; graphs are much smaller than the old cache (at most 28 nodes / 212 edges, against the old 130 / 695).
+
+**Desktop review round 1:** all 8 items are fixed. The most serious was a logging bug that would have crashed head training on its first epoch.
+
+**Decisions for you to confirm**
+- **Learning-rate schedule:** cRT now uses the modern order you asked for, so all 10 epochs train. The official code's literal order would leave the 10th epoch at learning rate 0.
+- **Pairs with fewer than 10 paths:**
+  - 39 pairs hit the 1,000-candidate search limit (2 rows in single test, 3 in single val, none in double val/test). They are flagged, not hidden. That is 0.02%, so I reported it rather than changing anything.
+  - Another 131 pairs genuinely have fewer than 10 distinct paths within 4 hops.
+- **Restart rule:** if a Step2 run crashes before its first checkpoint, recovery refuses to restart it from scratch and leaves the decision to you.
+
+**Launch (after your approval):**
+```
+cd /data/interns/zhangpc/cairn_new
+setsid nohup bash crt_kpaths/launch.sh > logs/crt_kpaths/launch.log 2>&1 < /dev/null &
+```
+This starts a background scheduler that runs Step1 and Step2 immediately and each Step3 when its inputs are ready. It then waits for each launched job's first real training update, starts the Codex monitor (every 2400 s), and confirms its first check succeeded. To follow up:
+```
+cat logs/crt_kpaths/launch.log logs/crt_kpaths/launch_confirmation.json
+source crt_kpaths/env.sh; $PYTHON_BIN crt_kpaths/jobs.py --status
+cat logs/crt_kpaths/monitor/next_check.txt
+```
+
+Full details, the exact change list and time estimates are in `crt_kpaths/implementation_summary.md`.

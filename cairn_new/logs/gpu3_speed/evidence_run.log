@@ -1,0 +1,298 @@
+=== evidence start 2026-10-12T11:09:54+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+Traceback (most recent call last):
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 628, in <module>
+    main()
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 451, in main
+    result = attention_compare(old_model.cse.blocks[k], new_model.cse.blocks[k], hx, tx,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 207, in attention_compare
+    old32 = attention_pass(old_block, hx, tx, old_edges, ptrs, weights, torch.float32)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 193, in attention_pass
+    loss = (ho * weights[0].to(dtype)).sum() + (to * weights[1].to(dtype)).sum()
+            ~~~^~~~~~~~~~~~~~~~~~~~~~
+RuntimeError: The size of tensor a (64) must match the size of tensor b (128) at non-singleton dimension 1
+=== evidence start 2026-10-12T11:10:29+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py:289: UserWarning: The .grad attribute of a Tensor that is not a leaf Tensor is being accessed. Its .grad attribute won't be populated during autograd.backward(). If you indeed want the .grad field to be populated for a non-leaf Tensor, use .retain_grad() on the non-leaf Tensor. If you access the non-leaf Tensor by mistake, make sure you access the leaf Tensor instead. See github.com/pytorch/pytorch/pull/30531 for more informations. (Triggered internally at /pytorch/build/aten/src/ATen/core/TensorBody.h:489.)
+  inputs = {name: leaf.grad.detach().clone() for name, leaf in leaves.items()}
+Traceback (most recent call last):
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 629, in <module>
+    main()
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 459, in main
+    old_repeat = model_pass(old_model, old_raws[b], seed, config, beta)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 289, in model_pass
+    inputs = {name: leaf.grad.detach().clone() for name, leaf in leaves.items()}
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/tools/evidence.py", line 289, in <dictcomp>
+    inputs = {name: leaf.grad.detach().clone() for name, leaf in leaves.items()}
+                    ^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'detach'
+=== evidence start 2026-10-12T11:11:56+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+{
+ "all_numerical_checks_passed": false,
+ "failed_checks": [
+  "fresh_seed42_init.model_parameter_gradients",
+  "trained_production_best.model_parameter_gradients"
+ ],
+ "timing": {
+  "breakdown.transfer": {
+   "old_median_seconds": 0.0033240243792533875,
+   "new_median_seconds": 0.0009339181706309319,
+   "old_over_new": 3.559224441481591
+  },
+  "breakdown.forward": {
+   "old_median_seconds": 0.6591692510992289,
+   "new_median_seconds": 0.03790733218193054,
+   "old_over_new": 17.38896443399512
+  },
+  "breakdown.backward": {
+   "old_median_seconds": 0.4754528868943453,
+   "new_median_seconds": 0.03656148910522461,
+   "old_over_new": 13.004199186909032
+  },
+  "breakdown.optimizer": {
+   "old_median_seconds": 0.00516811478883028,
+   "new_median_seconds": 0.002759987488389015,
+   "old_over_new": 1.872513846737353
+  },
+  "breakdown.fullstep": {
+   "old_median_seconds": 1.1447146199643612,
+   "new_median_seconds": 0.07818018738180399,
+   "old_over_new": 14.642004046037721
+  },
+  "fullstep.fullstep": {
+   "old_median_seconds": 1.1322778454050422,
+   "new_median_seconds": 0.08282910380512476,
+   "old_over_new": 13.670048248608317
+  },
+  "eval.transfer": {
+   "old_median_seconds": 0.0032808645628392696,
+   "new_median_seconds": 0.0008261529728770256,
+   "old_over_new": 3.9712555308175745
+  },
+  "eval.forward": {
+   "old_median_seconds": 0.5808824175037444,
+   "new_median_seconds": 0.032475356478244066,
+   "old_over_new": 17.886868090051294
+  },
+  "eval.fullstep": {
+   "old_median_seconds": 0.5841900995001197,
+   "new_median_seconds": 0.03344580112025142,
+   "old_over_new": 17.46676951763589
+  }
+ }
+}
+=== evidence exit=0 2026-10-12T11:15:35+08:00
+=== evidence start 2026-10-12T11:16:34+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+{
+ "all_numerical_checks_passed": true,
+ "failed_checks": [],
+ "timing": {
+  "breakdown.transfer": {
+   "old_median_seconds": 0.0033047497272491455,
+   "new_median_seconds": 0.0013271253556013107,
+   "old_over_new": 2.490156422150331
+  },
+  "breakdown.forward": {
+   "old_median_seconds": 0.6567702032625675,
+   "new_median_seconds": 0.08329438604414463,
+   "old_over_new": 7.88492759781542
+  },
+  "breakdown.backward": {
+   "old_median_seconds": 0.47740061953663826,
+   "new_median_seconds": 0.08873027097433805,
+   "old_over_new": 5.380357957823759
+  },
+  "breakdown.optimizer": {
+   "old_median_seconds": 0.005279301665723324,
+   "new_median_seconds": 0.005606718361377716,
+   "old_over_new": 0.9416027924802098
+  },
+  "breakdown.fullstep": {
+   "old_median_seconds": 1.1465468369424343,
+   "new_median_seconds": 0.18516710959374905,
+   "old_over_new": 6.19195730525752
+  },
+  "fullstep.fullstep": {
+   "old_median_seconds": 1.1377172227948904,
+   "new_median_seconds": 0.07726303208619356,
+   "old_over_new": 14.725246888132334
+  },
+  "eval.transfer": {
+   "old_median_seconds": 0.0033129211515188217,
+   "new_median_seconds": 0.0007919999770820141,
+   "old_over_new": 4.182981372960013
+  },
+  "eval.forward": {
+   "old_median_seconds": 0.5812567663379014,
+   "new_median_seconds": 0.03197634080424905,
+   "old_over_new": 18.17771363822415
+  },
+  "eval.fullstep": {
+   "old_median_seconds": 0.5845073885284364,
+   "new_median_seconds": 0.03283776203170419,
+   "old_over_new": 17.79985456877684
+  }
+ }
+}
+=== evidence exit=0 2026-10-12T11:20:03+08:00
+=== evidence start 2026-10-12T11:23:13+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+{
+ "all_numerical_checks_passed": true,
+ "failed_checks": [],
+ "timing": {
+  "breakdown.transfer": {
+   "old_median_seconds": 0.003217305988073349,
+   "new_median_seconds": 0.000897599384188652,
+   "old_over_new": 3.5843451374262028
+  },
+  "breakdown.forward": {
+   "old_median_seconds": 0.6540093785151839,
+   "new_median_seconds": 0.03784894570708275,
+   "old_over_new": 17.279460928096547
+  },
+  "breakdown.backward": {
+   "old_median_seconds": 0.4587268764153123,
+   "new_median_seconds": 0.035391928628087044,
+   "old_over_new": 12.96134158824186
+  },
+  "breakdown.optimizer": {
+   "old_median_seconds": 0.0049868058413267136,
+   "new_median_seconds": 0.0028363941237330437,
+   "old_over_new": 1.7581498281922343
+  },
+  "breakdown.fullstep": {
+   "old_median_seconds": 1.1226273169741035,
+   "new_median_seconds": 0.07679062429815531,
+   "old_over_new": 14.619327909293629
+  },
+  "fullstep.fullstep": {
+   "old_median_seconds": 1.1310927793383598,
+   "new_median_seconds": 0.2091398499906063,
+   "old_over_new": 5.40830826544613
+  },
+  "eval.transfer": {
+   "old_median_seconds": 0.003246431704610586,
+   "new_median_seconds": 0.0008517149835824966,
+   "old_over_new": 3.8116409446683623
+  },
+  "eval.forward": {
+   "old_median_seconds": 0.5789732350967824,
+   "new_median_seconds": 0.031712130177766085,
+   "old_over_new": 18.25715370904697
+  },
+  "eval.fullstep": {
+   "old_median_seconds": 0.5819845115765929,
+   "new_median_seconds": 0.03256761562079191,
+   "old_over_new": 17.87003747382233
+  }
+ }
+}
+=== evidence exit=0 2026-10-12T11:26:36+08:00
+=== evidence start 2026-10-12T11:27:13+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+{
+ "all_numerical_checks_passed": true,
+ "failed_checks": [],
+ "timing": {
+  "breakdown.transfer": {
+   "old_median_seconds": 0.003360763192176819,
+   "new_median_seconds": 0.0009100316092371941,
+   "old_over_new": 3.6930180864749027
+  },
+  "breakdown.forward": {
+   "old_median_seconds": 0.6490390542894602,
+   "new_median_seconds": 0.03765324968844652,
+   "old_over_new": 17.237265300068124
+  },
+  "breakdown.backward": {
+   "old_median_seconds": 0.47200803365558386,
+   "new_median_seconds": 0.03641384560614824,
+   "old_over_new": 12.962323143806826
+  },
+  "breakdown.optimizer": {
+   "old_median_seconds": 0.005094642750918865,
+   "new_median_seconds": 0.0027884822338819504,
+   "old_over_new": 1.8270307370136702
+  },
+  "breakdown.fullstep": {
+   "old_median_seconds": 1.1284100338816643,
+   "new_median_seconds": 0.07820644788444042,
+   "old_over_new": 14.428606136785907
+  },
+  "fullstep.fullstep": {
+   "old_median_seconds": 1.1270225690677762,
+   "new_median_seconds": 0.07903756015002728,
+   "old_over_new": 14.2593289434604
+  },
+  "eval.transfer": {
+   "old_median_seconds": 0.003087194636464119,
+   "new_median_seconds": 0.0008287369273602962,
+   "old_over_new": 3.725180494004885
+  },
+  "eval.forward": {
+   "old_median_seconds": 0.5742210252210498,
+   "new_median_seconds": 0.03200106415897608,
+   "old_over_new": 17.943810317319862
+  },
+  "eval.fullstep": {
+   "old_median_seconds": 0.5773664680309594,
+   "new_median_seconds": 0.03290215553715825,
+   "old_over_new": 17.547983060833417
+  }
+ }
+}
+=== evidence exit=0 2026-10-12T11:30:41+08:00
+=== evidence start 2026-10-12T11:31:20+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+{
+ "all_numerical_checks_passed": true,
+ "failed_checks": [],
+ "timing": {
+  "breakdown.transfer": {
+   "old_median_seconds": 0.0032864511013031006,
+   "new_median_seconds": 0.0008862856775522232,
+   "old_over_new": 3.708117128079677
+  },
+  "breakdown.forward": {
+   "old_median_seconds": 0.6458344561979175,
+   "new_median_seconds": 0.03791669104248285,
+   "old_over_new": 17.032985696834874
+  },
+  "breakdown.backward": {
+   "old_median_seconds": 0.47937628999352455,
+   "new_median_seconds": 0.03695846814662218,
+   "old_over_new": 12.97067530211847
+  },
+  "breakdown.optimizer": {
+   "old_median_seconds": 0.0051125213503837585,
+   "new_median_seconds": 0.002831784076988697,
+   "old_over_new": 1.80540648982686
+  },
+  "breakdown.fullstep": {
+   "old_median_seconds": 1.1342285135760903,
+   "new_median_seconds": 0.07863108348101377,
+   "old_over_new": 14.424683768346657
+  },
+  "fullstep.fullstep": {
+   "old_median_seconds": 1.1456242334097624,
+   "new_median_seconds": 0.07837099488824606,
+   "old_over_new": 14.61796210502849
+  },
+  "eval.transfer": {
+   "old_median_seconds": 0.0032499944791197777,
+   "new_median_seconds": 0.0016838042065501213,
+   "old_over_new": 1.9301498751915822
+  },
+  "eval.forward": {
+   "old_median_seconds": 0.5823710835538805,
+   "new_median_seconds": 0.08094241004437208,
+   "old_over_new": 7.194881931914661
+  },
+  "eval.fullstep": {
+   "old_median_seconds": 0.5857671163976192,
+   "new_median_seconds": 0.08282868284732103,
+   "old_over_new": 7.072032250921699
+  }
+ }
+}
+=== evidence exit=0 2026-10-12T11:34:47+08:00

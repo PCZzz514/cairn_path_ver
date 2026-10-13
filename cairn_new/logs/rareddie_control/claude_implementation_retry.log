@@ -1,0 +1,39 @@
+The `rareddie_control` package is built and ready for Codex review. Nothing has been launched; GPU6 and GPU7 are still idle.
+
+**The equivalence check passed.** It compared the new model's molecular encoder (CSE) against the unmodified original RareDDIE code (`MVN_DDI.forward`, imported read-only from cairn_dev). Both used the same parameters on 60 real single_drugout train pairs, with molecules from 1 to 208 atoms, including 1-atom self-loop molecules. It ran on CPU only.
+- **Outputs:** bitwise equal (max difference 0.0).
+- **Gradients:** every shared parameter's gradient is bitwise equal. The parameters that get no gradient are the same on both sides: the last block's `norm2` (the original forward never uses it) and the frozen SAGPooling scalar.
+- **Negative control:** the current DSN version of the encoder, with the same parameters, differs by 0.406, so the check does detect changes.
+- **Parameter inventory:** compared with the existing no-path model, exactly 14 names are removed, all `interAtt` or `inter_projection`, and none are added. FIN/NAI/PVR/classifier names and shapes are unchanged, and all four molecular TransformerConv layers are kept. Logits are [60, 85] and there are no path, GAT or cross-edge names.
+- **Launch gate:** it now refuses for one reason only, the missing `logs/rareddie_control/review_approval.json`. GPU6/7 were detected idle and the busy GPU4 was detected.
+
+**Evidence and diffs:**
+- `rareddie_control/evidence/cse_equivalence.json` (log in `logs/rareddie_control/cse_equivalence.log`)
+- `rareddie_control/evidence/parameter_inventory_cpu.json`
+- `rareddie_control/review/implementation.diff` (1570 lines: every adapted file against its accelerated_four original, plus the original block for order comparison)
+- `rareddie_control/review/new_files.diff`
+- Status is in `logs/rareddie_control/status.json` (`implementation_ready_for_review`); the handoff is `logs/rareddie_control/implementation_handoff.md`.
+
+**What's in the package:**
+- **Model:** the existing no-path model with the DSN `interAtt`, `inter_projection` and cross-edge generation removed entirely. NAI, PVR and the classifier are imported unchanged, and the classifier takes the deterministic `mu_ab`.
+- **Trainer:** requires an explicit `--fresh`, `--resume` or `--test-only`.
+  - `--fresh` refuses an output folder that already has a checkpoint or history.
+  - Resume and test-only only load this run's own checkpoints.
+  - A fresh run saves the seeded RNG state as `initial_rng.pt` and writes `model_inventory.json`.
+  - The first real update writes `first_update.json` (loss terms, per-group gradient norms, finiteness).
+  - The test export adds report-only Top-5, and the verifier recomputes it from the saved probabilities.
+- **Controller and monitor:** adapted copies; the accelerated_four originals are not modified.
+  - The monitor uses the exact gpt-6.1-sol LOW command with the bypass flags you specified, and codex-cli 0.160.0 accepts all of them.
+  - It checks immediately, then every 2400 s, runs as a detached daemon with PPID 1, and sends no notifications.
+  - Its first check counts as successful when Codex exits 0 and `after.json` and `next_check.txt` are saved.
+
+**Decision for the reviewer:** a run that dies before its first epoch checkpoint can't be recovered automatically, because `--fresh` is reserved for the initial launch as you specified. That arm would stay marked failed. Allowing a fresh restart when no checkpoint exists would fix this, but it goes against that rule.
+
+**Commands**, run from `/data/interns/zhangpc/cairn_new` in a non-sandboxed shell, after Codex writes the approval:
+1. Codex writes `logs/rareddie_control/review_approval.json` with `{"approved": true, "reviewer": "Codex …"}`. It must be newer than the code, evidence and diff, or the gate refuses.
+2. Launch and confirm: `bash rareddie_control/launch.sh --launch-reviewed`. This waits up to 1800 s for the first update and a 100-update line on both arms.
+3. Re-confirm (read-only): `bash -c 'source rareddie_control/env.sh; CUDA_VISIBLE_DEVICES= "$PYTHON_BIN" rareddie_control/confirm_launch.py'`
+4. Start the monitor: `bash rareddie_control/monitor/start_monitor.sh`. This waits up to 1500 s for the first successful check and records the PID, PPID and next check.
+5. Status: `bash -c 'source rareddie_control/env.sh; CUDA_VISIBLE_DEVICES= "$PYTHON_BIN" rareddie_control/jobs.py --status'`
+
+Outputs go to `rareddie_control/outputs/{single_drugout,double_drugout}`; job records, monitor state and `launch.json` go under `logs/rareddie_control/`.

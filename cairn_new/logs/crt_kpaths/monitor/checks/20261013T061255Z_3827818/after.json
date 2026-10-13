@@ -1,0 +1,107 @@
+{
+  "checked_at": 1791871998.691269,
+  "runs": {
+    "step1_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 3826575,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step1_single_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "head_epoch",
+        "epoch": 2,
+        "arm": "crt",
+        "base_lr": 0.2,
+        "epoch_lr": 0.19510565162951538,
+        "seed": 42,
+        "val_macro_f1_85": 0.4998748248452717,
+        "seconds": 0.5733797550201416
+      },
+      "exit": null
+    },
+    "step1_double_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 3826576,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step1_double_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "head_epoch",
+        "epoch": 7,
+        "arm": "natural",
+        "base_lr": 0.2,
+        "epoch_lr": 0.06909830056250528,
+        "seed": 44,
+        "val_macro_f1_85": 0.10670137066137853,
+        "seconds": 0.4133319854736328
+      },
+      "exit": null
+    },
+    "step2_kpaths_single_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 3826577,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step2_kpaths_single_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 2,
+        "update": 1200,
+        "epoch_seconds": 3.3582584857940674
+      },
+      "exit": null,
+      "history_last_epoch": 1,
+      "best_validation_macro_f1_85": 0.21669940982118197,
+      "bad_epochs": 0
+    },
+    "step2_kpaths_double_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 3826578,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/crt_kpaths/jobs/step2_kpaths_double_drugout/attempt_1.log",
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 2,
+        "update": 1300,
+        "epoch_seconds": 11.368581533432007
+      },
+      "exit": null,
+      "history_last_epoch": 1,
+      "best_validation_macro_f1_85": 0.10820396396665762,
+      "bad_epochs": 0
+    },
+    "step3_single_drugout": {
+      "state": "waiting",
+      "waiting_for": [
+        "step1_single_drugout",
+        "step2_kpaths_single_drugout"
+      ],
+      "gpu": 7
+    },
+    "step3_double_drugout": {
+      "state": "waiting",
+      "waiting_for": [
+        "step1_double_drugout",
+        "step2_kpaths_double_drugout"
+      ],
+      "gpu": 7
+    }
+  },
+  "dispatcher": {
+    "pid": 3826574,
+    "process_start": "1278160510",
+    "started_at": 1791871870.2089899,
+    "poll_seconds": 60,
+    "live": true
+  },
+  "all_complete": false
+}

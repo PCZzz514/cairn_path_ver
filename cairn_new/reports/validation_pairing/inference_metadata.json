@@ -1,0 +1,162 @@
+{
+  "pairout": {
+    "base": {
+      "arm": "pairout",
+      "variant": "base",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/dsn_pairout_cellout/outputs/pairout/best.pt",
+      "selected_epoch": 36,
+      "prepared": "/data/interns/zhangpc/cairn_new/pairout_cellout/prepared",
+      "metrics": {
+        "ce": 0.13385556628486983,
+        "rec": 0.21720325370085164,
+        "kl": 3.4469310194356204,
+        "loss": 0.15902282348330182,
+        "macro_f1_85": 0.9134179436575569,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.9628280268229579,
+      "stored_best_val_f1": 0.9134179436575569,
+      "inference_gpu": "6",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    },
+    "path": {
+      "arm": "pairout",
+      "variant": "path",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/pairout_cellout/outputs/pairout/best.pt",
+      "selected_epoch": 24,
+      "prepared": "/data/interns/zhangpc/cairn_new/pairout_cellout/prepared",
+      "metrics": {
+        "ce": 0.15251301650389257,
+        "rec": 0.2804320632130501,
+        "kl": 3.533853869357855,
+        "loss": 0.1840900776724773,
+        "macro_f1_85": 0.9005239724768849,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.9558582818522625,
+      "stored_best_val_f1": 0.9005239724768849,
+      "inference_gpu": "6",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    }
+  },
+  "cellout": {
+    "base": {
+      "arm": "cellout",
+      "variant": "base",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/dsn_pairout_cellout/outputs/cellout/best.pt",
+      "selected_epoch": 79,
+      "prepared": "/data/interns/zhangpc/cairn_new/pairout_cellout/prepared",
+      "metrics": {
+        "ce": 0.16092459020802857,
+        "rec": 0.1868956404801023,
+        "kl": 3.2801979822180667,
+        "loss": 0.18289435281956187,
+        "macro_f1_85": 0.9211805653994958,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.9652040762447859,
+      "stored_best_val_f1": 0.9211805653994958,
+      "inference_gpu": "7",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    },
+    "path": {
+      "arm": "cellout",
+      "variant": "path",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/pairout_cellout/outputs/cellout/best.pt",
+      "selected_epoch": 37,
+      "prepared": "/data/interns/zhangpc/cairn_new/pairout_cellout/prepared",
+      "metrics": {
+        "ce": 0.180559166264869,
+        "rec": 0.2775091520717689,
+        "kl": 3.3259039651794287,
+        "loss": 0.21163598611367465,
+        "macro_f1_85": 0.9024906088139462,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.9573367126036222,
+      "stored_best_val_f1": 0.9024906088139462,
+      "inference_gpu": "7",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    }
+  },
+  "single_drugout": {
+    "base": {
+      "arm": "single_drugout",
+      "variant": "base",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_single_drugout/best.pt",
+      "selected_epoch": 16,
+      "prepared": "/data/interns/zhangpc/cairn_new/data/prepared",
+      "metrics": {
+        "ce": 1.4716943561270859,
+        "rec": 0.2711265810240855,
+        "kl": 3.509171800748758,
+        "loss": 1.5023161932743596,
+        "macro_f1_85": 0.5667568308804323,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.719557373105605,
+      "stored_best_val_f1": 0.5667568308804323,
+      "inference_gpu": "6",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    },
+    "path": {
+      "arm": "single_drugout",
+      "variant": "path",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_single_drugout/best.pt",
+      "selected_epoch": 32,
+      "prepared": "/data/interns/zhangpc/cairn_new/data/prepared",
+      "metrics": {
+        "ce": 1.9496207743503167,
+        "rec": 0.3058306659589973,
+        "kl": 3.2157587048065097,
+        "loss": 1.9834196099631052,
+        "macro_f1_85": 0.5842708175488728,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.7461149867693048,
+      "stored_best_val_f1": 0.5842708175488728,
+      "inference_gpu": "6",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    }
+  },
+  "double_drugout": {
+    "base": {
+      "arm": "double_drugout",
+      "variant": "base",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_double_drugout/best.pt",
+      "selected_epoch": 24,
+      "prepared": "/data/interns/zhangpc/cairn_new/data/prepared",
+      "metrics": {
+        "ce": 3.5490219392274556,
+        "rec": 0.29162093746034723,
+        "kl": 3.360253085588154,
+        "loss": 3.581544228603965,
+        "macro_f1_85": 0.1259564026908654,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.5118421052631579,
+      "stored_best_val_f1": 0.1259564026908654,
+      "inference_gpu": "7",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    },
+    "path": {
+      "arm": "double_drugout",
+      "variant": "path",
+      "checkpoint": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_double_drugout/best.pt",
+      "selected_epoch": 40,
+      "prepared": "/data/interns/zhangpc/cairn_new/data/prepared",
+      "metrics": {
+        "ce": 4.547359900725516,
+        "rec": 0.3547231611452605,
+        "kl": 3.0568274548179226,
+        "loss": 4.585889128634804,
+        "macro_f1_85": 0.12708502407587072,
+        "kl_beta": 0.001
+      },
+      "accuracy": 0.5355263157894737,
+      "stored_best_val_f1": 0.12708502407587072,
+      "inference_gpu": "7",
+      "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+    }
+  }
+}

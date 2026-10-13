@@ -1,0 +1,8 @@
+Server Codex medium owns planning/review; Claude opus-5-5 default effort authors every implementation/deployment change. Existing original sources/configs/outputs/jobs/monitor remain read-only. Only GPUs4/5/6/7 for replicas, sharing original GPUs and recording contention.
+1. Claude creates accelerated_four isolated package from ORIGINAL production trainer, copies only reviewed GPU3 model/data optimization, retains metrics, resume/earlystop/test protocol. Narrow progress/accuracy additions.
+2. Claude stable CPU snapshots per original arm, verifies coherent last/best/history/config cutoff and preserves all states; whitelist metadata/output migration only. Independent new outputs, historical best retained.
+3. Claude meaningful real ragged no-path comparisons and all-four checkpoint/optimizer/RNG/shuffle/formula evidence. Reuse existing GPU3 attention/path evidence; no repeated speed campaign.
+4. Codex reads ALL changes/evidence, verifies strict state keys/load, AdamW schedule/epoch/KL, RNG restoration, fixed85 strict selection, patience entry guard and selected-best exports; signs review approval before launch.
+5. Claude-authored host launcher starts four detached PPID1 jobs, distinct PID/log/outputs. Codex checks actual first/100step progress for each and originals live/naturally complete.
+6. Claude-authored separate detached host daemon checks every2400s using separate server Codex gpt-6.1-sol LOW CLI; deterministic artifact verifier + bounded host recovery only failed/dead/unlocked jobs, never live. Confirm startup and handoff; medium turn ends without waiting full training.
+No hashes/smoke/AMP/hyperparameter/layer/loss changes, no external/environment/auth writes. All writes under accelerated_four or logs/accelerated_four.

@@ -1,0 +1,28 @@
+The implementation is ready for Codex review. Nothing was launched: no jobs, no monitor, no CUDA work, no model forward pass or benchmark, and no prepare or audit rerun.
+
+**What's in `rareddie_pairout_cellout/`**
+- **Model and data:** `model.py` and `data.py` are byte-for-byte copies of the `rareddie_control` files, confirmed with `cmp`. There are no DSN inter-graph attention modules, cross edges or path code, and the molecular TransformerConv stays.
+- **Trainer (`train.py`)**, a narrow adaptation of the control trainer:
+  - PairOut runs on GPU6 and CellOut on GPU7.
+  - It reuses the existing `pairout_cellout/prepared` audit read-only, with no cold-drug or path checks.
+  - It enforces 150 epochs, patience 15, 1184 batches per epoch, 177600 planned updates and 35520 KL warmup updates (30 epochs) in every mode.
+  - The first-update record now also says whether the actual batch contained cross edges or a path graph, and whether the logits are finite.
+  - The test metrics and completion marker record the protocol, the same-DDI-split note, the parameter count and total training time.
+  - Loss, state keys, seeding, AdamW, resume and selection on strict fixed85 validation MacroF1 are unchanged.
+- **Configs:** both arms use seed 42, 150 epochs, patience 15, batch 128, AdamW 1e-4 with weight decay 1e-4, rec 0.1, KL 0.001 with warmup fraction 0.2, NAI cap 30, 2 CPU threads and 2 workers. Each carries `ddi_split_note` stating these are independent fresh seed42 runs on the same DDI split, **not true cell-cold DDI generalization**. That note is required and verified in the saved config, test config, test metrics and completion marker.
+- **Launch gate (`jobs.py`):** requires Codex approval, the new cohort/copy evidence, `model.py`/`data.py` still identical to the originals, the earlier CSE evidence (`rareddie_control/evidence/cse_equivalence.json`), the earlier approval, and idle GPU6/7. The export verifier now checks the 150-epoch schedule, 1184 updates per epoch, the split note and the same cohort's rows.
+- **Launch confirmation (`confirm_launch.py`):** checks the start line (fresh, seed 42, 1184 batches, 151508 rows, 150/15/177600/35520). It checks the KL weight on the first and 100th updates and requires finite, nonzero gradients in every parameter group. It confirms there are no cross edges or path graph, and that the parameter counts match the original control model's.
+- **Monitor:** renamed copies of the existing scripts. The prompt covers only the two new jobs, with 150 epochs and 1184 updates per epoch. It uses gpt-6.1-sol low, checks immediately and then every 2400 s, runs detached with PPID 1, and uses the existing `.codex_runtime`. It uses the launching shell's proxy and falls back to the old 127.0.0.1:7890 setting only if none is set.
+
+**Checks run**
+- **Cohort evidence** (`evidence/cohort_copy_evidence.json`): passed.
+  - The original PairOut source and the CellOut source (a symlink to the same file) match each other and both prepared copies in columns, order, dtypes, index and values.
+  - Split counts are 151508/18939/18938, with 85/82/83 classes present.
+  - Pair indices are identical across arms, all 1666 drugs have graphs and NAI rows, and event names match exactly.
+- **Static checks:** syntax checks pass on every Python and shell file, and the modules import with both configs passing the data gate. No `__pycache__` was written.
+- **Launch-gate dry run:** the only refusal is the missing Codex approval; GPU6 and GPU7 are idle.
+- **Review diffs:** written to `review/implementation.diff` and `review/new_files.diff`, with `tools/make_review.sh` to regenerate them.
+
+I wrote `logs/rareddie_pairout_cellout/implementation_handoff.md` with the review, approval, launch and monitor commands, and set `status.json` to `implementation_ready_for_codex_review`.
+
+I edited nothing in the protected folders. `logs/pairout_cellout/status.json` changed during this session; that was the existing pairout_cellout monitor writing its own update (it now reads `monitor_complete`), not anything I did.

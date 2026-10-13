@@ -1,0 +1,18 @@
+{
+ "approved": true,
+ "reviewer": "server Codex gpt-6.1-sol medium",
+ "implementation_author": "claude-opus-5-5 DEFAULT effort",
+ "state": "approved_for_fresh_launch",
+ "review": "logs/rareddie_pairout_cellout/review.md",
+ "evidence": "rareddie_pairout_cellout/evidence/cohort_copy_evidence.json",
+ "prior_cse_evidence": "rareddie_control/evidence/cse_equivalence.json",
+ "model_data_byte_identical": true,
+ "gpu_mapping": {"pairout": 6, "cellout": 7},
+ "epochs": 150,
+ "patience": 15,
+ "planned_updates": 177600,
+ "kl_warmup_updates": 35520,
+ "fresh_only": true,
+ "ddi_split_note": "independent fresh seed42 same-DDI-split replicates; NOT true cell-cold DDI generalization",
+ "postlaunch_required": "finite actual first updates/update100, PPID1 jobs and durable LOW monitor first successful check"
+}

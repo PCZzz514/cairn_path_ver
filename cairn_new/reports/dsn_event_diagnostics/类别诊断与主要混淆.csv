@@ -1,0 +1,341 @@
+﻿划分,event_id,事件模板,训练样本数,验证样本数,测试样本数,预测为该类的次数,误分类次数,诊断,前三混淆event_id,前三混淆次数,前三占错误比例,Precision,Recall,F1
+pairout,0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37,2,5,5,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,1,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,372,47,52,53,0,训练测试均有正例，无上述标记,,,0.0,0.981132075471698,1.0,0.9904761904761904
+pairout,2,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,7,2,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,3,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,27258,3469,3289,3365,121,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,8,35","51,27,9",0.71900826446281,0.9414561664190192,0.9632107023411371,0.9522091974752028
+pairout,4,The metabolism of {drug_B} can be increased when combined with {drug_A}.,4005,418,499,529,31,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"16,8,14","21,3,2",0.8387096774193549,0.8846880907372401,0.937875751503006,0.9105058365758756
+pairout,5,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,7,1,3,2,1,训练测试均有正例，无上述标记,17,1,1.0,1.0,0.6666666666666666,0.8
+pairout,6,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,22,3,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,7,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,344,47,50,45,8,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"16,35,3","2,2,1",0.625,0.9333333333333332,0.84,0.8842105263157894
+pairout,8,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,48226,6098,5987,5974,124,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,17,4","44,20,8",0.5806451612903226,0.981419484432541,0.9792884583263738,0.980352813309924
+pairout,9,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,100,12,15,15,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,10,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20,1,5,5,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,11,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,4,0,2,1,1,训练测试均有正例，无上述标记,25,1,1.0,1.0,0.5,0.6666666666666666
+pairout,12,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,11,2,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,13,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,21,4,7,5,2,训练测试均有正例，无上述标记,8,2,1.0,1.0,0.7142857142857143,0.8333333333333333
+pairout,14,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,427,52,57,57,6,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,15","2,2,1",0.8333333333333334,0.8947368421052632,0.8947368421052632,0.8947368421052632
+pairout,15,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,242,26,27,25,6,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,4,14","2,1,1",0.6666666666666666,0.84,0.7777777777777778,0.8076923076923077
+pairout,16,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7310,907,983,981,69,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"4,17,3","32,21,7",0.8695652173913043,0.9317023445463812,0.9298067141403866,0.9307535641547862
+pairout,17,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,18836,2324,2316,2263,175,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,16,8","101,22,16",0.7942857142857143,0.9460892620415378,0.9244386873920551,0.935138676566936
+pairout,18,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,6096,752,772,763,32,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,17","9,6,4",0.59375,0.9698558322411532,0.9585492227979274,0.9641693811074918
+pairout,19,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,182,27,34,34,1,训练测试均有正例，无上述标记,18,1,1.0,0.9705882352941176,0.9705882352941176,0.9705882352941176
+pairout,20,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,677,69,80,83,0,训练测试均有正例，无上述标记,,,0.0,0.963855421686747,1.0,0.98159509202454
+pairout,21,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,57,12,10,9,1,训练测试均有正例，无上述标记,17,1,1.0,1.0,0.9,0.9473684210526316
+pairout,22,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,29,2,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,23,{drug_A} may decrease the analgesic activities of {drug_B}.,7,2,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,24,{drug_A} may decrease the anticoagulant activities of {drug_B}.,191,28,19,21,0,训练测试均有正例，无上述标记,,,0.0,0.9047619047619048,1.0,0.95
+pairout,25,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2429,304,308,313,1,训练测试均有正例，无上述标记,73,1,1.0,0.9808306709265175,0.9967532467532468,0.9887278582930756
+pairout,26,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6,0,1,0,1,预测极少：预测次数为0或≤测试支持数10%,39,1,1.0,0.0,0.0,0.0
+pairout,27,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,286,38,23,23,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,28,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,809,97,116,117,0,训练测试均有正例，无上述标记,,,0.0,0.9914529914529916,1.0,0.9957081545064378
+pairout,29,{drug_A} may decrease the diuretic activities of {drug_B}.,254,32,34,36,0,训练测试均有正例，无上述标记,,,0.0,0.9444444444444444,1.0,0.9714285714285714
+pairout,30,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1425,181,181,183,0,训练测试均有正例，无上述标记,,,0.0,0.989071038251366,1.0,0.9945054945054944
+pairout,31,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,69,7,3,3,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,32,{drug_A} may decrease the sedative activities of {drug_B}.,438,49,61,58,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,30","2,1",1.0,1.0,0.9508196721311476,0.9747899159663864
+pairout,33,{drug_A} may decrease the stimulatory activities of {drug_B}.,411,47,40,41,0,训练测试均有正例，无上述标记,,,0.0,0.975609756097561,1.0,0.9876543209876544
+pairout,34,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,249,30,30,26,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,48,64","2,1,1",1.0,1.0,0.8666666666666667,0.9285714285714286
+pairout,35,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4766,626,643,651,26,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,17,8","11,11,1",0.8846153846153846,0.9477726574500768,0.9595645412130638,0.9536321483771252
+pairout,36,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,77,8,9,9,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,37,{drug_A} may increase the analgesic activities of {drug_B}.,224,21,33,33,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,38,{drug_A} may increase the anticholinergic activities of {drug_B}.,248,30,39,39,1,训练测试均有正例，无上述标记,8,1,1.0,0.9743589743589745,0.9743589743589745,0.9743589743589745
+pairout,39,{drug_A} may increase the anticoagulant activities of {drug_B}.,2497,308,326,318,14,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,18","7,3,1",0.7857142857142857,0.981132075471698,0.9570552147239264,0.968944099378882
+pairout,40,{drug_A} may increase the antihypertensive activities of {drug_B}.,486,72,65,68,2,训练测试均有正例，无上述标记,"3,64","1,1",1.0,0.9264705882352942,0.9692307692307692,0.9473684210526316
+pairout,41,{drug_A} may increase the antiplatelet activities of {drug_B}.,253,41,42,37,8,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"18,3,8","4,3,1",1.0,0.918918918918919,0.8095238095238095,0.860759493670886
+pairout,42,{drug_A} may increase the antipsychotic activities of {drug_B}.,77,11,6,6,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,43,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,280,30,40,37,5,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,35,62","2,2,1",1.0,0.945945945945946,0.875,0.9090909090909092
+pairout,44,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,571,67,77,79,2,训练测试均有正例，无上述标记,"3,8","1,1",1.0,0.9493670886075948,0.974025974025974,0.9615384615384616
+pairout,45,{drug_A} may increase the bradycardic activities of {drug_B}.,1013,106,123,118,8,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,28","2,2,1",0.625,0.9745762711864406,0.934959349593496,0.954356846473029
+pairout,46,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,20,3,3,3,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,47,{drug_A} may increase the cardiotoxic activities of {drug_B}.,163,15,20,24,1,训练测试均有正例，无上述标记,3,1,1.0,0.7916666666666666,0.95,0.8636363636363635
+pairout,48,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4331,524,522,532,2,训练测试均有正例，无上述标记,"4,17","1,1",1.0,0.9774436090225564,0.9961685823754788,0.986717267552182
+pairout,49,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,25,1,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,50,{drug_A} may increase the central neurotoxic activities of {drug_B}.,10,3,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+pairout,51,{drug_A} may increase the constipating activities of {drug_B}.,115,9,22,22,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,52,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,8,3,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+pairout,53,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,23,4,5,5,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,54,{drug_A} may increase the fluid retaining activities of {drug_B}.,324,56,42,42,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,55,{drug_A} may increase the hepatotoxic activities of {drug_B}.,40,5,6,6,2,训练测试均有正例，无上述标记,"17,48","1,1",1.0,0.6666666666666666,0.6666666666666666,0.6666666666666666
+pairout,56,{drug_A} may increase the hypercalcemic activities of {drug_B}.,64,8,11,10,1,训练测试均有正例，无上述标记,35,1,1.0,1.0,0.9090909090909092,0.9523809523809524
+pairout,57,{drug_A} may increase the hyperglycemic activities of {drug_B}.,22,4,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,58,{drug_A} may increase the hyperkalemic activities of {drug_B}.,219,26,32,29,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17","2,1",1.0,1.0,0.90625,0.9508196721311476
+pairout,59,{drug_A} may increase the hypertensive activities of {drug_B}.,530,60,82,77,7,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,50","3,3,1",1.0,0.974025974025974,0.9146341463414634,0.9433962264150942
+pairout,60,{drug_A} may increase the hypocalcemic activities of {drug_B}.,147,16,17,17,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,61,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1659,222,214,216,7,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,18,16","3,3,1",1.0,0.9583333333333334,0.9672897196261684,0.9627906976744186
+pairout,62,{drug_A} may increase the hypokalemic activities of {drug_B}.,979,118,107,109,0,训练测试均有正例，无上述标记,,,0.0,0.981651376146789,1.0,0.9907407407407408
+pairout,63,{drug_A} may increase the hyponatremic activities of {drug_B}.,96,10,12,13,0,训练测试均有正例，无上述标记,,,0.0,0.9230769230769232,1.0,0.96
+pairout,64,{drug_A} may increase the hypotensive activities of {drug_B}.,6603,834,827,805,32,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,4,3","19,3,2",0.75,0.9875776397515528,0.9613059250302296,0.9742647058823528
+pairout,65,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,13,0,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,66,{drug_A} may increase the immunosuppressive activities of {drug_B}.,247,30,32,31,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"16,45,47","1,1,1",1.0,0.935483870967742,0.90625,0.9206349206349206
+pairout,67,{drug_A} may increase the myelosuppressive activities of {drug_B}.,27,3,4,3,1,训练测试均有正例，无上述标记,3,1,1.0,1.0,0.75,0.8571428571428571
+pairout,68,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,55,7,7,5,2,训练测试均有正例，无上述标记,"3,17","1,1",1.0,1.0,0.7142857142857143,0.8333333333333333
+pairout,69,{drug_A} may increase the nephrotoxic activities of {drug_B}.,544,59,51,51,1,训练测试均有正例，无上述标记,3,1,1.0,0.9803921568627452,0.9803921568627452,0.9803921568627452
+pairout,70,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,731,96,97,99,0,训练测试均有正例，无上述标记,,,0.0,0.9797979797979798,1.0,0.989795918367347
+pairout,71,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,297,44,51,53,0,训练测试均有正例，无上述标记,,,0.0,0.9622641509433962,1.0,0.9807692307692308
+pairout,72,{drug_A} may increase the neurotoxic activities of {drug_B}.,54,7,8,6,2,训练测试均有正例，无上述标记,"8,16","1,1",1.0,1.0,0.75,0.8571428571428571
+pairout,73,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,500,54,62,62,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,63","1,1,1",1.0,0.9516129032258064,0.9516129032258064,0.9516129032258064
+pairout,74,{drug_A} may increase the ototoxic activities of {drug_B}.,17,1,3,2,1,训练测试均有正例，无上述标记,8,1,1.0,1.0,0.6666666666666666,0.8
+pairout,75,{drug_A} may increase the respiratory depressant activities of {drug_B}.,220,26,34,34,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,76,{drug_A} may increase the sedative activities of {drug_B}.,805,109,93,94,1,训练测试均有正例，无上述标记,48,1,1.0,0.9787234042553192,0.989247311827957,0.983957219251337
+pairout,77,{drug_A} may increase the serotonergic activities of {drug_B}.,627,94,80,75,5,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,17","2,1,1",0.8,1.0,0.9375,0.967741935483871
+pairout,78,{drug_A} may increase the stimulatory activities of {drug_B}.,42,8,6,6,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,79,{drug_A} may increase the tachycardic activities of {drug_B}.,297,34,39,40,0,训练测试均有正例，无上述标记,,,0.0,0.975,1.0,0.9873417721518988
+pairout,80,{drug_A} may increase the thrombogenic activities of {drug_B}.,92,9,7,7,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,81,{drug_A} may increase the ulcerogenic activities of {drug_B}.,34,4,4,3,1,训练测试均有正例，无上述标记,8,1,1.0,1.0,0.75,0.8571428571428571
+pairout,82,{drug_A} may increase the vasoconstricting activities of {drug_B}.,91,14,4,3,2,训练测试均有正例，无上述标记,8,2,1.0,0.6666666666666666,0.5,0.5714285714285715
+pairout,83,{drug_A} may increase the vasodilatory activities of {drug_B}.,24,3,6,6,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+pairout,84,{drug_A} may increase the vasopressor activities of {drug_B}.,57,4,4,4,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37,2,5,5,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,1,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,372,47,52,52,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,2,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,7,2,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,3,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,27258,3469,3289,3347,112,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,8,16","59,21,6",0.7678571428571429,0.9492082461906184,0.965947096381879,0.9575045207956602
+cellout,4,The metabolism of {drug_B} can be increased when combined with {drug_A}.,4005,418,499,492,42,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"16,3,17","27,5,4",0.8571428571428571,0.9288617886178862,0.9158316633266532,0.9223007063572148
+cellout,5,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,7,1,3,3,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,6,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,22,3,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,7,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,344,47,50,45,9,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"16,3,8","3,1,1",0.5555555555555556,0.9111111111111112,0.82,0.8631578947368421
+cellout,8,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,48226,6098,5987,5938,128,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,17,18","45,20,8",0.5703125,0.9866958571909734,0.9786203440788376,0.9826415094339622
+cellout,9,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,100,12,15,15,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,10,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20,1,5,5,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,11,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,4,0,2,1,1,训练测试均有正例，无上述标记,25,1,1.0,1.0,0.5,0.6666666666666666
+cellout,12,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,11,2,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,13,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,21,4,7,5,2,训练测试均有正例，无上述标记,"8,64","1,1",1.0,1.0,0.7142857142857143,0.8333333333333333
+cellout,14,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,427,52,57,57,5,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,15","2,2,1",1.0,0.912280701754386,0.912280701754386,0.912280701754386
+cellout,15,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,242,26,27,23,8,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,4,16","4,1,1",0.75,0.8260869565217391,0.7037037037037037,0.76
+cellout,16,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7310,907,983,978,73,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,4,3","24,20,13",0.7808219178082192,0.9304703476482618,0.9257375381485248,0.9280979092299848
+cellout,17,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,18836,2324,2316,2335,124,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,16,8","75,17,6",0.7903225806451613,0.9387580299785868,0.9464594127806564,0.9425929907546764
+cellout,18,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,6096,752,772,765,32,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,3","10,7,6",0.71875,0.9673202614379084,0.9585492227979274,0.962914769030579
+cellout,19,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,182,27,34,32,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,18,3,1.0,0.96875,0.9117647058823528,0.9393939393939394
+cellout,20,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,677,69,80,81,1,训练测试均有正例，无上述标记,69,1,1.0,0.9753086419753086,0.9875,0.9813664596273292
+cellout,21,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,57,12,10,9,1,训练测试均有正例，无上述标记,17,1,1.0,1.0,0.9,0.9473684210526316
+cellout,22,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,29,2,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,23,{drug_A} may decrease the analgesic activities of {drug_B}.,7,2,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,24,{drug_A} may decrease the anticoagulant activities of {drug_B}.,191,28,19,19,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,25,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2429,304,308,310,2,训练测试均有正例，无上述标记,"3,73","1,1",1.0,0.9870967741935484,0.9935064935064936,0.9902912621359222
+cellout,26,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6,0,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,27,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,286,38,23,22,1,训练测试均有正例，无上述标记,64,1,1.0,1.0,0.9565217391304348,0.9777777777777776
+cellout,28,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,809,97,116,117,0,训练测试均有正例，无上述标记,,,0.0,0.9914529914529916,1.0,0.9957081545064378
+cellout,29,{drug_A} may decrease the diuretic activities of {drug_B}.,254,32,34,34,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,30,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1425,181,181,182,0,训练测试均有正例，无上述标记,,,0.0,0.9945054945054944,1.0,0.9972451790633609
+cellout,31,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,69,7,3,3,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,32,{drug_A} may decrease the sedative activities of {drug_B}.,438,49,61,62,0,训练测试均有正例，无上述标记,,,0.0,0.9838709677419356,1.0,0.991869918699187
+cellout,33,{drug_A} may decrease the stimulatory activities of {drug_B}.,411,47,40,41,0,训练测试均有正例，无上述标记,,,0.0,0.975609756097561,1.0,0.9876543209876544
+cellout,34,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,249,30,30,29,1,训练测试均有正例，无上述标记,64,1,1.0,1.0,0.9666666666666668,0.983050847457627
+cellout,35,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4766,626,643,639,23,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,3,61","13,4,3",0.8695652173913043,0.970266040688576,0.9642301710730948,0.967238689547582
+cellout,36,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,77,8,9,9,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,37,{drug_A} may increase the analgesic activities of {drug_B}.,224,21,33,33,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,38,{drug_A} may increase the anticholinergic activities of {drug_B}.,248,30,39,39,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,39,{drug_A} may increase the anticoagulant activities of {drug_B}.,2497,308,326,330,6,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,17","2,1,1",0.6666666666666666,0.9696969696969696,0.98159509202454,0.975609756097561
+cellout,40,{drug_A} may increase the antihypertensive activities of {drug_B}.,486,72,65,66,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,64","2,1",1.0,0.9393939393939394,0.953846153846154,0.9465648854961832
+cellout,41,{drug_A} may increase the antiplatelet activities of {drug_B}.,253,41,42,36,8,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,18,8","3,3,1",0.875,0.9444444444444444,0.8095238095238095,0.8717948717948718
+cellout,42,{drug_A} may increase the antipsychotic activities of {drug_B}.,77,11,6,6,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,43,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,280,30,40,40,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,62","2,1",1.0,0.925,0.925,0.925
+cellout,44,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,571,67,77,77,1,训练测试均有正例，无上述标记,8,1,1.0,0.987012987012987,0.987012987012987,0.987012987012987
+cellout,45,{drug_A} may increase the bradycardic activities of {drug_B}.,1013,106,123,120,5,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"64,17,28","2,1,1",0.8,0.9833333333333332,0.959349593495935,0.97119341563786
+cellout,46,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,20,3,3,3,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,47,{drug_A} may increase the cardiotoxic activities of {drug_B}.,163,15,20,22,1,训练测试均有正例，无上述标记,3,1,1.0,0.8636363636363636,0.95,0.9047619047619048
+cellout,48,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4331,524,522,534,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"4,8,17","1,1,1",1.0,0.9719101123595506,0.9942528735632185,0.9829545454545454
+cellout,49,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,25,1,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,50,{drug_A} may increase the central neurotoxic activities of {drug_B}.,10,3,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+cellout,51,{drug_A} may increase the constipating activities of {drug_B}.,115,9,22,22,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,52,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,8,3,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+cellout,53,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,23,4,5,5,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,54,{drug_A} may increase the fluid retaining activities of {drug_B}.,324,56,42,42,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,55,{drug_A} may increase the hepatotoxic activities of {drug_B}.,40,5,6,7,1,训练测试均有正例，无上述标记,48,1,1.0,0.7142857142857143,0.8333333333333334,0.7692307692307692
+cellout,56,{drug_A} may increase the hypercalcemic activities of {drug_B}.,64,8,11,10,1,训练测试均有正例，无上述标记,35,1,1.0,1.0,0.9090909090909092,0.9523809523809524
+cellout,57,{drug_A} may increase the hyperglycemic activities of {drug_B}.,22,4,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,58,{drug_A} may increase the hyperkalemic activities of {drug_B}.,219,26,32,28,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,8,4,1.0,1.0,0.875,0.9333333333333332
+cellout,59,{drug_A} may increase the hypertensive activities of {drug_B}.,530,60,82,78,7,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,17","3,2,1",0.8571428571428571,0.9615384615384616,0.9146341463414634,0.9375
+cellout,60,{drug_A} may increase the hypocalcemic activities of {drug_B}.,147,16,17,17,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,61,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1659,222,214,223,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,16","2,1",1.0,0.9461883408071748,0.985981308411215,0.965675057208238
+cellout,62,{drug_A} may increase the hypokalemic activities of {drug_B}.,979,118,107,108,0,训练测试均有正例，无上述标记,,,0.0,0.9907407407407408,1.0,0.9953488372093025
+cellout,63,{drug_A} may increase the hyponatremic activities of {drug_B}.,96,10,12,12,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,64,{drug_A} may increase the hypotensive activities of {drug_B}.,6603,834,827,827,21,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,40,48","12,2,2",0.7619047619047619,0.9746070133010882,0.9746070133010882,0.9746070133010882
+cellout,65,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,13,0,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,66,{drug_A} may increase the immunosuppressive activities of {drug_B}.,247,30,32,32,2,训练测试均有正例，无上述标记,"16,47","1,1",1.0,0.9375,0.9375,0.9375
+cellout,67,{drug_A} may increase the myelosuppressive activities of {drug_B}.,27,3,4,3,1,训练测试均有正例，无上述标记,3,1,1.0,1.0,0.75,0.8571428571428571
+cellout,68,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,55,7,7,6,2,训练测试均有正例，无上述标记,"3,17","1,1",1.0,0.8333333333333334,0.7142857142857143,0.7692307692307692
+cellout,69,{drug_A} may increase the nephrotoxic activities of {drug_B}.,544,59,51,54,1,训练测试均有正例，无上述标记,17,1,1.0,0.925925925925926,0.9803921568627452,0.9523809523809524
+cellout,70,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,731,96,97,97,1,训练测试均有正例，无上述标记,8,1,1.0,0.9896907216494846,0.9896907216494846,0.9896907216494846
+cellout,71,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,297,44,51,52,1,训练测试均有正例，无上述标记,8,1,1.0,0.9615384615384616,0.9803921568627452,0.970873786407767
+cellout,72,{drug_A} may increase the neurotoxic activities of {drug_B}.,54,7,8,8,2,训练测试均有正例，无上述标记,"16,17","1,1",1.0,0.75,0.75,0.75
+cellout,73,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,500,54,62,59,7,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,4,64","5,1,1",1.0,0.9322033898305084,0.8870967741935484,0.9090909090909092
+cellout,74,{drug_A} may increase the ototoxic activities of {drug_B}.,17,1,3,2,1,训练测试均有正例，无上述标记,8,1,1.0,1.0,0.6666666666666666,0.8
+cellout,75,{drug_A} may increase the respiratory depressant activities of {drug_B}.,220,26,34,34,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,76,{drug_A} may increase the sedative activities of {drug_B}.,805,109,93,91,2,训练测试均有正例，无上述标记,"48,72","1,1",1.0,1.0,0.978494623655914,0.9891304347826088
+cellout,77,{drug_A} may increase the serotonergic activities of {drug_B}.,627,94,80,76,5,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,17","2,1,1",0.8,0.986842105263158,0.9375,0.9615384615384616
+cellout,78,{drug_A} may increase the stimulatory activities of {drug_B}.,42,8,6,6,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,79,{drug_A} may increase the tachycardic activities of {drug_B}.,297,34,39,39,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,80,{drug_A} may increase the thrombogenic activities of {drug_B}.,92,9,7,7,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,81,{drug_A} may increase the ulcerogenic activities of {drug_B}.,34,4,4,3,1,训练测试均有正例，无上述标记,8,1,1.0,1.0,0.75,0.8571428571428571
+cellout,82,{drug_A} may increase the vasoconstricting activities of {drug_B}.,91,14,4,4,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,83,{drug_A} may increase the vasodilatory activities of {drug_B}.,24,3,6,6,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+cellout,84,{drug_A} may increase the vasopressor activities of {drug_B}.,57,4,4,4,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37,3,4,4,1,训练测试均有正例，无上述标记,28,1,1.0,0.75,0.75,0.75
+single_drugout,1,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,451,10,10,10,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,2,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,10,0,1,0,1,预测极少：预测次数为0或≤测试支持数10%,76,1,1.0,0.0,0.0,0.0
+single_drugout,3,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,25693,4281,3480,3671,767,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,8,16","268,260,73",0.7835723598435462,0.739035685099428,0.7795977011494253,0.7587749965039854
+single_drugout,4,The metabolism of {drug_B} can be increased when combined with {drug_A}.,3794,389,671,500,283,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,16,8","85,68,63",0.7632508833922261,0.776,0.5782414307004471,0.6626814688300598
+single_drugout,5,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,9,2,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,6,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,24,1,2,1,1,训练测试均有正例，无上述标记,17,1,1.0,1.0,0.5,0.6666666666666666
+single_drugout,7,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,346,69,21,40,15,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,16,35","10,2,2",0.9333333333333332,0.15,0.2857142857142857,0.1967213114754098
+single_drugout,8,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,49295,5698,4707,5470,802,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,17,16","266,77,74",0.5199501246882793,0.7138939670932358,0.8296154663267474,0.7674167239854573
+single_drugout,9,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,109,13,5,6,0,训练测试均有正例，无上述标记,,,0.0,0.8333333333333334,1.0,0.9090909090909092
+single_drugout,10,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20,5,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,11,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,6,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,12,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,14,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,13,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,30,2,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,14,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,454,35,47,62,12,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,15","4,2,2",0.6666666666666666,0.5645161290322581,0.7446808510638298,0.6422018348623854
+single_drugout,15,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,194,42,48,46,38,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,4","19,7,5",0.8157894736842105,0.217391304347826,0.2083333333333333,0.2127659574468085
+single_drugout,16,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7154,882,1030,1034,362,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,4","98,74,54",0.6243093922651933,0.6460348162475822,0.6485436893203883,0.6472868217054263
+single_drugout,17,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,17471,3266,2298,2158,784,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,16","348,148,99",0.7589285714285714,0.7015755329008341,0.6588337684943429,0.6795332136445242
+single_drugout,18,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,5624,1258,593,695,146,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,4","56,22,13",0.6232876712328768,0.6431654676258993,0.7537942664418212,0.6940993788819875
+single_drugout,19,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,222,11,10,25,0,训练测试均有正例，无上述标记,,,0.0,0.4,1.0,0.5714285714285715
+single_drugout,20,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,765,22,39,44,8,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3","7,1",1.0,0.7045454545454546,0.7948717948717948,0.746987951807229
+single_drugout,21,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,69,3,7,10,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,20","1,1,1",1.0,0.4,0.5714285714285714,0.4705882352941176
+single_drugout,22,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,32,0,1,2,0,训练测试均有正例，无上述标记,,,0.0,0.5,1.0,0.6666666666666666
+single_drugout,23,{drug_A} may decrease the analgesic activities of {drug_B}.,8,0,2,0,2,预测极少：预测次数为0或≤测试支持数10%,"8,70","1,1",1.0,0.0,0.0,0.0
+single_drugout,24,{drug_A} may decrease the anticoagulant activities of {drug_B}.,185,37,16,5,13,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,39,13,1.0,0.6,0.1875,0.2857142857142857
+single_drugout,25,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2382,363,264,264,29,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,59","8,6,4",0.6206896551724138,0.8901515151515151,0.8901515151515151,0.8901515151515151
+single_drugout,26,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6,0,1,0,1,预测极少：预测次数为0或≤测试支持数10%,4,1,1.0,0.0,0.0,0.0
+single_drugout,27,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,290,20,35,22,14,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,64,3","11,2,1",1.0,0.9545454545454546,0.6,0.7368421052631579
+single_drugout,28,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,634,82,261,239,39,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,45","18,13,4",0.8974358974358975,0.9288702928870292,0.8505747126436781,0.888
+single_drugout,29,{drug_A} may decrease the diuretic activities of {drug_B}.,201,94,12,16,0,训练测试均有正例，无上述标记,,,0.0,0.75,1.0,0.8571428571428571
+single_drugout,30,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1272,281,183,197,8,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,16","4,2,1",0.875,0.8883248730964467,0.9562841530054644,0.9210526315789472
+single_drugout,31,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,61,17,0,3,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,32,{drug_A} may decrease the sedative activities of {drug_B}.,513,20,15,22,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,33,4,1.0,0.5,0.7333333333333333,0.5945945945945945
+single_drugout,33,{drug_A} may decrease the stimulatory activities of {drug_B}.,452,16,30,37,10,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"32,3,8","6,3,1",1.0,0.5405405405405406,0.6666666666666666,0.5970149253731343
+single_drugout,34,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,295,9,5,7,2,训练测试均有正例，无上述标记,"8,17","1,1",1.0,0.4285714285714285,0.6,0.5
+single_drugout,35,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4432,806,683,576,252,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,17","70,59,52",0.7182539682539683,0.7482638888888888,0.6310395314787701,0.6846703733121524
+single_drugout,36,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,90,2,2,2,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,37,{drug_A} may increase the analgesic activities of {drug_B}.,278,0,0,2,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,38,{drug_A} may increase the anticholinergic activities of {drug_B}.,254,15,44,13,39,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"18,8,31","19,13,3",0.8974358974358975,0.3846153846153846,0.1136363636363636,0.175438596491228
+single_drugout,39,{drug_A} may increase the anticoagulant activities of {drug_B}.,2496,493,113,169,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,41","2,1",1.0,0.650887573964497,0.9734513274336284,0.7801418439716311
+single_drugout,40,{drug_A} may increase the antihypertensive activities of {drug_B}.,571,41,11,14,0,训练测试均有正例，无上述标记,,,0.0,0.7857142857142857,1.0,0.88
+single_drugout,41,{drug_A} may increase the antiplatelet activities of {drug_B}.,279,48,7,32,0,训练测试均有正例，无上述标记,,,0.0,0.21875,1.0,0.358974358974359
+single_drugout,42,{drug_A} may increase the antipsychotic activities of {drug_B}.,45,1,45,11,34,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,33","26,5,2",0.9705882352941176,1.0,0.2444444444444444,0.3928571428571428
+single_drugout,43,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,256,13,75,84,40,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"64,35,8","11,9,8",0.7,0.4166666666666667,0.4666666666666667,0.440251572327044
+single_drugout,44,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,589,26,95,52,45,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,45,3","22,11,5",0.8444444444444444,0.9615384615384616,0.5263157894736842,0.6802721088435374
+single_drugout,45,{drug_A} may increase the bradycardic activities of {drug_B}.,1061,76,98,94,37,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,17","14,8,4",0.7027027027027027,0.648936170212766,0.6224489795918368,0.6354166666666666
+single_drugout,46,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,24,1,1,24,0,训练测试均有正例，无上述标记,,,0.0,0.0416666666666666,1.0,0.0799999999999999
+single_drugout,47,{drug_A} may increase the cardiotoxic activities of {drug_B}.,0,0,155,0,155,事件级零样本：测试有正例、训练无正例,"8,3,17","71,36,24",0.8451612903225807,0.0,0.0,0.0
+single_drugout,48,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4526,393,422,261,232,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,18,3","174,24,22",0.9482758620689656,0.7279693486590039,0.4502369668246445,0.5563689604685212
+single_drugout,49,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,27,0,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,50,{drug_A} may increase the central neurotoxic activities of {drug_B}.,13,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,51,{drug_A} may increase the constipating activities of {drug_B}.,138,6,2,3,0,训练测试均有正例，无上述标记,,,0.0,0.6666666666666666,1.0,0.8
+single_drugout,52,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,9,1,1,0,1,预测极少：预测次数为0或≤测试支持数10%,15,1,1.0,0.0,0.0,0.0
+single_drugout,53,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,31,1,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,54,{drug_A} may increase the fluid retaining activities of {drug_B}.,314,52,52,52,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,55,{drug_A} may increase the hepatotoxic activities of {drug_B}.,36,2,11,6,10,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,16,17","7,1,1",0.9,0.1666666666666666,0.0909090909090909,0.1176470588235294
+single_drugout,56,{drug_A} may increase the hypercalcemic activities of {drug_B}.,65,6,11,10,1,训练测试均有正例，无上述标记,69,1,1.0,1.0,0.9090909090909092,0.9523809523809524
+single_drugout,57,{drug_A} may increase the hyperglycemic activities of {drug_B}.,27,0,1,1,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,58,{drug_A} may increase the hyperkalemic activities of {drug_B}.,259,8,10,17,0,训练测试均有正例，无上述标记,,,0.0,0.5882352941176471,1.0,0.7407407407407407
+single_drugout,59,{drug_A} may increase the hypertensive activities of {drug_B}.,643,22,7,17,0,训练测试均有正例，无上述标记,,,0.0,0.4117647058823529,1.0,0.5833333333333334
+single_drugout,60,{drug_A} may increase the hypocalcemic activities of {drug_B}.,144,18,18,18,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,61,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1359,469,196,137,77,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,18,16","22,21,14",0.7402597402597403,0.8686131386861314,0.6071428571428571,0.7147147147147147
+single_drugout,62,{drug_A} may increase the hypokalemic activities of {drug_B}.,1026,159,15,17,0,训练测试均有正例，无上述标记,,,0.0,0.8823529411764706,1.0,0.9375
+single_drugout,63,{drug_A} may increase the hyponatremic activities of {drug_B}.,97,10,10,17,0,训练测试均有正例，无上述标记,,,0.0,0.5882352941176471,1.0,0.7407407407407407
+single_drugout,64,{drug_A} may increase the hypotensive activities of {drug_B}.,7137,757,332,271,153,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,4","118,11,7",0.8888888888888888,0.6605166051660517,0.5391566265060241,0.593698175787728
+single_drugout,65,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,14,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,66,{drug_A} may increase the immunosuppressive activities of {drug_B}.,164,22,101,29,77,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,3","53,16,3",0.935064935064935,0.8275862068965517,0.2376237623762376,0.3692307692307691
+single_drugout,67,{drug_A} may increase the myelosuppressive activities of {drug_B}.,20,8,4,4,2,训练测试均有正例，无上述标记,"8,16","1,1",1.0,0.5,0.5,0.5
+single_drugout,68,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,47,13,9,4,5,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,16,17","2,2,1",1.0,1.0,0.4444444444444444,0.6153846153846153
+single_drugout,69,{drug_A} may increase the nephrotoxic activities of {drug_B}.,438,50,148,40,118,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,39","114,2,1",0.9915254237288136,0.75,0.2027027027027027,0.3191489361702128
+single_drugout,70,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,715,89,108,124,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"16,18,35","1,1,1",0.75,0.8387096774193549,0.9629629629629628,0.896551724137931
+single_drugout,71,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,356,28,8,15,0,训练测试均有正例，无上述标记,,,0.0,0.5333333333333333,1.0,0.6956521739130436
+single_drugout,72,{drug_A} may increase the neurotoxic activities of {drug_B}.,60,3,6,3,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,16,17","1,1,1",1.0,1.0,0.5,0.6666666666666666
+single_drugout,73,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,427,27,150,18,140,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,43,3","129,5,2",0.9714285714285714,0.5555555555555556,0.0666666666666666,0.119047619047619
+single_drugout,74,{drug_A} may increase the ototoxic activities of {drug_B}.,0,17,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,75,{drug_A} may increase the respiratory depressant activities of {drug_B}.,208,42,26,26,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+single_drugout,76,{drug_A} may increase the sedative activities of {drug_B}.,931,35,41,84,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,3,3,1.0,0.4523809523809524,0.926829268292683,0.608
+single_drugout,77,{drug_A} may increase the serotonergic activities of {drug_B}.,657,52,85,79,25,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,79","22,2,1",1.0,0.759493670886076,0.7058823529411765,0.7317073170731707
+single_drugout,78,{drug_A} may increase the stimulatory activities of {drug_B}.,51,5,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,79,{drug_A} may increase the tachycardic activities of {drug_B}.,311,10,47,41,7,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,35,44","3,1,1",0.7142857142857143,0.975609756097561,0.851063829787234,0.9090909090909092
+single_drugout,80,{drug_A} may increase the thrombogenic activities of {drug_B}.,80,13,15,9,10,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,3,16","5,2,1",0.8,0.5555555555555556,0.3333333333333333,0.4166666666666667
+single_drugout,81,{drug_A} may increase the ulcerogenic activities of {drug_B}.,38,3,1,0,1,预测极少：预测次数为0或≤测试支持数10%,8,1,1.0,0.0,0.0,0.0
+single_drugout,82,{drug_A} may increase the vasoconstricting activities of {drug_B}.,95,6,8,7,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,8,3,1.0,0.7142857142857143,0.625,0.6666666666666666
+single_drugout,83,{drug_A} may increase the vasodilatory activities of {drug_B}.,33,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+single_drugout,84,{drug_A} may increase the vasopressor activities of {drug_B}.,55,5,5,3,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"18,38","3,1",1.0,0.3333333333333333,0.2,0.25
+double_drugout,0,The absorption of {drug_B} can be decreased when combined with {drug_A}.,37,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,1,The bioavailability of {drug_B} can be decreased when combined with {drug_A}.,451,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,2,The bioavailability of {drug_B} can be increased when combined with {drug_A}.,10,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,3,The metabolism of {drug_B} can be decreased when combined with {drug_A}.,25693,170,104,90,59,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,8,35","24,20,5",0.8305084745762712,0.5,0.4326923076923077,0.4639175257731959
+double_drugout,4,The metabolism of {drug_B} can be increased when combined with {drug_A}.,3794,9,30,16,16,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"16,17,8","8,4,2",0.875,0.875,0.4666666666666667,0.608695652173913
+double_drugout,5,The protein binding of {drug_B} can be decreased when combined with {drug_A}.,9,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,6,The risk of a hypersensitivity reaction to {drug_B} is increased when it is combined with {drug_A}.,24,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,7,The risk or severity of QTc prolongation can be increased when {drug_A} is combined with {drug_B}.,346,3,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,8,The risk or severity of adverse effects can be increased when {drug_A} is combined with {drug_B}.,49295,177,125,172,38,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,16,18","13,6,6",0.6578947368421053,0.5058139534883721,0.696,0.5858585858585859
+double_drugout,9,The risk or severity of bleeding can be increased when {drug_A} is combined with {drug_B}.,109,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,10,The risk or severity of heart failure can be increased when {drug_B} is combined with {drug_A}.,20,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,11,The risk or severity of hyperkalemia can be increased when {drug_A} is combined with {drug_B}.,6,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,12,The risk or severity of hypertension can be increased when {drug_B} is combined with {drug_A}.,14,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,13,The risk or severity of hypotension can be increased when {drug_A} is combined with {drug_B}.,30,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,14,The serum concentration of the active metabolites of {drug_B} can be increased when {drug_B} is used in combination with {drug_A}.,454,0,0,2,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,15,The serum concentration of the active metabolites of {drug_B} can be reduced when {drug_B} is used in combination with {drug_A} resulting in a loss in efficacy.,194,1,6,1,6,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,16,18","4,1,1",1.0,0.0,0.0,0.0
+double_drugout,16,The serum concentration of {drug_B} can be decreased when it is combined with {drug_A}.,7154,27,39,40,27,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,3","10,6,4",0.7407407407407407,0.3,0.3076923076923077,0.3037974683544304
+double_drugout,17,The serum concentration of {drug_B} can be increased when it is combined with {drug_A}.,17471,156,72,88,36,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,16","13,6,5",0.6666666666666666,0.4090909090909091,0.5,0.45
+double_drugout,18,The therapeutic efficacy of {drug_B} can be decreased when used in combination with {drug_A}.,5624,73,15,37,6,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,29,66","4,1,1",1.0,0.2432432432432432,0.6,0.3461538461538461
+double_drugout,19,The therapeutic efficacy of {drug_B} can be increased when used in combination with {drug_A}.,222,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,20,{drug_A} can cause a decrease in the absorption of {drug_B} resulting in a reduced serum concentration and potentially a decrease in efficacy.,765,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,21,{drug_A} can cause an increase in the absorption of {drug_B} resulting in an increased serum concentration and potentially a worsening of adverse effects.,69,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,22,{drug_A} may decrease effectiveness of {drug_B} as a diagnostic agent.,32,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,23,{drug_A} may decrease the analgesic activities of {drug_B}.,8,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,24,{drug_A} may decrease the anticoagulant activities of {drug_B}.,185,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,25,{drug_A} may decrease the antihypertensive activities of {drug_B}.,2382,9,8,4,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"3,8,35","1,1,1",0.75,1.0,0.5,0.6666666666666666
+double_drugout,26,{drug_A} may decrease the antiplatelet activities of {drug_B}.,6,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,27,{drug_A} may decrease the bronchodilatory activities of {drug_B}.,290,0,1,0,1,预测极少：预测次数为0或≤测试支持数10%,8,1,1.0,0.0,0.0,0.0
+double_drugout,28,{drug_A} may decrease the cardiotoxic activities of {drug_B}.,634,0,24,23,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"18,8,17","2,1,1",1.0,0.8695652173913043,0.8333333333333334,0.851063829787234
+double_drugout,29,{drug_A} may decrease the diuretic activities of {drug_B}.,201,9,0,2,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,30,{drug_A} may decrease the excretion rate of {drug_B} which could result in a higher serum level.,1272,18,8,13,0,训练测试均有正例，无上述标记,,,0.0,0.6153846153846154,1.0,0.761904761904762
+double_drugout,31,{drug_A} may decrease the neuromuscular blocking activities of {drug_B}.,61,1,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,32,{drug_A} may decrease the sedative activities of {drug_B}.,513,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,33,{drug_A} may decrease the stimulatory activities of {drug_B}.,452,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,34,{drug_A} may decrease the vasoconstricting activities of {drug_B}.,295,0,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,35,{drug_A} may increase the QTc-prolonging activities of {drug_B}.,4432,27,24,17,16,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,17,18","7,3,3",0.8125,0.4705882352941176,0.3333333333333333,0.3902439024390243
+double_drugout,36,{drug_A} may increase the adverse neuromuscular activities of {drug_B}.,90,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,37,{drug_A} may increase the analgesic activities of {drug_B}.,278,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,38,{drug_A} may increase the anticholinergic activities of {drug_B}.,254,0,1,2,1,训练测试均有正例，无上述标记,8,1,1.0,0.0,0.0,0.0
+double_drugout,39,{drug_A} may increase the anticoagulant activities of {drug_B}.,2496,23,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,40,{drug_A} may increase the antihypertensive activities of {drug_B}.,571,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,41,{drug_A} may increase the antiplatelet activities of {drug_B}.,279,2,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,42,{drug_A} may increase the antipsychotic activities of {drug_B}.,45,0,2,1,1,训练测试均有正例，无上述标记,8,1,1.0,1.0,0.5,0.6666666666666666
+double_drugout,43,{drug_A} may increase the arrhythmogenic activities of {drug_B}.,256,0,3,5,2,训练测试均有正例，无上述标记,"18,35","1,1",1.0,0.2,0.3333333333333333,0.25
+double_drugout,44,{drug_A} may increase the atrioventricular blocking (AV block) activities of {drug_B}.,589,0,2,0,2,预测极少：预测次数为0或≤测试支持数10%,8,2,1.0,0.0,0.0,0.0
+double_drugout,45,{drug_A} may increase the bradycardic activities of {drug_B}.,1061,1,2,1,1,训练测试均有正例，无上述标记,64,1,1.0,1.0,0.5,0.6666666666666666
+double_drugout,46,{drug_A} may increase the bronchoconstrictory activities of {drug_B}.,24,0,0,1,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,47,{drug_A} may increase the cardiotoxic activities of {drug_B}.,0,0,22,0,22,事件级零样本：测试有正例、训练无正例,"3,17,16","9,6,3",0.8181818181818182,0.0,0.0,0.0
+double_drugout,48,{drug_A} may increase the central nervous system depressant (CNS depressant) activities of {drug_B}.,4526,8,9,3,9,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"18,8,3","5,3,1",1.0,0.0,0.0,0.0
+double_drugout,49,{drug_A} may increase the central nervous system depressant (CNS depressant) and hypertensive activities of {drug_B}.,27,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,50,{drug_A} may increase the central neurotoxic activities of {drug_B}.,13,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,51,{drug_A} may increase the constipating activities of {drug_B}.,138,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,52,{drug_A} may increase the dermatologic adverse activities of {drug_B}.,9,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,53,{drug_A} may increase the excretion rate of {drug_B} which could result in a lower serum level and potentially a reduction in efficacy.,31,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,54,{drug_A} may increase the fluid retaining activities of {drug_B}.,314,1,1,2,0,训练测试均有正例，无上述标记,,,0.0,0.5,1.0,0.6666666666666666
+double_drugout,55,{drug_A} may increase the hepatotoxic activities of {drug_B}.,36,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,56,{drug_A} may increase the hypercalcemic activities of {drug_B}.,65,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,57,{drug_A} may increase the hyperglycemic activities of {drug_B}.,27,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,58,{drug_A} may increase the hyperkalemic activities of {drug_B}.,259,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,59,{drug_A} may increase the hypertensive activities of {drug_B}.,643,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,60,{drug_A} may increase the hypocalcemic activities of {drug_B}.,144,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,61,{drug_A} may increase the hypoglycemic activities of {drug_B}.,1359,20,6,2,6,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"17,3,8","2,1,1",0.6666666666666666,0.0,0.0,0.0
+double_drugout,62,{drug_A} may increase the hypokalemic activities of {drug_B}.,1026,2,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,63,{drug_A} may increase the hyponatremic activities of {drug_B}.,97,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,64,{drug_A} may increase the hypotensive activities of {drug_B}.,7137,18,4,1,4,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,16","3,1",1.0,0.0,0.0,0.0
+double_drugout,65,{drug_A} may increase the hypotensive and central nervous system depressant (CNS depressant) activities of {drug_B}.,14,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,66,{drug_A} may increase the immunosuppressive activities of {drug_B}.,164,0,11,1,11,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）; 预测极少：预测次数为0或≤测试支持数10%,"8,3,16","7,2,1",0.9090909090909092,0.0,0.0,0.0
+double_drugout,67,{drug_A} may increase the myelosuppressive activities of {drug_B}.,20,1,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,68,{drug_A} may increase the myopathic rhabdomyolysis activities of {drug_B}.,47,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,69,{drug_A} may increase the nephrotoxic activities of {drug_B}.,438,0,5,0,5,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）; 预测极少：预测次数为0或≤测试支持数10%,8,5,1.0,0.0,0.0,0.0
+double_drugout,70,{drug_A} may increase the neuroexcitatory activities of {drug_B}.,715,0,4,4,0,训练测试均有正例，无上述标记,,,0.0,1.0,1.0,1.0
+double_drugout,71,{drug_A} may increase the neuromuscular blocking activities of {drug_B}.,356,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,72,{drug_A} may increase the neurotoxic activities of {drug_B}.,60,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,73,{drug_A} may increase the orthostatic hypotensive activities of {drug_B}.,427,0,3,1,3,混淆集中：错误≥3次且前三去向占错误≥50%（非语义相似性结论）,"8,29","2,1",1.0,0.0,0.0,0.0
+double_drugout,74,{drug_A} may increase the ototoxic activities of {drug_B}.,0,2,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,75,{drug_A} may increase the respiratory depressant activities of {drug_B}.,208,2,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,76,{drug_A} may increase the sedative activities of {drug_B}.,931,0,0,2,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,77,{drug_A} may increase the serotonergic activities of {drug_B}.,657,0,2,1,1,训练测试均有正例，无上述标记,8,1,1.0,1.0,0.5,0.6666666666666666
+double_drugout,78,{drug_A} may increase the stimulatory activities of {drug_B}.,51,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,79,{drug_A} may increase the tachycardic activities of {drug_B}.,311,0,1,0,1,预测极少：预测次数为0或≤测试支持数10%,8,1,1.0,0.0,0.0,0.0
+double_drugout,80,{drug_A} may increase the thrombogenic activities of {drug_B}.,80,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,81,{drug_A} may increase the ulcerogenic activities of {drug_B}.,38,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,82,{drug_A} may increase the vasoconstricting activities of {drug_B}.,95,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,83,{drug_A} may increase the vasodilatory activities of {drug_B}.,33,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0
+double_drugout,84,{drug_A} may increase the vasopressor activities of {drug_B}.,55,0,0,0,0,不属于训练测试均有正例集合,,,0.0,0.0,0.0,0.0

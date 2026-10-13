@@ -1,0 +1,86 @@
+protocol: double_drugout
+with_path: false
+gpu: 7
+prepared: /data/interns/zhangpc/cairn_new/data/prepared
+output: /data/interns/zhangpc/cairn_new/outputs/no_path_double_drugout
+seed: 42
+epochs: 100
+patience: 15
+batch_size: 128
+learning_rate: 0.0001
+weight_decay: 0.0001
+reconstruction_weight: 0.1
+kl_weight: 0.001
+kl_warmup_fraction: 0.2
+path_depth: 4
+path_meeting_cap: 32
+path_arm_cap: 2
+nai_cap: 30
+cpu_threads: 2
+num_workers: 2
+generator: gpt-6.1-sol high
+selection_metric: fixed85 validation macroF1
+test_selection: false
+source_provenance:
+  generator: gpt-6.1-sol
+  reasoning_effort: high
+  scope:
+  - DDI SingleDrugOut
+  - DDI DoubleDrugOut
+  sources_read_before_implementation:
+    DSN-DDI:
+      repository: https://github.com/microsoft/Drug-Interaction-Research
+      branch: DSN-DDI-for-DDI-Prediction
+      revision: 6f23522264ccd1efee202f4949e150a156181edc
+      files:
+      - drugbank_test/layers.py
+      - drugbank_test/models.py
+      - drugbank_test/data_preprocessing.py
+      ported: InterGraphAttention, complete bipartite molecular edges
+    EmerGNN:
+      repository: https://github.com/LARS-research/EmerGNN
+      revision: 520d018ca9b57e7eaf884ff0265779b24f009282
+      files:
+      - DrugBank/models.py
+      - DrugBank/load_data.py
+      ported: enc_ht ordered-pair gates, source-only initialization, multiplicative
+        sum messages, per-layer linear/ReLU, bidirectional endpoint order, inverses/self
+        relations
+    RareDDIE:
+      revision: f658cae053af1e93eecc88ad77dc3af2e33cf527
+      read_only_source: ../cairn_dev/references/RareDDIE_source/RareDDIE-f658cae053af1e93eecc88ad77dc3af2e33cf527/RareDDIE
+      files:
+      - models_t_struc.py
+      - matcher_structure_acc_fp_neigh_VAE_struc.py
+      - modules_structure_fp_neigh.py
+      - data_preprocessing_t.py
+      ported: bond-aware CSE active operation order, pooling, first/last mixture;
+        neighbor_encoder relation/entity concat and bilinear difference guide
+  real_input_sources:
+    frozen_splits: ../cairn_dev/data/experiments/reference85/{single_drugout,double_drugout}/ddi.parquet
+    molecular_bundle: ../cairn_dev/data/processed/bundle.pt
+    events: ../cairn_dev/data/processed/ddi_events.csv
+    DRKG: ../cairn_dev/data/processed/drkg_triples.pt
+    DRKG_entity_mapping: ../cairn_dev/data/processed/drkg_entities.csv
+    DRKG_relation_mapping: ../cairn_dev/data/processed/drkg_relations.csv
+    FIN: ../cairn_dev/data/processed/fin.pt
+    FIN_training_code_read: ../cairn_dev/cairn/fin.py
+    FIN_training_config: ../cairn_dev/outputs/fin/config.yaml
+    FIN_training_history: ../cairn_dev/outputs/fin/train.jsonl
+    DRKG_preparation_code_read: ../cairn_dev/cairn/prepare.py
+    six_type_neighbor_data: ../cairn_dev/data/experiments/no_gene_embeddings_six_relations/shared/neighbours.parquet
+    six_type_neighbor_preparation_code_read: ../cairn_dev/scripts/prepare_no_gene_six_relations.py
+  FIN_provenance:
+    dimension: 128
+    trained_model: typed-negative-sampling TransE
+    completed_epochs: 100
+    selected_export_epoch: 99
+    non_DDI_training_triples: 4488504
+    entities: 96766
+    relations: 105
+    published_embeddings_used: false
+    downstream_trainable: true
+planned_updates: 116500
+kl_warmup_updates: 23300
+evaluation_batch_size: 128
+evaluation_checkpoint: best.pt

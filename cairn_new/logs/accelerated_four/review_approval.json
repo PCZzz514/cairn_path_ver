@@ -1,0 +1,53 @@
+{
+  "approved": true,
+  "reviewer": "Server Codex gpt-6.1-sol reasoning MEDIUM",
+  "approved_at": "2026-10-12T12:11:22+0800",
+  "implementation_author": "claude --dangerously-skip-permissions --model claude-opus-5-5 -p; DEFAULT effort",
+  "reviewed_files": [
+    "accelerated_four/dsn/train.py",
+    "accelerated_four/dsn/model.py",
+    "accelerated_four/dsn/data.py",
+    "accelerated_four/dsn/metrics.py",
+    "accelerated_four/dsn/__init__.py",
+    "accelerated_four/__init__.py",
+    "accelerated_four/configs/path_single_drugout.yaml",
+    "accelerated_four/configs/path_double_drugout.yaml",
+    "accelerated_four/configs/no_path_single_drugout.yaml",
+    "accelerated_four/configs/no_path_double_drugout.yaml",
+    "accelerated_four/jobs.py",
+    "accelerated_four/env.sh",
+    "accelerated_four/status.py",
+    "accelerated_four/launch_four.sh",
+    "accelerated_four/tools/snapshot.py",
+    "accelerated_four/tools/evidence.py",
+    "accelerated_four/tools/summarize_evidence.py",
+    "accelerated_four/tools/run_evidence.sh",
+    "accelerated_four/tools/make_review.sh",
+    "accelerated_four/tools/confirm_launch.py",
+    "accelerated_four/monitor/monitor_loop.sh",
+    "accelerated_four/monitor/start_monitor.sh",
+    "accelerated_four/monitor/drain_recovery_requests.py",
+    "accelerated_four/monitor/notify.py",
+    "accelerated_four/monitor/prompt.md"
+  ],
+  "reviewed_diff": "/data/interns/zhangpc/cairn_new/accelerated_four/review/implementation.diff",
+  "reviewed_new_files": "/data/interns/zhangpc/cairn_new/accelerated_four/review/new_files.diff",
+  "evidence": "/data/interns/zhangpc/cairn_new/accelerated_four/evidence/summary.json",
+  "independent_cpu_loading": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/codex_checkpoint_verification.json",
+  "gpu3_reused_evidence": "/data/interns/zhangpc/cairn_new/logs/gpu3_speed/review_approval.json",
+  "review": {
+    "model_data": "Exactly identical to reviewed GPU3 model.py/data.py. Original local diagonal removal then min(nh,nt) loops before offsets; automatic packed loops off; no parameter/layer/loss changes. Original metrics identical. FIN/PVR state keys, shapes and trainability preserved.",
+    "production_trainer": "Original production train.py retained. Only ROOT/output containment, migration metadata, start/first/100 progress and val accuracy additions. Resume exact config check unchanged; RNG restores after construction and before iteration. AdamW/loss/KL/update/schedule unchanged. Strict fixed85 > selection, epochs100 patience15 guard honored before any resumed epoch. Historical best retained. Test loader only after selection and unchanged full test exports/test_config/completion marker.",
+    "snapshot": "Pinned atomic original checkpoint inode loads into CPU, history cutoff and replayed strict selection/coherent configs, independent export snapshots. Every non-config state compared exactly incl model/AdamW/RNG/update/epoch/bestmetric/badepochs. Whitelist only output/generator/namespace/optimization. Original paths+epochs+bestepochs+inodes+configmigration recorded.",
+    "independent_verification": "Codex directly strictly loaded actual last/best models and AdamW for all four on CPU, compared state exactly, confirmed strict resume config/schedule/historical records/FIN trainability/inodes. Shell syntax passed and originals source size/mtime unchanged. No repeated probes.",
+    "no_path_numerical": "New approval for both uncovered no-path splits: physicalGPU6/7, three real next-epoch ragged128 batches, last and best states, train stochastic full loss/eval/104 parameter gradients per batch/input gradients. Original-repeat floor disclosed; GPU3 reviewed thresholds unchanged. Worst forward abs1.52587890625e-5 rel6.54355620031396e-7; worst paramgrad abs2.086162567138672e-7; worst meaningful param rel about1.11e-5. Six analytically zero-gradient bias tensor relative residues disclosed. Every tensor gate passed. All four exact shuffled full permutation and real2worker firstbatch/graphs/path/loop directions verified.",
+    "controller_monitor": "Detached sessions orphan wrapper PPID1; inherited job lock/process-start prevent live restarts; <=3 exact checkpoint recoveries incl errors, no fromscratch/batch edits; best>last publication crash uses full newer best and trims history with archive. Real selected-best artifact verifier. Separate daemon with startup+2400s checks, LOW gpt6.1sol CLI, existing proxy/auth, host recovery drain outside CLI timeout, local quiet notes/meaningful state notifications. No originalmonitor edits.",
+    "limitations": [
+      "Independent continued trajectory numerically equivalent within FP roundoff; not bitwise identical.",
+      "GPU3 measured14.62x step and114.09s mean epoch (~13x historical) reused, no claimed new sameGPU speed ratio. All replicas share GPUs/host with originals; both may slow due contention.",
+      "Recovery not artificially exercised; no smoke tests. Verifier will check real final artifacts.",
+      "Historical val records before cutoff lack accuracy; new records include it."
+    ],
+    "launch_condition": "Launch only through reviewed Claude host launcher onGPU4/5/6/7; confirm real first/100 progress, PPID1, deviceUUID and originals live/naturallycomplete; then start separate LOW monitor."
+  }
+}

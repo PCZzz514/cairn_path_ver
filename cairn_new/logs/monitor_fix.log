@@ -1,0 +1,2373 @@
+bash: cannot set terminal process group (2561459): Inappropriate ioctl for device
+bash: no job control in this shell
+代理已开启: http://127.0.0.1:7890 (socks5 同端口)
+OpenAI Codex v0.160.0
+--------
+workdir: /data/interns/zhangpc/cairn_new
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: high
+reasoning summaries: none
+session id: 01a12b8b-a009-7c30-b77e-98d56863403d
+--------
+user
+NARROW FINAL TASK. Four REAL train jobs have been launched by coordinator and completed first backprop on GPUs4-7. DO NOT EDIT cairn_dsn/, configs/, data/, checkpoints, or stop/relaunch any training. Core model/training review passed. Only edit monitoring scripts/docs; finish promptly. Read docs/monitor_review.md plus scripts/monitor_loop.sh/start_monitor.sh/server_jobs.py/docs/server_monitor_prompt.md.
+Fix monitor_loop noninteractive source.bashrc: actual .bashrc returns early, so clashon undefined. Existing proxy service running; export process-local http_proxy/https_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890 and no_proxy, no interactive shell/history writes.
+Fix monitor loop so three transient Codex failures do NOT abandon live training; deterministic status and low Codex checks continue every2400seconds until all complete (retain bounded job recovery).
+Ensure failed recovery attempts actually consume recorded recovery bound (currently prompt says yes but exception handler maybe log only); limit this change to controller, don't interfere with live jobs.
+Check syntax (bash -n, ast parsing) and read real status, no smoke tests/fake runs/hashes. Do not re-audit data/prep. No broad source reading. Keep all modifications inside cairn_new.
+After fixes, START actual detached monitor via scripts/start_monitor.sh. Verify daemon alive and first codex invocation logs model=gpt-6.1-sol reasoning=low. Monitor every2400sec, snapshot/final summaries inside logs. Do not wait for training completion or sleep40min. If legitimate monitor startup failure, fix scripts. Final response with daemon PID and nextcheck and exact logs; concise. This high task ends after successful monitoring handoff; loop launches LOW model checks. All four job records/first_update_gradients exist. Existing authorized CODEX_HOME .codex_runtime; never read/print credentials.
+
+warning: Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.
+codex
+I’ll read the specified monitoring files, fix the loop and recovery accounting, check syntax and real job status, then start and verify the detached monitor without touching training.
+
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g 'monitor_review.md' -g 'monitor_loop.sh' -g 'start_monitor.sh' -g 'server_jobs.py' -g 'server_monitor_prompt.md' -g '"'!data/**'"' -g '"'!checkpoints/**'"' -g '"'!cairn_dsn/**'"' -g '"'!configs/**'"'" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+/data/interns/zhangpc/cairn_new
+scripts/monitor_loop.sh
+scripts/server_jobs.py
+scripts/start_monitor.sh
+docs/server_monitor_prompt.md
+docs/monitor_review.md
+
+exec
+/bin/bash -lc "for f in docs/monitor_review.md scripts/monitor_loop.sh scripts/start_monitor.sh scripts/server_jobs.py docs/server_monitor_prompt.md; do printf '\\nFILE %s\\n' \""'$f"; cat "$f"; done' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+
+FILE docs/monitor_review.md
+# Final monitoring review (must fix before handoff)
+- P1 scripts/monitor_loop.sh invokes source ~/.bashrc under NON-interactive bash. Actual ~/.bashrc lines5-9 returns immediately unless interactive; clashon function is NOT defined => daemon exits before first check. Avoid sourcing .bashrc. Proxy already running and clashon was executed for codegen; set explicit process-local http_proxy/https_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890 no_proxy equivalent, or other method that preserves all writes inside workspace. Do not launch interactive shells that could write ~/.bash_history.
+- Do not exit monitoring just because Codex has three transient CLI failures while training jobs remain live. User requested monitor every40minutes until training finishes. Keep deterministic status checks scheduled, record unavailable CLI, retry low CLI next scheduled check without restarting live jobs. Only verified completion permits successful final exit; terminal unrecoverable job failures may be recorded, but must not abandon remaining live jobs.
+- Verify server_jobs declared attempted recovery failures consume MAX_RECOVERIES actually updates record on exceptions; current prompt claims this but current exception handler only logs (may have changed). Align bounded behavior.
+
+FILE scripts/monitor_loop.sh
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname -- "${BASH_SOURCE[0]}")/runtime.sh"
+MONITOR_DIR="$ROOT_DIR/logs/server_monitor"
+mkdir -p "$MONITOR_DIR"
+exec 9>"$MONITOR_DIR/daemon.lock"
+flock -n 9 || exit 0
+echo "$$" > "$MONITOR_DIR/monitor.pid"
+export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+export CUDA_VISIBLE_DEVICES=4,5,6,7
+# Reuse the network setup from run_codegen.sh without reading credentials.
+set +eu
+source /data/interns/zhangpc/.bashrc
+clashon
+NETWORK_EXIT=$?
+set -eu
+if (( NETWORK_EXIT != 0 )); then
+  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+  echo 'Existing clashon network setup failed; see daemon.log' >&2
+  exit 1
+fi
+cd "$ROOT_DIR"
+# Reapply workspace cache paths if shell initialization changed them.
+source "$ROOT_DIR/scripts/runtime.sh"
+export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+CLI_FAILURES=0
+trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+while true; do
+  CHECK_ID="$(date -u +%Y%m%dT%H%M%SZ)_$$"
+  CHECK_DIR="$MONITOR_DIR/$CHECK_ID"
+  mkdir -p "$CHECK_DIR"
+  date -u +%FT%TZ > "$MONITOR_DIR/last_check.txt"
+  date -u -d '+2400 seconds' +%FT%TZ > "$MONITOR_DIR/next_check.txt"
+  # Separate check lock covers BOTH state reads and the entire CLI invocation.
+  exec 7>"$MONITOR_DIR/check.lock"
+  flock 7
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
+  if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+import json, sys
+sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+PY
+  then
+    cp "$CHECK_DIR/before.json" "$MONITOR_DIR/final_summary.json"
+    echo 'complete' > "$MONITOR_DIR/state.txt"
+    echo 'All four selected-best checkpoint tests and complete exports verified.'
+    rm -f "$MONITOR_DIR/next_check.txt"
+    exit 0
+  fi
+  echo 'monitoring' > "$MONITOR_DIR/state.txt"
+  # A CLI timeout affects ONLY this check, never a project training process.
+  if timeout --signal=TERM --kill-after=30s 1200s \
+      /data/interns/zhangpc/.local/bin/codex exec \
+      --skip-git-repo-check --ephemeral --ignore-user-config \
+      -s workspace-write -c 'sandbox_workspace_write.network_access=true' \
+      -c 'model_reasoning_effort="low"' -m gpt-6.1-sol -C "$ROOT_DIR" \
+      -o "$CHECK_DIR/codex_final.txt" - < docs/server_monitor_prompt.md \
+      > "$CHECK_DIR/codex.log" 2>&1; then
+    CLI_FAILURES=0
+  else
+    CLI_EXIT=$?
+    CLI_FAILURES=$((CLI_FAILURES + 1))
+    printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+  fi
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+if state['all_complete']:
+    print('complete')
+elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+    print('blocked_recovery_budget')
+elif int(sys.argv[2]) >= 3:
+    print('blocked_codex_unavailable')
+else:
+    print('monitoring')
+PY
+  )"
+  echo "$OUTCOME" > "$MONITOR_DIR/state.txt"
+  if [[ "$OUTCOME" != monitoring ]]; then
+    cp "$CHECK_DIR/after.json" "$MONITOR_DIR/final_summary.json"
+    rm -f "$MONITOR_DIR/next_check.txt"
+    [[ "$OUTCOME" == complete ]] && exit 0
+    echo "Monitor blocked: $OUTCOME; see final_summary.json and attempt logs" >&2
+    exit 1
+  fi
+  flock -u 7
+  # Maintain a 2400-second interval between check starts, including CLI time.
+  NEXT_EPOCH="$(date -u -d "$(cat "$MONITOR_DIR/next_check.txt")" +%s)"
+  NOW_EPOCH="$(date -u +%s)"
+  if (( NEXT_EPOCH > NOW_EPOCH )); then
+    sleep "$((NEXT_EPOCH - NOW_EPOCH))"
+  fi
+done
+
+FILE scripts/start_monitor.sh
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname -- "${BASH_SOURCE[0]}")/runtime.sh"
+export CUDA_VISIBLE_DEVICES=''
+mkdir -p logs/server_monitor
+# Serialize monitor launches separately from its long-lived daemon lock.
+exec 8>logs/server_monitor/launcher.lock
+flock -n 8 || { echo 'Another monitor launch is in progress' >&2; exit 1; }
+if ! flock -n logs/server_monitor/daemon.lock true; then
+  echo 'Monitor is already running; see logs/server_monitor/monitor.pid'
+  exit 0
+fi
+"$PYTHON_BIN" - <<'PY'
+import os
+from pathlib import Path
+import subprocess
+from scripts.server_jobs import ARMS, STATE
+for arm in ARMS:
+    if not (STATE / arm / 'record.json').is_file():
+        raise SystemExit('Launch and confirm all four jobs before starting the monitor')
+if not Path('/data/interns/zhangpc/.local/bin/codex').is_file():
+    raise SystemExit('Existing Codex CLI is unavailable')
+root = Path.cwd()
+with (root / 'logs/server_monitor/daemon.log').open('a') as log:
+    process = subprocess.Popen(['bash', str(root / 'scripts/monitor_loop.sh')],
+                               cwd=root, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                               start_new_session=True, close_fds=True)
+(root / 'logs/server_monitor/monitor.pid').write_text(str(process.pid) + '\n')
+print(f'Detached server monitor PID {process.pid}; checks every 2400 seconds')
+PY
+
+FILE scripts/server_jobs.py
+"""Durable four-arm job records, real export verification, bounded recovery.
+
+CPU controller only. Training children receive exactly their assigned GPU.
+No model forward, preparation, smoke run, or credential access here.
+"""
+import argparse
+from contextlib import contextmanager
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import shutil
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+STATE = ROOT / 'logs/server_jobs'
+ARMS = {'path_single_drugout': 4, 'path_double_drugout': 5,
+        'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
+MAX_RECOVERIES = 3
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
+
+
+def read_json(path):
+    return json.loads(path.read_text())
+
+
+@contextmanager
+def registry_lock():
+    STATE.mkdir(parents=True, exist_ok=True)
+    with (STATE / 'registry.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def process_start(pid):
+    try:
+        # /proc comm may contain spaces; field 22 follows the closing ')'.
+        fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+        return None if fields[0] == 'Z' else fields[19]
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def busy(arm):
+    # The training child inherits this lock. If its wrapper dies, the live
+    # training process still prevents a duplicate launch.
+    with (STATE / arm / 'job.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return False
+        except BlockingIOError:
+            return True
+
+
+def live(record):
+    pid = record['pid']
+    return (record['process_start'] is not None and process_start(pid) == record['process_start']) or busy(record['arm'])
+
+
+def checkpoint(output, name):
+    import torch
+    return torch.load(output / name, map_location='cpu', weights_only=False)
+
+
+def verify_exports(arm):
+    """Completion means selected-best metrics AND all frozen test rows exported."""
+    import numpy as np
+    import pandas as pd
+    import yaml
+    from cairn_dsn.metrics import classification_metrics
+
+    output = ROOT / 'outputs' / arm
+    required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+                'test_probabilities.npz', 'test_per_class.csv', 'test_confusion.csv',
+                'test_config.yaml', 'test_complete.json']
+    missing = [name for name in required if not (output / name).is_file()]
+    if missing:
+        return False, {'missing': missing}
+    try:
+        best = checkpoint(output, 'best.pt')
+        last = checkpoint(output, 'last.pt')
+        cfg = best['config']
+        assert cfg['gpu'] == ARMS[arm]
+        assert last['config'] == cfg
+        assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+        marker = read_json(output / 'test_complete.json')
+        metrics = read_json(output / 'test_metrics.json')
+        assert marker['checkpoint'] == metrics['checkpoint'] == 'best.pt'
+        assert marker['selected_epoch'] == metrics['selected_epoch'] == best['epoch']
+        assert marker['selected_update'] == best['update']
+        assert metrics['selection'] == 'validation only'
+        assert metrics['selected_validation_macro_f1_85'] == best['best_metric']
+        eval_cfg = yaml.safe_load((output / 'test_config.yaml').read_text())
+        assert all(eval_cfg.get(k) == v for k, v in cfg.items())
+        assert eval_cfg['evaluation_checkpoint'] == 'best.pt'
+        frozen = pd.read_parquet(ROOT / 'data/prepared' / cfg['protocol'] / 'ddi.parquet')
+        rows = np.flatnonzero(frozen.split.eq('test').to_numpy())
+        expected = frozen.iloc[rows]
+        prediction = pd.read_parquet(output / 'test_predictions.parquet')
+        assert marker['rows'] == metrics['rows'] == len(prediction) == len(expected)
+        assert prediction[expected.columns].reset_index(drop=True).equals(expected.reset_index(drop=True))
+        with np.load(output / 'test_probabilities.npz', allow_pickle=False) as data:
+            probabilities = data['probabilities']
+            labels = data['labels']
+            assert probabilities.shape == (len(rows), 85)
+            assert np.isfinite(probabilities).all() and (probabilities >= 0).all() and (probabilities <= 1).all()
+            assert np.allclose(probabilities.sum(1), 1., atol=1e-5)
+            assert np.array_equal(data['event_ids'], np.arange(85))
+            assert np.array_equal(labels, expected.event_id.to_numpy())
+            assert np.array_equal(data['frozen_row_indices'], rows)
+            assert np.array_equal(prediction.frozen_row_index.to_numpy(), rows)
+            assert np.array_equal(prediction.predicted_event_id.to_numpy(), probabilities.argmax(1))
+            assert np.allclose(prediction.predicted_probability.to_numpy(), probabilities.max(1))
+            mask = data['path_mask']
+            assert mask.shape == (len(rows), 2 if cfg['with_path'] else 0)
+            if cfg['with_path']:
+                assert np.array_equal(mask, prediction[['path_v_to_u_present', 'path_u_to_v_present']].to_numpy())
+        actual, per_class, confusion = classification_metrics(labels, probabilities)
+        for key, value in actual.items():
+            assert metrics[key] is None if value is None else np.isclose(metrics[key], value, rtol=1e-6, atol=1e-8)
+        exported_class = pd.read_csv(output / 'test_per_class.csv')
+        assert np.array_equal(exported_class.event_id, np.arange(85))
+        for key in per_class.columns:
+            assert np.allclose(exported_class[key], per_class[key], equal_nan=True)
+        exported_confusion = pd.read_csv(output / 'test_confusion.csv', index_col=0)
+        assert np.array_equal(exported_confusion.index.to_numpy(), np.arange(85))
+        assert np.array_equal(exported_confusion.columns.astype(int), np.arange(85))
+        assert np.array_equal(exported_confusion.to_numpy(), confusion)
+        return True, {'selected_epoch': best['epoch'], 'rows': len(rows), 'metrics': actual}
+    except Exception as exc:
+        return False, {'verification_error': f'{type(exc).__name__}: {exc}'}
+
+
+def status():
+    result = {}
+    for arm, gpu in ARMS.items():
+        record_path = STATE / arm / 'record.json'
+        if not record_path.exists():
+            result[arm] = {'state': 'not_launched', 'gpu': gpu}
+            continue
+        record = read_json(record_path)
+        running = live(record)
+        # Avoid reading checkpoints while the trainer is atomically publishing
+        # its final files. A live process is always left alone.
+        complete, evidence = (False, {}) if running else verify_exports(arm)
+        result[arm] = {'state': 'live' if running else 'complete' if complete else
+                      'exhausted' if record['recoveries'] >= MAX_RECOVERIES else 'failed',
+                      'gpu': gpu, 'pid': record['pid'], 'attempt': record['attempt'],
+                      'recoveries': record['recoveries'], 'log': record['log'],
+                      'config': record['config'], 'evidence': evidence,
+                      'blocked_reason': record.get('blocked_reason'),
+                      'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+    snapshot = {'checked_at': time.time(), 'runs': result,
+                'all_complete': all(r['state'] == 'complete' for r in result.values())}
+    write_json(STATE / 'status.json', snapshot)
+    if snapshot['all_complete']:
+        write_json(STATE / 'final_summary.json', snapshot)
+    return snapshot
+
+
+def start(arm, config_path, mode, recoveries=0, reason='reviewed initial launch'):
+    directory = STATE / arm
+    directory.mkdir(parents=True, exist_ok=True)
+    old_path = directory / 'record.json'
+    old = read_json(old_path) if old_path.exists() else None
+    if old and live(old):
+        raise RuntimeError(f'{arm} is live; cannot relaunch')
+    attempt = old['attempt'] + 1 if old else 1
+    log = directory / f'attempt_{attempt}.log'
+    if log.exists():
+        raise RuntimeError(f'Refusing to overwrite {log}')
+    config_path = config_path.resolve()
+    if not config_path.is_relative_to(ROOT):
+        raise ValueError('Config must remain in workspace')
+    exit_file = directory / f'attempt_{attempt}_exit.json'
+    command = [sys.executable, '-m', 'cairn_dsn.train', '--config', str(config_path)]
+    if mode:
+        command.append(mode)
+    launch_file = directory / f'attempt_{attempt}.json'
+    record = {'arm': arm, 'gpu': ARMS[arm], 'attempt': attempt, 'recoveries': recoveries,
+              'started_at': time.time(), 'config': str(config_path), 'mode': mode,
+              'reason': reason, 'log': str(log), 'exit_file': str(exit_file), 'command': command}
+    write_json(launch_file, record)
+    with log.open('x') as stream:
+        child = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '--worker', str(launch_file)],
+                                 cwd=ROOT, stdin=subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT,
+                                 start_new_session=True)
+    record.update(pid=child.pid, process_start=process_start(child.pid))
+    write_json(launch_file, record)
+    write_json(old_path, record)
+    (directory / 'job.pid').write_text(str(child.pid) + '\n')
+    return record
+
+
+def worker(launch_file):
+    record = read_json(launch_file)
+    with (STATE / record['arm'] / 'job.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(record['gpu']), PYTHONUNBUFFERED='1')
+        child = subprocess.Popen(record['command'], cwd=ROOT, env=env, pass_fds=(lock.fileno(),))
+        write_json(launch_file.with_name(launch_file.stem + '_process.json'),
+                   {'pid': child.pid, 'process_start': process_start(child.pid), 'command': record['command']})
+        code = child.wait()
+        write_json(Path(record['exit_file']), {'exit_code': code, 'finished_at': time.time()})
+        return code if code >= 0 else 128 - code
+
+
+def recover(arm, reason, reduce_batch):
+    import yaml
+    directory = STATE / arm
+    record = read_json(directory / 'record.json')
+    if live(record):
+        raise RuntimeError('Live job: no recovery, regardless of log age')
+    complete, _ = verify_exports(arm)
+    if complete:
+        raise RuntimeError('Verified complete: no recovery needed')
+    if record['recoveries'] >= MAX_RECOVERIES:
+        raise RuntimeError('Recovery budget exhausted; failure remains recorded')
+    # Reserve a recovery before reading a potentially broken checkpoint. Even
+    # failed recovery preparation consumes the bound; no endless error retries.
+    record['recoveries'] += 1
+    write_json(directory / 'record.json', record)
+    output = ROOT / 'outputs' / arm
+    cfg = yaml.safe_load(Path(record['config']).read_text())
+    mode = ''
+    config_path = Path(record['config'])
+    last = checkpoint(output, 'last.pt') if (output / 'last.pt').exists() else None
+    best_exists = (output / 'best.pt').exists()
+    if last is not None:
+        cfg = last['config']
+        done = last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+        mode = '--test-only' if done else '--resume'
+        if done and not best_exists:
+            raise RuntimeError('Training is done but best.pt is missing; do not reset training')
+    elif best_exists:
+        # Crash between best and last publication: recover that exact epoch,
+        # including optimizer and RNG, rather than reset its schedule.
+        cfg = checkpoint(output, 'best.pt')['config']
+        mode = '--resume'
+    if reduce_batch:
+        log_text = Path(record['log']).read_text(errors='replace')[-30000:]
+        if last is not None or best_exists or 'out of memory' not in log_text.lower():
+            raise RuntimeError('Batch reduction allowed only for recorded OOM before ANY checkpoint')
+        cfg['batch_size'] = max(1, cfg['batch_size'] // 2)
+        if cfg['batch_size'] == 1 and yaml.safe_load(config_path.read_text())['batch_size'] == 1:
+            raise RuntimeError('Cannot reduce batch below one')
+    # Retain preceding checkpoint inodes and all attempt logs. Trainer saves
+    # via atomic replacement, so later epochs cannot alter these archives.
+    archive = output / 'recovery_archive' / str(record['recoveries'])
+    archive.mkdir(parents=True, exist_ok=False)
+    for name in ['last.pt', 'best.pt', 'config.yaml', 'test_metrics.json', 'test_complete.json']:
+        if (output / name).exists():
+            if name.endswith('.pt'):
+                os.link(output / name, archive / name)
+            else:
+                shutil.copyfile(output / name, archive / name)
+    if last is None and best_exists:
+        os.link(output / 'best.pt', output / 'last.pt')
+    config_path = directory / f'recovery_{record["recoveries"]}_config.yaml'
+    config_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
+    return start(arm, config_path, mode, record['recoveries'], reason)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument('--launch-reviewed', action='store_true')
+    action.add_argument('--status', action='store_true')
+    action.add_argument('--recover', choices=ARMS)
+    action.add_argument('--block', choices=ARMS)
+    action.add_argument('--worker', type=Path)
+    parser.add_argument('--reason')
+    parser.add_argument('--reduce-batch', action='store_true')
+    args = parser.parse_args()
+    os.chdir(ROOT)
+    # Direct script invocation needs this for metrics import, not only -m.
+    sys.path.insert(0, str(ROOT))
+    if args.worker:
+        return worker(args.worker)
+    with registry_lock():
+        if args.status:
+            result = status()
+        elif args.block:
+            if not args.reason:
+                parser.error('--block requires the observed irreparable --reason')
+            record_path = STATE / args.block / 'record.json'
+            result = read_json(record_path)
+            if live(result) or verify_exports(args.block)[0]:
+                raise RuntimeError('Cannot block a live or completed job')
+            result.update(recoveries=MAX_RECOVERIES, blocked_reason=args.reason, blocked_at=time.time())
+            write_json(record_path, result)
+        elif args.recover:
+            if not args.reason:
+                parser.error('--recover requires an observed failure --reason')
+            try:
+                result = recover(args.recover, args.reason, args.reduce_batch)
+            except Exception as exc:
+                with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                    stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
+                                             'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                raise
+        else:
+            # Initial launch is intentionally distinct from recovery. Refuse
+            # any existing record/checkpoint before starting the first job.
+            for arm in ARMS:
+                if (STATE / arm / 'record.json').exists() or any((ROOT / 'outputs' / arm / n).exists()
+                                                               for n in ['last.pt', 'best.pt']):
+                    raise RuntimeError('Existing run found: use --status and bounded --recover')
+            result = {arm: start(arm, ROOT / 'configs' / f'{arm}.yaml', '') for arm in ARMS}
+        print(json.dumps(result, indent=2, allow_nan=False), flush=True)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
+
+FILE docs/server_monitor_prompt.md
+You are the detached SERVER monitor for the four reviewed full-data DDI jobs in
+/data/interns/zhangpc/cairn_new. Use gpt-6.1-sol with reasoning LOW. The main chat
+has ended; do not require it, app automation, or user confirmation. Scheduled
+networked CLI execution and the existing private .codex_runtime authentication
+are authorized. Never inspect, print, copy, or commit authentication credentials.
+
+First read logs/server_jobs/status.json (written immediately before this check),
+then read actual per-run record.json, current attempt log tail, process identity
+and exit records, history tail, checkpoint/output state as needed. Use the
+existing read-only Python environment via scripts/runtime.sh. Keep every write,
+temporary file and cache inside cairn_new. cairn_dev is READ ONLY. GPUs 0-3 are
+forbidden. Exact mapping: path single=4, path double=5, no_path single=6,
+no_path double=7. No permission changes, broad audits, hashes, smoke runs,
+preparation, new experiments, or changes to data/model/selection formulas.
+
+Use scripts/server_jobs.py --status for real export verification. It checks the
+selected best checkpoint, stopping state, frozen test rows, 85 probabilities,
+metrics consistency, predictions, per-class and confusion exports, test config
+and completion marker. Exit alone never proves success. Do not mark a run
+complete yourself or manufacture output files. The loop writes final_summary
+and exits only with verified success (or a recorded bounded failure).
+
+Leave every LIVE job alone even if its epoch log has not changed for hours.
+Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+the job.lock may still be held by its live training child. Never kill/restart
+live jobs because of SSH loss, CLI timeout, polling timeout, or missing logs.
+If all states are live/complete and there is no actionable change, stay quiet:
+write a short local check note under logs/server_monitor/check_note.json with
+checked_at, per-run state, and changed=false, then return without chat output.
+Do not emit repeated unchanged summaries or ask the user questions.
+
+For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+verified exports), inspect its recorded errors first. If a narrowly justified
+project-code fix is necessary, edit only cairn_new, document the observed error
+and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+mapping, stopping/selection rule, or training schedule. Do not run extra training
+commands directly. Use only the bounded recovery controller:
+
+  source scripts/runtime.sh
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --recover <arm> --reason '<actual observed failure>'
+
+It archives checkpoints/configs, resumes last.pt with the exact recorded config,
+optimizer/update/RNG and schedule, or runs --test-only after completed training.
+If a crash occurred between best/last publication it resumes the retained best
+epoch, never resets the schedule. Without any checkpoint, it retries the same
+full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+best.pt, append --reduce-batch; this halves that run's batch and records its
+actual config. Never change batch size after a checkpoint. Never overwrite
+past attempt logs/archives. At most three recovery attempts per run; attempted
+recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+Do not bypass this bound, erase records, or create replacement output directories.
+
+After any action re-read --status and save a local check note plus action record.
+If a failure cannot be repaired within these constraints, retry only when a
+legitimate retry can help. Otherwise record the observed irreparable failure:
+
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --block <arm> --reason '<observed irreparable failure>'
+
+This closes that run's recovery budget without altering checkpoints. Never
+claim completion without the verifier. The daemon handles the next 2400-second
+check, next-check timestamp, PID, overlap lock, summary and exit. Do not start
+another daemon, sleep for the interval, or create a new automation.
+
+exec
+/bin/bash -lc 'for p in /AGENTS.md /data/AGENTS.md /data/interns/AGENTS.md /data/interns/zhangpc/AGENTS.md /data/interns/zhangpc/cairn_new/AGENTS.md; do if [[ -f "$p" ]]; then printf '"'\\nFILE %s\\n' \""'$p"; cat "$p"; fi; done; find scripts docs -name AGENTS.md -print' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+exec
+/bin/bash -lc "cat scripts/runtime.sh; git status --short -- scripts docs; ls -la logs/server_monitor; for f in logs/server_jobs/*/record.json; do printf '\\nFILE %s\\n' \""'$f"; cat "$f"; done' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Source this from this workspace; the existing cairn environment is read-only.
+set -euo pipefail
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+export PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="$ROOT_DIR/tmp"
+export XDG_CACHE_HOME="$ROOT_DIR/.cache"
+export TORCH_HOME="$ROOT_DIR/.cache/torch"
+export TRITON_CACHE_DIR="$ROOT_DIR/.cache/triton"
+export CUDA_CACHE_PATH="$ROOT_DIR/.cache/cuda"
+export MPLCONFIGDIR="$ROOT_DIR/.cache/matplotlib"
+export HF_HOME="$ROOT_DIR/.cache/huggingface"
+export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
+export NUMBA_CACHE_DIR="$ROOT_DIR/.cache/numba"
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+PYTHON_BIN="$ROOT_DIR/../cairn_dev/.conda/cairn/bin/python"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME" "$TORCH_HOME" "$TRITON_CACHE_DIR" "$CUDA_CACHE_PATH" "$MPLCONFIGDIR" "$HF_HOME" "$NUMBA_CACHE_DIR" "$ROOT_DIR/logs"
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+ls: cannot access 'logs/server_monitor': No such file or directory
+
+FILE logs/server_jobs/no_path_double_drugout/record.json
+{
+  "arm": "no_path_double_drugout",
+  "gpu": 7,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5385025,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ],
+  "pid": 2560539,
+  "process_start": "1264159747"
+}
+
+FILE logs/server_jobs/no_path_single_drugout/record.json
+{
+  "arm": "no_path_single_drugout",
+  "gpu": 6,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5355487,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml"
+  ],
+  "pid": 2560538,
+  "process_start": "1264159746"
+}
+
+FILE logs/server_jobs/path_double_drugout/record.json
+{
+  "arm": "path_double_drugout",
+  "gpu": 5,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5320885,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml"
+  ],
+  "pid": 2560537,
+  "process_start": "1264159746"
+}
+
+FILE logs/server_jobs/path_single_drugout/record.json
+{
+  "arm": "path_single_drugout",
+  "gpu": 4,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5274358,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml"
+  ],
+  "pid": 2560536,
+  "process_start": "1264159746"
+}
+
+codex
+The loop sources `.bashrc` before its first check and exits after three Codex failures. Recovery already reserves a slot before reading checkpoints; I’ll move the YAML import after that reservation and log the recorded count on errors. I’ll also constrain the monitor prompt to edits in scripts/docs.
+
+apply patch
+patch: completed
+/data/interns/zhangpc/cairn_new/docs/server_monitor_prompt.md
+/data/interns/zhangpc/cairn_new/scripts/monitor_loop.sh
+/data/interns/zhangpc/cairn_new/scripts/server_jobs.py
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+exec
+/bin/bash -lc 'bash -n scripts/monitor_loop.sh scripts/start_monitor.sh && source scripts/runtime.sh && "$PYTHON_BIN" - <<'"'PY'
+import ast
+from pathlib import Path
+ast.parse(Path('scripts/server_jobs.py').read_text(), filename='scripts/server_jobs.py')
+print('bash -n and Python AST parsing passed')
+PY
+CUDA_VISIBLE_DEVICES='' \""'$PYTHON_BIN" scripts/server_jobs.py --status' in /data/interns/zhangpc/cairn_new
+ succeeded in 21ms:
+bash -n and Python AST parsing passed
+{
+  "checked_at": 1791731994.343734,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+exec
+/bin/bash -lc 'bash scripts/start_monitor.sh' in /data/interns/zhangpc/cairn_new
+ succeeded in 241ms:
+Detached server monitor PID 12; checks every 2400 seconds
+
+exec
+/bin/bash -lc 'source scripts/runtime.sh
+"$PYTHON_BIN" - <<'"'PY'
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+root = Path('logs/server_monitor')
+pid = int((root / 'monitor.pid').read_text())
+stat = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+print(f'daemon_pid={pid} process_state={stat[0]}')
+for name in ('state.txt', 'last_check.txt', 'next_check.txt'):
+    path = root / name
+    print(f'{name}: {path.read_text().strip() if path.exists() else \"pending\"}')
+print('daemon.log:')
+print((root / 'daemon.log').read_text()[-2000:])
+checks = sorted(p for p in root.iterdir() if p.is_dir())
+if checks:
+    check = checks[-1]
+    print(f'first_check_dir={check.resolve()}')
+    log = check / 'codex.log'
+    if log.exists():
+        print('codex.log header:')
+        print('\\n'.join(log.read_text(errors='replace').splitlines()[:18]))
+PY" in /data/interns/zhangpc/cairn_new
+ exited 1 in 144ms:
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+  File "/data/interns/zhangpc/cairn_dev/.conda/cairn/lib/python3.11/pathlib.py", line 1058, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/interns/zhangpc/cairn_dev/.conda/cairn/lib/python3.11/pathlib.py", line 1044, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/proc/12/stat'
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+exec
+/bin/bash -lc 'ls -l logs/server_monitor; cat logs/server_monitor/daemon.log; for f in logs/server_monitor/monitor.pid logs/server_monitor/state.txt logs/server_monitor/last_check.txt logs/server_monitor/next_check.txt logs/server_monitor/stopped_at.txt; do if [[ -f "$f" ]]; then printf '"'\\nFILE %s\\n' \""'$f"; cat "$f"; fi; done; ps -eo pid,ppid,sid,stat,args | rg '"'monitor_loop|codex exec|server_monitor_prompt'" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+total 4
+-rw-r--r-- 1 zhangpc zhangpc 0 Oct 11 23:20 daemon.lock
+-rw-r--r-- 1 zhangpc zhangpc 0 Oct 11 23:20 daemon.log
+-rw-r--r-- 1 zhangpc zhangpc 0 Oct 11 23:20 launcher.lock
+-rw-r--r-- 1 zhangpc zhangpc 3 Oct 11 23:20 monitor.pid
+
+FILE logs/server_monitor/monitor.pid
+12
+      1       0       1 Ss   codex-linux-sandbox --sandbox-policy-cwd /data/interns/zhangpc/cairn_new --command-cwd /data/interns/zhangpc/cairn_new --permission-profile {"type":"managed","file_system":{"type":"restricted","entries":[{"path":{"type":"special","value":{"kind":"root"}},"access":"read"},{"path":{"type":"path","path":"/data/interns/zhangpc/cairn_new"},"access":"write"},{"path":{"type":"special","value":{"kind":"slash_tmp"}},"access":"write"},{"path":{"type":"special","value":{"kind":"tmpdir"}},"access":"write"},{"path":{"type":"path","path":"/data/interns/zhangpc/cairn_new/.git"},"access":"read","missing_path_behavior":"skip"},{"path":{"type":"path","path":"/data/interns/zhangpc/cairn_new/.agents"},"access":"read","missing_path_behavior":"skip"},{"path":{"type":"path","path":"/data/interns/zhangpc/cairn_new/.codex"},"access":"read","missing_path_behavior":"skip"},{"path":{"type":"path","path":"/data/interns/zhangpc/cairn_new/.aws"},"access":"read","missing_path_behavior":"skip"}]},"network":"enabled"} --apply-seccomp-then-exec -- /bin/bash -c __CODEX_SNAPSHOT_OVERRIDE_SET_0="${CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS+x}" __CODEX_SNAPSHOT_OVERRIDE_0="${CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS-}" __CODEX_SNAPSHOT_OVERRIDE_SET_1="${CODEX_PERMISSION_PROFILE+x}" __CODEX_SNAPSHOT_OVERRIDE_1="${CODEX_PERMISSION_PROFILE-}" __CODEX_SNAPSHOT_OVERRIDE_SET_2="${CODEX_PLUGIN_METRICS_OUTPUT+x}" __CODEX_SNAPSHOT_OVERRIDE_2="${CODEX_PLUGIN_METRICS_OUTPUT-}" __CODEX_SNAPSHOT_OVERRIDE_SET_3="${CODEX_SESSION_ID+x}" __CODEX_SNAPSHOT_OVERRIDE_3="${CODEX_SESSION_ID-}" __CODEX_SNAPSHOT_OVERRIDE_SET_4="${CODEX_THREAD_ID+x}" __CODEX_SNAPSHOT_OVERRIDE_4="${CODEX_THREAD_ID-}" __CODEX_SNAPSHOT_OVERRIDE_SET_5="${CODEX_VERSION+x}" __CODEX_SNAPSHOT_OVERRIDE_5="${CODEX_VERSION-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_0="${ALL_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_0="${ALL_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_1="${BUNDLE_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_1="${BUNDLE_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_2="${BUNDLE_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_2="${BUNDLE_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_3="${BUNDLE_NO_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_3="${BUNDLE_NO_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_4="${BUNDLE_SSL_CA_CERT+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_4="${BUNDLE_SSL_CA_CERT-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_5="${CARGO_HTTP_CAINFO+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_5="${CARGO_HTTP_CAINFO-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_6="${CODEX_CA_CERTIFICATE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_6="${CODEX_CA_CERTIFICATE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_7="${CODEX_NETWORK_ALLOW_LOCAL_BINDING+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_7="${CODEX_NETWORK_ALLOW_LOCAL_BINDING-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_8="${CODEX_NETWORK_PROXY_ACTIVE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_8="${CODEX_NETWORK_PROXY_ACTIVE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_9="${CODEX_NETWORK_PROXY_ATTRIBUTION+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_9="${CODEX_NETWORK_PROXY_ATTRIBUTION-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_10="${CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_10="${CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_11="${CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_11="${CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_12="${CURL_CA_BUNDLE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_12="${CURL_CA_BUNDLE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_13="${DOCKER_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_13="${DOCKER_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_14="${DOCKER_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_14="${DOCKER_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_15="${ELECTRON_GET_USE_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_15="${ELECTRON_GET_USE_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_16="${FTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_16="${FTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_17="${GIT_SSL_CAINFO+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_17="${GIT_SSL_CAINFO-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_18="${HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_18="${HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_19="${HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_19="${HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_20="${NODE_EXTRA_CA_CERTS+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_20="${NODE_EXTRA_CA_CERTS-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_21="${NODE_USE_ENV_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_21="${NODE_USE_ENV_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_22="${NO_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_22="${NO_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_23="${NPM_CONFIG_CAFILE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_23="${NPM_CONFIG_CAFILE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_24="${NPM_CONFIG_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_24="${NPM_CONFIG_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_25="${NPM_CONFIG_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_25="${NPM_CONFIG_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_26="${NPM_CONFIG_NOPROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_26="${NPM_CONFIG_NOPROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_27="${NPM_CONFIG_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_27="${NPM_CONFIG_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_28="${PIP_CERT+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_28="${PIP_CERT-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_29="${PIP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_29="${PIP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_30="${REQUESTS_CA_BUNDLE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_30="${REQUESTS_CA_BUNDLE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_31="${SSL_CERT_FILE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_31="${SSL_CERT_FILE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_32="${WSS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_32="${WSS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_33="${WS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_33="${WS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_34="${YARN_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_34="${YARN_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_35="${YARN_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_35="${YARN_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_36="${YARN_NO_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_36="${YARN_NO_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_37="${all_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_37="${all_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_38="${ftp_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_38="${ftp_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_39="${http_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_39="${http_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_40="${https_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_40="${https_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_41="${no_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_41="${no_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_42="${npm_config_cafile+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_42="${npm_config_cafile-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_43="${npm_config_http_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_43="${npm_config_http_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_44="${npm_config_https_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_44="${npm_config_https_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_45="${npm_config_noproxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_45="${npm_config_noproxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_46="${npm_config_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_46="${npm_config_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_47="${ws_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_47="${ws_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_48="${wss_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_48="${wss_proxy-}" __CODEX_SNAPSHOT_PROXY_ENV_SET="${CODEX_NETWORK_PROXY_ACTIVE+x}"  if . '/data/interns/zhangpc/cairn_new/.codex_runtime/shell_snapshots/01a12b8b-a009-7c30-b77e-98d56863403d.1791731933204765459.sh' >/dev/null 2>&1; then :; fi  if [ -n "${__CODEX_SNAPSHOT_OVERRIDE_SET_0}" ]; then   if [ -z "${CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS+x}" ] || [ "${CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS-}" != "${__CODEX_SNAPSHOT_OVERRIDE_0}" ]; then export CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS="${__CODEX_SNAPSHOT_OVERRIDE_0}"; else export CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS; fi else builtin unset CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS 2>/dev/null || command unset CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS; fi builtin unset __CODEX_SNAPSHOT_OVERRIDE_SET_0 __CODEX_SNAPSHOT_OVERRIDE_0 2>/dev/null || command unset __CODEX_SNAPSHOT_OVERRIDE_SET_0 __CODEX_SNAPSHOT_OVERRIDE_0 if [ -n "${__CODEX_SNAPSHOT_OVERRIDE_SET_1}" ]; then   if [ -z "${CODEX_PERMISSION_PROFILE+x}" ] || [ "${CODEX_PERMISSION_PROFILE-}" != "${__CODEX_SNAPSHOT_OVERRIDE_1}" ]; then export CODEX_PERMISSION_PROFILE="${__CODEX_SNAPSHOT_OVERRIDE_1}"; else export CODEX_PERMISSION_PROFILE; fi else builtin unset CODEX_PERMISSION_PROFILE 2>/dev/null || command unset CODEX_PERMISSION_PROFILE; fi builtin unset __CODEX_SNAPSHOT_OVERRIDE_SET_1 __CODEX_SNAPSHOT_OVERRIDE_1 2>/dev/null || command unset __CODEX_SNAPSHOT_OVERRIDE_SET_1 __CODEX_SNAPSHOT_OVERRIDE_1 if [ -n "${__CODEX_SNAPSHOT_OVERRIDE_SET_2}" ]; then   if [ -z "${CODEX_PLUGIN_METRICS_OUTPUT+x}" ] || [ "${CODEX_PLUGIN_METRICS_OUTPUT-}" != "${__CODEX_SNAPSHOT_OVERRIDE_2}" ]; then export CODEX_PLUGIN_METRICS_OUTPUT="${__CODEX_SNAPSHOT_OVERRIDE_2}"; else export CODEX_PLUGIN_METRICS_OUTPUT; fi else builtin unset CODEX_PLUGIN_METRICS_OUTPUT 2>/dev/null || command unset CODEX_PLUGIN_METRICS_OUTPUT; fi builtin unset __CODEX_SNAPSHOT_OVERRIDE_SET_2 __CODEX_SNAPSHOT_OVERRIDE_2 2>/dev/null || command unset __CODEX_SNAPSHOT_OVERRIDE_SET_2 __CODEX_SNAPSHOT_OVERRIDE_2 if [ -n "${__CODEX_SNAPSHOT_OVERRIDE_SET_3}" ]; then   if [ -z "${CODEX_SESSION_ID+x}" ] || [ "${CODEX_SESSION_ID-}" != "${__CODEX_SNAPSHOT_OVERRIDE_3}" ]; then export CODEX_SESSION_ID="${__CODEX_SNAPSHOT_OVERRIDE_3}"; else export CODEX_SESSION_ID; fi else builtin unset CODEX_SESSION_ID 2>/dev/null || command unset CODEX_SESSION_ID; fi builtin unset __CODEX_SNAPSHOT_OVERRIDE_SET_3 __CODEX_SNAPSHOT_OVERRIDE_3 2>/dev/null || command unset __CODEX_SNAPSHOT_OVERRIDE_SET_3 __CODEX_SNAPSHOT_OVERRIDE_3 if [ -n "${__CODEX_SNAPSHOT_OVERRIDE_SET_4}" ]; then   if [ -z "${CODEX_THREAD_ID+x}" ] || [ "${CODEX_THREAD_ID-}" != "${__CODEX_SNAPSHOT_OVERRIDE_4}" ]; then export CODEX_THREAD_ID="${__CODEX_SNAPSHOT_OVERRIDE_4}"; else export CODEX_THREAD_ID; fi else builtin unset CODEX_THREAD_ID 2>/dev/null || command unset CODEX_THREAD_ID; fi builtin unset __CODEX_SNAPSHOT_OVERRIDE_SET_4 __CODEX_SNAPSHOT_OVERRIDE_4 2>/dev/null || command unset __CODEX_SNAPSHOT_OVERRIDE_SET_4 __CODEX_SNAPSHOT_OVERRIDE_4 if [ -n "${__CODEX_SNAPSHOT_OVERRIDE_SET_5}" ]; then   if [ -z "${CODEX_VERSION+x}" ] || [ "${CODEX_VERSION-}" != "${__CODEX_SNAPSHOT_OVERRIDE_5}" ]; then export CODEX_VERSION="${__CODEX_SNAPSHOT_OVERRIDE_5}"; else export CODEX_VERSION; fi else builtin unset CODEX_VERSION 2>/dev/null || command unset CODEX_VERSION; fi builtin unset __CODEX_SNAPSHOT_OVERRIDE_SET_5 __CODEX_SNAPSHOT_OVERRIDE_5 2>/dev/null || command unset __CODEX_SNAPSHOT_OVERRIDE_SET_5 __CODEX_SNAPSHOT_OVERRIDE_5 if [ -n "$__CODEX_SNAPSHOT_PROXY_ENV_SET" ] || [ -n "${CODEX_NETWORK_PROXY_ACTIVE+x}" ]; then if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_0}" ]; then   if [ -z "${ALL_PROXY+x}" ] || [ "${ALL_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_0}" ]; then export ALL_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_0}"; else export ALL_PROXY; fi else builtin unset ALL_PROXY 2>/dev/null || command unset ALL_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_0 __CODEX_SNAPSHOT_PROXY_OVERRIDE_0 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_0 __CODEX_SNAPSHOT_PROXY_OVERRIDE_0 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_1}" ]; then   if [ -z "${BUNDLE_HTTPS_PROXY+x}" ] || [ "${BUNDLE_HTTPS_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_1}" ]; then export BUNDLE_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_1}"; else export BUNDLE_HTTPS_PROXY; fi else builtin unset BUNDLE_HTTPS_PROXY 2>/dev/null || command unset BUNDLE_HTTPS_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_1 __CODEX_SNAPSHOT_PROXY_OVERRIDE_1 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_1 __CODEX_SNAPSHOT_PROXY_OVERRIDE_1 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_2}" ]; then   if [ -z "${BUNDLE_HTTP_PROXY+x}" ] || [ "${BUNDLE_HTTP_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_2}" ]; then export BUNDLE_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_2}"; else export BUNDLE_HTTP_PROXY; fi else builtin unset BUNDLE_HTTP_PROXY 2>/dev/null || command unset BUNDLE_HTTP_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_2 __CODEX_SNAPSHOT_PROXY_OVERRIDE_2 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_2 __CODEX_SNAPSHOT_PROXY_OVERRIDE_2 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_3}" ]; then   if [ -z "${BUNDLE_NO_PROXY+x}" ] || [ "${BUNDLE_NO_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_3}" ]; then export BUNDLE_NO_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_3}"; else export BUNDLE_NO_PROXY; fi else builtin unset BUNDLE_NO_PROXY 2>/dev/null || command unset BUNDLE_NO_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_3 __CODEX_SNAPSHOT_PROXY_OVERRIDE_3 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_3 __CODEX_SNAPSHOT_PROXY_OVERRIDE_3 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_4}" ]; then   if [ -z "${BUNDLE_SSL_CA_CERT+x}" ] || [ "${BUNDLE_SSL_CA_CERT-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_4}" ]; then export BUNDLE_SSL_CA_CERT="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_4}"; else export BUNDLE_SSL_CA_CERT; fi else builtin unset BUNDLE_SSL_CA_CERT 2>/dev/null || command unset BUNDLE_SSL_CA_CERT; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_4 __CODEX_SNAPSHOT_PROXY_OVERRIDE_4 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_4 __CODEX_SNAPSHOT_PROXY_OVERRIDE_4 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_5}" ]; then   if [ -z "${CARGO_HTTP_CAINFO+x}" ] || [ "${CARGO_HTTP_CAINFO-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_5}" ]; then export CARGO_HTTP_CAINFO="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_5}"; else export CARGO_HTTP_CAINFO; fi else builtin unset CARGO_HTTP_CAINFO 2>/dev/null || command unset CARGO_HTTP_CAINFO; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_5 __CODEX_SNAPSHOT_PROXY_OVERRIDE_5 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_5 __CODEX_SNAPSHOT_PROXY_OVERRIDE_5 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_6}" ]; then   if [ -z "${CODEX_CA_CERTIFICATE+x}" ] || [ "${CODEX_CA_CERTIFICATE-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_6}" ]; then export CODEX_CA_CERTIFICATE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_6}"; else export CODEX_CA_CERTIFICATE; fi else builtin unset CODEX_CA_CERTIFICATE 2>/dev/null || command unset CODEX_CA_CERTIFICATE; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_6 __CODEX_SNAPSHOT_PROXY_OVERRIDE_6 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_6 __CODEX_SNAPSHOT_PROXY_OVERRIDE_6 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_7}" ]; then   if [ -z "${CODEX_NETWORK_ALLOW_LOCAL_BINDING+x}" ] || [ "${CODEX_NETWORK_ALLOW_LOCAL_BINDING-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_7}" ]; then export CODEX_NETWORK_ALLOW_LOCAL_BINDING="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_7}"; else export CODEX_NETWORK_ALLOW_LOCAL_BINDING; fi else builtin unset CODEX_NETWORK_ALLOW_LOCAL_BINDING 2>/dev/null || command unset CODEX_NETWORK_ALLOW_LOCAL_BINDING; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_7 __CODEX_SNAPSHOT_PROXY_OVERRIDE_7 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_7 __CODEX_SNAPSHOT_PROXY_OVERRIDE_7 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_8}" ]; then   if [ -z "${CODEX_NETWORK_PROXY_ACTIVE+x}" ] || [ "${CODEX_NETWORK_PROXY_ACTIVE-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_8}" ]; then export CODEX_NETWORK_PROXY_ACTIVE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_8}"; else export CODEX_NETWORK_PROXY_ACTIVE; fi else builtin unset CODEX_NETWORK_PROXY_ACTIVE 2>/dev/null || command unset CODEX_NETWORK_PROXY_ACTIVE; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_8 __CODEX_SNAPSHOT_PROXY_OVERRIDE_8 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_8 __CODEX_SNAPSHOT_PROXY_OVERRIDE_8 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_9}" ]; then   if [ -z "${CODEX_NETWORK_PROXY_ATTRIBUTION+x}" ] || [ "${CODEX_NETWORK_PROXY_ATTRIBUTION-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_9}" ]; then export CODEX_NETWORK_PROXY_ATTRIBUTION="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_9}"; else export CODEX_NETWORK_PROXY_ATTRIBUTION; fi else builtin unset CODEX_NETWORK_PROXY_ATTRIBUTION 2>/dev/null || command unset CODEX_NETWORK_PROXY_ATTRIBUTION; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_9 __CODEX_SNAPSHOT_PROXY_OVERRIDE_9 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_9 __CODEX_SNAPSHOT_PROXY_OVERRIDE_9 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_10}" ]; then   if [ -z "${CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS+x}" ] || [ "${CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_10}" ]; then export CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_10}"; else export CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS; fi else builtin unset CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS 2>/dev/null || command unset CODEX_NETWORK_PROXY_BROKERED_CREDENTIALS; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_10 __CODEX_SNAPSHOT_PROXY_OVERRIDE_10 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_10 __CODEX_SNAPSHOT_PROXY_OVERRIDE_10 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_11}" ]; then   if [ -z "${CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE+x}" ] || [ "${CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_11}" ]; then export CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_11}"; else export CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE; fi else builtin unset CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE 2>/dev/null || command unset CODEX_NETWORK_PROXY_CREDENTIAL_BROKER_ACTIVE; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_11 __CODEX_SNAPSHOT_PROXY_OVERRIDE_11 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_11 __CODEX_SNAPSHOT_PROXY_OVERRIDE_11 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_12}" ]; then   if [ -z "${CURL_CA_BUNDLE+x}" ] || [ "${CURL_CA_BUNDLE-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_12}" ]; then export CURL_CA_BUNDLE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_12}"; else export CURL_CA_BUNDLE; fi else builtin unset CURL_CA_BUNDLE 2>/dev/null || command unset CURL_CA_BUNDLE; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_12 __CODEX_SNAPSHOT_PROXY_OVERRIDE_12 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_12 __CODEX_SNAPSHOT_PROXY_OVERRIDE_12 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_13}" ]; then   if [ -z "${DOCKER_HTTPS_PROXY+x}" ] || [ "${DOCKER_HTTPS_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_13}" ]; then export DOCKER_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_13}"; else export DOCKER_HTTPS_PROXY; fi else builtin unset DOCKER_HTTPS_PROXY 2>/dev/null || command unset DOCKER_HTTPS_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_13 __CODEX_SNAPSHOT_PROXY_OVERRIDE_13 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_13 __CODEX_SNAPSHOT_PROXY_OVERRIDE_13 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_14}" ]; then   if [ -z "${DOCKER_HTTP_PROXY+x}" ] || [ "${DOCKER_HTTP_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_14}" ]; then export DOCKER_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_14}"; else export DOCKER_HTTP_PROXY; fi else builtin unset DOCKER_HTTP_PROXY 2>/dev/null || command unset DOCKER_HTTP_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_14 __CODEX_SNAPSHOT_PROXY_OVERRIDE_14 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_14 __CODEX_SNAPSHOT_PROXY_OVERRIDE_14 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_15}" ]; then   if [ -z "${ELECTRON_GET_USE_PROXY+x}" ] || [ "${ELECTRON_GET_USE_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_15}" ]; then export ELECTRON_GET_USE_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_15}"; else export ELECTRON_GET_USE_PROXY; fi else builtin unset ELECTRON_GET_USE_PROXY 2>/dev/null || command unset ELECTRON_GET_USE_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_15 __CODEX_SNAPSHOT_PROXY_OVERRIDE_15 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_15 __CODEX_SNAPSHOT_PROXY_OVERRIDE_15 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_16}" ]; then   if [ -z "${FTP_PROXY+x}" ] || [ "${FTP_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_16}" ]; then export FTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_16}"; else export FTP_PROXY; fi else builtin unset FTP_PROXY 2>/dev/null || command unset FTP_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_16 __CODEX_SNAPSHOT_PROXY_OVERRIDE_16 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_16 __CODEX_SNAPSHOT_PROXY_OVERRIDE_16 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_17}" ]; then   if [ -z "${GIT_SSL_CAINFO+x}" ] || [ "${GIT_SSL_CAINFO-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_17}" ]; then export GIT_SSL_CAINFO="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_17}"; else export GIT_SSL_CAINFO; fi else builtin unset GIT_SSL_CAINFO 2>/dev/null || command unset GIT_SSL_CAINFO; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_17 __CODEX_SNAPSHOT_PROXY_OVERRIDE_17 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_17 __CODEX_SNAPSHOT_PROXY_OVERRIDE_17 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_18}" ]; then   if [ -z "${HTTPS_PROXY+x}" ] || [ "${HTTPS_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_18}" ]; then export HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_18}"; else export HTTPS_PROXY; fi else builtin unset HTTPS_PROXY 2>/dev/null || command unset HTTPS_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_18 __CODEX_SNAPSHOT_PROXY_OVERRIDE_18 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_18 __CODEX_SNAPSHOT_PROXY_OVERRIDE_18 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_19}" ]; then   if [ -z "${HTTP_PROXY+x}" ] || [ "${HTTP_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_19}" ]; then export HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_19}"; else export HTTP_PROXY; fi else builtin unset HTTP_PROXY 2>/dev/null || command unset HTTP_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_19 __CODEX_SNAPSHOT_PROXY_OVERRIDE_19 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_19 __CODEX_SNAPSHOT_PROXY_OVERRIDE_19 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_20}" ]; then   if [ -z "${NODE_EXTRA_CA_CERTS+x}" ] || [ "${NODE_EXTRA_CA_CERTS-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_20}" ]; then export NODE_EXTRA_CA_CERTS="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_20}"; else export NODE_EXTRA_CA_CERTS; fi else builtin unset NODE_EXTRA_CA_CERTS 2>/dev/null || command unset NODE_EXTRA_CA_CERTS; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_20 __CODEX_SNAPSHOT_PROXY_OVERRIDE_20 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_20 __CODEX_SNAPSHOT_PROXY_OVERRIDE_20 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_21}" ]; then   if [ -z "${NODE_USE_ENV_PROXY+x}" ] || [ "${NODE_USE_ENV_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_21}" ]; then export NODE_USE_ENV_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_21}"; else export NODE_USE_ENV_PROXY; fi else builtin unset NODE_USE_ENV_PROXY 2>/dev/null || command unset NODE_USE_ENV_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_21 __CODEX_SNAPSHOT_PROXY_OVERRIDE_21 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_21 __CODEX_SNAPSHOT_PROXY_OVERRIDE_21 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_22}" ]; then   if [ -z "${NO_PROXY+x}" ] || [ "${NO_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_22}" ]; then export NO_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_22}"; else export NO_PROXY; fi else builtin unset NO_PROXY 2>/dev/null || command unset NO_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_22 __CODEX_SNAPSHOT_PROXY_OVERRIDE_22 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_22 __CODEX_SNAPSHOT_PROXY_OVERRIDE_22 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_23}" ]; then   if [ -z "${NPM_CONFIG_CAFILE+x}" ] || [ "${NPM_CONFIG_CAFILE-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_23}" ]; then export NPM_CONFIG_CAFILE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_23}"; else export NPM_CONFIG_CAFILE; fi else builtin unset NPM_CONFIG_CAFILE 2>/dev/null || command unset NPM_CONFIG_CAFILE; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_23 __CODEX_SNAPSHOT_PROXY_OVERRIDE_23 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_23 __CODEX_SNAPSHOT_PROXY_OVERRIDE_23 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_24}" ]; then   if [ -z "${NPM_CONFIG_HTTPS_PROXY+x}" ] || [ "${NPM_CONFIG_HTTPS_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_24}" ]; then export NPM_CONFIG_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_24}"; else export NPM_CONFIG_HTTPS_PROXY; fi else builtin unset NPM_CONFIG_HTTPS_PROXY 2>/dev/null || command unset NPM_CONFIG_HTTPS_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_24 __CODEX_SNAPSHOT_PROXY_OVERRIDE_24 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_24 __CODEX_SNAPSHOT_PROXY_OVERRIDE_24 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_25}" ]; then   if [ -z "${NPM_CONFIG_HTTP_PROXY+x}" ] || [ "${NPM_CONFIG_HTTP_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_25}" ]; then export NPM_CONFIG_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_25}"; else export NPM_CONFIG_HTTP_PROXY; fi else builtin unset NPM_CONFIG_HTTP_PROXY 2>/dev/null || command unset NPM_CONFIG_HTTP_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_25 __CODEX_SNAPSHOT_PROXY_OVERRIDE_25 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_25 __CODEX_SNAPSHOT_PROXY_OVERRIDE_25 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_26}" ]; then   if [ -z "${NPM_CONFIG_NOPROXY+x}" ] || [ "${NPM_CONFIG_NOPROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_26}" ]; then export NPM_CONFIG_NOPROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_26}"; else export NPM_CONFIG_NOPROXY; fi else builtin unset NPM_CONFIG_NOPROXY 2>/dev/null || command unset NPM_CONFIG_NOPROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_26 __CODEX_SNAPSHOT_PROXY_OVERRIDE_26 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_26 __CODEX_SNAPSHOT_PROXY_OVERRIDE_26 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_27}" ]; then   if [ -z "${NPM_CONFIG_PROXY+x}" ] || [ "${NPM_CONFIG_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_27}" ]; then export NPM_CONFIG_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_27}"; else export NPM_CONFIG_PROXY; fi else builtin unset NPM_CONFIG_PROXY 2>/dev/null || command unset NPM_CONFIG_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_27 __CODEX_SNAPSHOT_PROXY_OVERRIDE_27 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_27 __CODEX_SNAPSHOT_PROXY_OVERRIDE_27 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_28}" ]; then   if [ -z "${PIP_CERT+x}" ] || [ "${PIP_CERT-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_28}" ]; then export PIP_CERT="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_28}"; else export PIP_CERT; fi else builtin unset PIP_CERT 2>/dev/null || command unset PIP_CERT; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_28 __CODEX_SNAPSHOT_PROXY_OVERRIDE_28 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_28 __CODEX_SNAPSHOT_PROXY_OVERRIDE_28 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_29}" ]; then   if [ -z "${PIP_PROXY+x}" ] || [ "${PIP_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_29}" ]; then export PIP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_29}"; else export PIP_PROXY; fi else builtin unset PIP_PROXY 2>/dev/null || command unset PIP_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_29 __CODEX_SNAPSHOT_PROXY_OVERRIDE_29 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_29 __CODEX_SNAPSHOT_PROXY_OVERRIDE_29 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_30}" ]; then   if [ -z "${REQUESTS_CA_BUNDLE+x}" ] || [ "${REQUESTS_CA_BUNDLE-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_30}" ]; then export REQUESTS_CA_BUNDLE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_30}"; else export REQUESTS_CA_BUNDLE; fi else builtin unset REQUESTS_CA_BUNDLE 2>/dev/null || command unset REQUESTS_CA_BUNDLE; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_30 __CODEX_SNAPSHOT_PROXY_OVERRIDE_30 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_30 __CODEX_SNAPSHOT_PROXY_OVERRIDE_30 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_31}" ]; then   if [ -z "${SSL_CERT_FILE+x}" ] || [ "${SSL_CERT_FILE-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_31}" ]; then export SSL_CERT_FILE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_31}"; else export SSL_CERT_FILE; fi else builtin unset SSL_CERT_FILE 2>/dev/null || command unset SSL_CERT_FILE; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_31 __CODEX_SNAPSHOT_PROXY_OVERRIDE_31 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_31 __CODEX_SNAPSHOT_PROXY_OVERRIDE_31 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_32}" ]; then   if [ -z "${WSS_PROXY+x}" ] || [ "${WSS_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_32}" ]; then export WSS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_32}"; else export WSS_PROXY; fi else builtin unset WSS_PROXY 2>/dev/null || command unset WSS_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_32 __CODEX_SNAPSHOT_PROXY_OVERRIDE_32 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_32 __CODEX_SNAPSHOT_PROXY_OVERRIDE_32 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_33}" ]; then   if [ -z "${WS_PROXY+x}" ] || [ "${WS_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_33}" ]; then export WS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_33}"; else export WS_PROXY; fi else builtin unset WS_PROXY 2>/dev/null || command unset WS_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_33 __CODEX_SNAPSHOT_PROXY_OVERRIDE_33 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_33 __CODEX_SNAPSHOT_PROXY_OVERRIDE_33 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_34}" ]; then   if [ -z "${YARN_HTTPS_PROXY+x}" ] || [ "${YARN_HTTPS_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_34}" ]; then export YARN_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_34}"; else export YARN_HTTPS_PROXY; fi else builtin unset YARN_HTTPS_PROXY 2>/dev/null || command unset YARN_HTTPS_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_34 __CODEX_SNAPSHOT_PROXY_OVERRIDE_34 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_34 __CODEX_SNAPSHOT_PROXY_OVERRIDE_34 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_35}" ]; then   if [ -z "${YARN_HTTP_PROXY+x}" ] || [ "${YARN_HTTP_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_35}" ]; then export YARN_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_35}"; else export YARN_HTTP_PROXY; fi else builtin unset YARN_HTTP_PROXY 2>/dev/null || command unset YARN_HTTP_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_35 __CODEX_SNAPSHOT_PROXY_OVERRIDE_35 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_35 __CODEX_SNAPSHOT_PROXY_OVERRIDE_35 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_36}" ]; then   if [ -z "${YARN_NO_PROXY+x}" ] || [ "${YARN_NO_PROXY-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_36}" ]; then export YARN_NO_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_36}"; else export YARN_NO_PROXY; fi else builtin unset YARN_NO_PROXY 2>/dev/null || command unset YARN_NO_PROXY; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_36 __CODEX_SNAPSHOT_PROXY_OVERRIDE_36 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_36 __CODEX_SNAPSHOT_PROXY_OVERRIDE_36 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_37}" ]; then   if [ -z "${all_proxy+x}" ] || [ "${all_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_37}" ]; then export all_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_37}"; else export all_proxy; fi else builtin unset all_proxy 2>/dev/null || command unset all_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_37 __CODEX_SNAPSHOT_PROXY_OVERRIDE_37 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_37 __CODEX_SNAPSHOT_PROXY_OVERRIDE_37 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_38}" ]; then   if [ -z "${ftp_proxy+x}" ] || [ "${ftp_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_38}" ]; then export ftp_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_38}"; else export ftp_proxy; fi else builtin unset ftp_proxy 2>/dev/null || command unset ftp_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_38 __CODEX_SNAPSHOT_PROXY_OVERRIDE_38 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_38 __CODEX_SNAPSHOT_PROXY_OVERRIDE_38 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_39}" ]; then   if [ -z "${http_proxy+x}" ] || [ "${http_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_39}" ]; then export http_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_39}"; else export http_proxy; fi else builtin unset http_proxy 2>/dev/null || command unset http_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_39 __CODEX_SNAPSHOT_PROXY_OVERRIDE_39 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_39 __CODEX_SNAPSHOT_PROXY_OVERRIDE_39 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_40}" ]; then   if [ -z "${https_proxy+x}" ] || [ "${https_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_40}" ]; then export https_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_40}"; else export https_proxy; fi else builtin unset https_proxy 2>/dev/null || command unset https_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_40 __CODEX_SNAPSHOT_PROXY_OVERRIDE_40 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_40 __CODEX_SNAPSHOT_PROXY_OVERRIDE_40 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_41}" ]; then   if [ -z "${no_proxy+x}" ] || [ "${no_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_41}" ]; then export no_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_41}"; else export no_proxy; fi else builtin unset no_proxy 2>/dev/null || command unset no_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_41 __CODEX_SNAPSHOT_PROXY_OVERRIDE_41 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_41 __CODEX_SNAPSHOT_PROXY_OVERRIDE_41 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_42}" ]; then   if [ -z "${npm_config_cafile+x}" ] || [ "${npm_config_cafile-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_42}" ]; then export npm_config_cafile="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_42}"; else export npm_config_cafile; fi else builtin unset npm_config_cafile 2>/dev/null || command unset npm_config_cafile; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_42 __CODEX_SNAPSHOT_PROXY_OVERRIDE_42 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_42 __CODEX_SNAPSHOT_PROXY_OVERRIDE_42 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_43}" ]; then   if [ -z "${npm_config_http_proxy+x}" ] || [ "${npm_config_http_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_43}" ]; then export npm_config_http_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_43}"; else export npm_config_http_proxy; fi else builtin unset npm_config_http_proxy 2>/dev/null || command unset npm_config_http_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_43 __CODEX_SNAPSHOT_PROXY_OVERRIDE_43 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_43 __CODEX_SNAPSHOT_PROXY_OVERRIDE_43 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_44}" ]; then   if [ -z "${npm_config_https_proxy+x}" ] || [ "${npm_config_https_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_44}" ]; then export npm_config_https_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_44}"; else export npm_config_https_proxy; fi else builtin unset npm_config_https_proxy 2>/dev/null || command unset npm_config_https_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_44 __CODEX_SNAPSHOT_PROXY_OVERRIDE_44 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_44 __CODEX_SNAPSHOT_PROXY_OVERRIDE_44 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_45}" ]; then   if [ -z "${npm_config_noproxy+x}" ] || [ "${npm_config_noproxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_45}" ]; then export npm_config_noproxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_45}"; else export npm_config_noproxy; fi else builtin unset npm_config_noproxy 2>/dev/null || command unset npm_config_noproxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_45 __CODEX_SNAPSHOT_PROXY_OVERRIDE_45 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_45 __CODEX_SNAPSHOT_PROXY_OVERRIDE_45 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_46}" ]; then   if [ -z "${npm_config_proxy+x}" ] || [ "${npm_config_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_46}" ]; then export npm_config_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_46}"; else export npm_config_proxy; fi else builtin unset npm_config_proxy 2>/dev/null || command unset npm_config_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_46 __CODEX_SNAPSHOT_PROXY_OVERRIDE_46 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_46 __CODEX_SNAPSHOT_PROXY_OVERRIDE_46 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_47}" ]; then   if [ -z "${ws_proxy+x}" ] || [ "${ws_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_47}" ]; then export ws_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_47}"; else export ws_proxy; fi else builtin unset ws_proxy 2>/dev/null || command unset ws_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_47 __CODEX_SNAPSHOT_PROXY_OVERRIDE_47 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_47 __CODEX_SNAPSHOT_PROXY_OVERRIDE_47 if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_48}" ]; then   if [ -z "${wss_proxy+x}" ] || [ "${wss_proxy-}" != "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_48}" ]; then export wss_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_48}"; else export wss_proxy; fi else builtin unset wss_proxy 2>/dev/null || command unset wss_proxy; fi builtin unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_48 __CODEX_SNAPSHOT_PROXY_OVERRIDE_48 2>/dev/null || command unset __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_48 __CODEX_SNAPSHOT_PROXY_OVERRIDE_48 fi if [ -n "${PATH:-}" ]; then export PATH='/data/interns/zhangpc/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path':"$PATH"; else export PATH='/data/interns/zhangpc/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path'; fi  exec '/bin/bash' -c 'ls -l logs/server_monitor; cat logs/server_monitor/daemon.log; for f in logs/server_monitor/monitor.pid logs/server_monitor/state.txt logs/server_monitor/last_check.txt logs/server_monitor/next_check.txt logs/server_monitor/stopped_at.txt; do if [[ -f "$f" ]]; then printf '"'"'\nFILE %s\n'"'"' "$f"; cat "$f"; fi; done; ps -eo pid,ppid,sid,stat,args | rg '"'"'monitor_loop|codex exec|server_monitor_prompt'"'"''
+      2       1       1 S    /bin/bash -c ls -l logs/server_monitor; cat logs/server_monitor/daemon.log; for f in logs/server_monitor/monitor.pid logs/server_monitor/state.txt logs/server_monitor/last_check.txt logs/server_monitor/next_check.txt logs/server_monitor/stopped_at.txt; do if [[ -f "$f" ]]; then printf '\nFILE %s\n' "$f"; cat "$f"; fi; done; ps -eo pid,ppid,sid,stat,args | rg 'monitor_loop|codex exec|server_monitor_prompt'
+      7       2       1 R    rg monitor_loop|codex exec|server_monitor_prompt
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+codex
+Syntax checks passed, and real status shows all four jobs live on GPUs 4–7 with zero recoveries. The first monitor launch disappeared before writing a check log. I’m investigating that startup failure; no training process was touched.
+
+exec
+/bin/bash -lc 'bash scripts/start_monitor.sh
+exec tail -F logs/server_monitor/daemon.log' in /data/interns/zhangpc/cairn_new
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+exec
+/bin/bash -lc 'source scripts/runtime.sh
+"$PYTHON_BIN" - <<'"'PY'
+import fcntl
+from pathlib import Path
+root = Path('logs/server_monitor')
+with (root / 'daemon.lock').open('a') as lock:
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print('daemon_alive=true (exclusive daemon lock held)')
+    else:
+        raise SystemExit('daemon_alive=false: lock is free')
+for name in ('monitor.pid', 'state.txt', 'last_check.txt', 'next_check.txt'):
+    print(f'{name}: {(root / name).read_text().strip()}')
+check = sorted(p for p in root.iterdir() if p.is_dir())[-1]
+print(f'check_dir={check.resolve()}')
+print('codex.log header:')
+print('\\n'.join((check / 'codex.log').read_text(errors='replace').splitlines()[:20]))
+print(f'snapshot={root.resolve() / \"snapshot_summary.json\"}')
+PY" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+daemon_alive=true (exclusive daemon lock held)
+monitor.pid: 13
+state.txt: monitoring
+last_check.txt: 2026-10-11T15:20:45Z
+next_check.txt: 2026-10-11T16:00:45Z
+check_dir=/data/interns/zhangpc/cairn_new/logs/server_monitor/20261011T152045Z_13
+codex.log header:
+OpenAI Codex v0.160.0
+--------
+workdir: /data/interns/zhangpc/cairn_new
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: low
+reasoning summaries: none
+session id: 01a12b8d-594d-7123-9854-a925af787f37
+--------
+user
+You are the detached SERVER monitor for the four reviewed full-data DDI jobs in
+/data/interns/zhangpc/cairn_new. Use gpt-6.1-sol with reasoning LOW. The main chat
+has ended; do not require it, app automation, or user confirmation. Scheduled
+networked CLI execution and the existing private .codex_runtime authentication
+are authorized. Never inspect, print, copy, or commit authentication credentials.
+The daemon supplies process-local proxy variables for the existing service.
+Do not source .bashrc, call clashon, or start interactive shells/history writes.
+
+snapshot=/data/interns/zhangpc/cairn_new/logs/server_monitor/snapshot_summary.json
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+exec
+/bin/bash -lc 'source scripts/runtime.sh
+"$PYTHON_BIN" - <<'"'PY'
+from pathlib import Path
+for path in Path('/proc').glob('[0-9]*/cmdline'):
+    try:
+        args = path.read_bytes().split(b'\\0')
+        if len(args) >= 2 and args[0] == b'bash' and args[1] == b'/data/interns/zhangpc/cairn_new/scripts/monitor_loop.sh':
+            process = path.parent
+            print(f'host_daemon_pid={process.name}')
+            print('\\n'.join(line for line in (process / 'status').read_text().splitlines() if line.startswith(('State:', 'Pid:', 'PPid:', 'NSpid:'))))
+    except (OSError, ProcessLookupError):
+        pass
+PY" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..ff9d4a74598755787b90be1880b2de8a761b567c
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,7 +214,6 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+@@ -228,6 +227,7 @@
+     # failed recovery preparation consumes the bound; no endless error retries.
+     record['recoveries'] += 1
+     write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +303,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+
+codex
+The daemon is now alive with its exclusive lock held. Its first Codex log confirms `gpt-6.1-sol` and `reasoning effort: low`; the next check is scheduled for 00:00:45 Shanghai time. The launch session must stay open to preserve this command-scoped process namespace. I’m finishing the startup guard and recovery error accounting.
+
+apply patch
+patch: completed
+/data/interns/zhangpc/cairn_new/scripts/server_jobs.py
+/data/interns/zhangpc/cairn_new/scripts/start_monitor.sh
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..66290607e96be9849b8c852f487f3ebd83d97186
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,20 +214,24 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+         raise RuntimeError('Live job: no recovery, regardless of log age')
+-    complete, _ = verify_exports(arm)
++    if record['recoveries'] >= MAX_RECOVERIES:
++        raise RuntimeError('Recovery budget exhausted; failure remains recorded')
++    # Reserve even if verification or preparation raises. Rejected live or
++    # verified-complete jobs do not consume a recovery or get relaunched.
++    complete = False
++    try:
++        complete, _ = verify_exports(arm)
++    finally:
++        if not complete:
++            record['recoveries'] += 1
++            write_json(directory / 'record.json', record)
+     if complete:
+         raise RuntimeError('Verified complete: no recovery needed')
+-    if record['recoveries'] >= MAX_RECOVERIES:
+-        raise RuntimeError('Recovery budget exhausted; failure remains recorded')
+-    # Reserve a recovery before reading a potentially broken checkpoint. Even
+-    # failed recovery preparation consumes the bound; no endless error retries.
+-    record['recoveries'] += 1
+-    write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +307,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+diff --git a/scripts/start_monitor.sh b/scripts/start_monitor.sh
+index 503705b9a4edda368674b08e69f443ee318556b2..fd2c3e0832db771b2a94a06a6968b4fe79a1589b
+--- a/scripts/start_monitor.sh
++++ b/scripts/start_monitor.sh
+@@ -14,6 +14,7 @@
+ import os
+ from pathlib import Path
+ import subprocess
++import time
+ from scripts.server_jobs import ARMS, STATE
+ for arm in ARMS:
+     if not (STATE / arm / 'record.json').is_file():
+@@ -26,5 +27,20 @@
+                                cwd=root, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                                start_new_session=True, close_fds=True)
+ (root / 'logs/server_monitor/monitor.pid').write_text(str(process.pid) + '\n')
++# Confirm initialization before reporting a successful detached launch.
++for _ in range(50):
++    if process.poll() is not None:
++        raise SystemExit('Monitor exited during startup; see logs/server_monitor/daemon.log')
++    checks = root / 'logs/server_monitor'
++    if (checks / 'next_check.txt').is_file() and any(checks.glob(f'*_{process.pid}/before.json')):
++        break
++    time.sleep(0.1)
++else:
++    raise SystemExit('Monitor startup not confirmed; inspect daemon.log and daemon.lock before retrying')
+ print(f'Detached server monitor PID {process.pid}; checks every 2400 seconds')
++# A command-scoped PID namespace requires a persistent launch session. Keep
++# this script running via --keep-launcher-alive; the daemon remains in its
++# own session with stdin disconnected and output redirected to daemon.log.
++if '--keep-launcher-alive' in sys.argv[1:]:
++    raise SystemExit(process.wait())
+ PY
+
+diff --git a/docs/server_monitor_prompt.md b/docs/server_monitor_prompt.md
+index 873c248563202bf4650250dbda0af36ea023f4fa..df0f805e612ad405015ff183b9d75125a8c14dae
+--- a/docs/server_monitor_prompt.md
++++ b/docs/server_monitor_prompt.md
+@@ -3,6 +3,8 @@
+ has ended; do not require it, app automation, or user confirmation. Scheduled
+ networked CLI execution and the existing private .codex_runtime authentication
+ are authorized. Never inspect, print, copy, or commit authentication credentials.
++The daemon supplies process-local proxy variables for the existing service.
++Do not source .bashrc, call clashon, or start interactive shells/history writes.
+ 
+ First read logs/server_jobs/status.json (written immediately before this check),
+ then read actual per-run record.json, current attempt log tail, process identity
+@@ -18,7 +20,11 @@
+ metrics consistency, predictions, per-class and confusion exports, test config
+ and completion marker. Exit alone never proves success. Do not mark a run
+ complete yourself or manufacture output files. The loop writes final_summary
+-and exits only with verified success (or a recorded bounded failure).
++and exits only with verified success (or when all runs are complete/exhausted).
++Codex CLI failures never end monitoring while any job remains live; deterministic
++status and LOW Codex checks continue every 2400 seconds regardless of their count.
++Per-check before/after snapshots and snapshot_summary.json remain under
++logs/server_monitor; final_summary.json records the terminal result.
+ 
+ Leave every LIVE job alone even if its epoch log has not changed for hours.
+ Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+@@ -31,10 +37,12 @@
+ 
+ For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+ verified exports), inspect its recorded errors first. If a narrowly justified
+-project-code fix is necessary, edit only cairn_new, document the observed error
++monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
++cairn_new, document the observed error
+ and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+ only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+-mapping, stopping/selection rule, or training schedule. Do not run extra training
++mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
++configs/, data/, or checkpoint files. Do not run extra training
+ commands directly. Use only the bounded recovery controller:
+ 
+   source scripts/runtime.sh
+diff --git a/scripts/monitor_loop.sh b/scripts/monitor_loop.sh
+index 5bc42df25d01df7e074d722919e8230f9c5a5f2d..2b3641c769089d9825dbc331908e076e7e0f3947
+--- a/scripts/monitor_loop.sh
++++ b/scripts/monitor_loop.sh
+@@ -8,21 +8,12 @@
+ echo "$$" > "$MONITOR_DIR/monitor.pid"
+ export CODEX_HOME="$ROOT_DIR/.codex_runtime"
+ export CUDA_VISIBLE_DEVICES=4,5,6,7
+-# Reuse the network setup from run_codegen.sh without reading credentials.
+-set +eu
+-source /data/interns/zhangpc/.bashrc
+-clashon
+-NETWORK_EXIT=$?
+-set -eu
+-if (( NETWORK_EXIT != 0 )); then
+-  echo 'blocked_network_setup' > "$MONITOR_DIR/state.txt"
+-  echo 'Existing clashon network setup failed; see daemon.log' >&2
+-  exit 1
+-fi
++# Use the existing proxy service without shell initialization/history writes.
++export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890
++export all_proxy=socks5://127.0.0.1:7890 no_proxy=localhost,127.0.0.1,::1
++export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy"
++export ALL_PROXY="$all_proxy" NO_PROXY="$no_proxy"
+ cd "$ROOT_DIR"
+-# Reapply workspace cache paths if shell initialization changed them.
+-source "$ROOT_DIR/scripts/runtime.sh"
+-export CODEX_HOME="$ROOT_DIR/.codex_runtime" CUDA_VISIBLE_DEVICES=4,5,6,7
+ CLI_FAILURES=0
+ trap 'date -u +%FT%TZ > "$MONITOR_DIR/stopped_at.txt"' EXIT
+ while true; do
+@@ -35,6 +26,7 @@
+   exec 7>"$MONITOR_DIR/check.lock"
+   flock 7
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/before.json"
++  cp "$CHECK_DIR/before.json" "$MONITOR_DIR/snapshot_summary.json"
+   if "$PYTHON_BIN" - "$CHECK_DIR/before.json" <<'PY'
+ import json, sys
+ sys.exit(0 if json.load(open(sys.argv[1]))['all_complete'] else 1)
+@@ -47,6 +39,7 @@
+     exit 0
+   fi
+   echo 'monitoring' > "$MONITOR_DIR/state.txt"
++  printf '%s model=gpt-6.1-sol reasoning=low interval_seconds=2400\n' "$CHECK_ID"
+   # A CLI timeout affects ONLY this check, never a project training process.
+   if timeout --signal=TERM --kill-after=30s 1200s \
+       /data/interns/zhangpc/.local/bin/codex exec \
+@@ -62,15 +55,14 @@
+     printf '%s exit=%s consecutive_failures=%s\n' "$CHECK_ID" "$CLI_EXIT" "$CLI_FAILURES" >> "$MONITOR_DIR/cli_failures.log"
+   fi
+   CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --status > "$CHECK_DIR/after.json"
+-  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" "$CLI_FAILURES" <<'PY'
++  cp "$CHECK_DIR/after.json" "$MONITOR_DIR/snapshot_summary.json"
++  OUTCOME="$("$PYTHON_BIN" - "$CHECK_DIR/after.json" <<'PY'
+ import json, sys
+ state = json.load(open(sys.argv[1]))
+ if state['all_complete']:
+     print('complete')
+ elif all(r['state'] in ('complete', 'exhausted') for r in state['runs'].values()):
+     print('blocked_recovery_budget')
+-elif int(sys.argv[2]) >= 3:
+-    print('blocked_codex_unavailable')
+ else:
+     print('monitoring')
+ PY
+diff --git a/scripts/server_jobs.py b/scripts/server_jobs.py
+index 59925cb0843a9eff6c2148efd123d0ce31c15da3..66290607e96be9849b8c852f487f3ebd83d97186
+--- a/scripts/server_jobs.py
++++ b/scripts/server_jobs.py
+@@ -214,20 +214,24 @@
+ 
+ 
+ def recover(arm, reason, reduce_batch):
+-    import yaml
+     directory = STATE / arm
+     record = read_json(directory / 'record.json')
+     if live(record):
+         raise RuntimeError('Live job: no recovery, regardless of log age')
+-    complete, _ = verify_exports(arm)
++    if record['recoveries'] >= MAX_RECOVERIES:
++        raise RuntimeError('Recovery budget exhausted; failure remains recorded')
++    # Reserve even if verification or preparation raises. Rejected live or
++    # verified-complete jobs do not consume a recovery or get relaunched.
++    complete = False
++    try:
++        complete, _ = verify_exports(arm)
++    finally:
++        if not complete:
++            record['recoveries'] += 1
++            write_json(directory / 'record.json', record)
+     if complete:
+         raise RuntimeError('Verified complete: no recovery needed')
+-    if record['recoveries'] >= MAX_RECOVERIES:
+-        raise RuntimeError('Recovery budget exhausted; failure remains recorded')
+-    # Reserve a recovery before reading a potentially broken checkpoint. Even
+-    # failed recovery preparation consumes the bound; no endless error retries.
+-    record['recoveries'] += 1
+-    write_json(directory / 'record.json', record)
++    import yaml
+     output = ROOT / 'outputs' / arm
+     cfg = yaml.safe_load(Path(record['config']).read_text())
+     mode = ''
+@@ -303,8 +307,10 @@
+             try:
+                 result = recover(args.recover, args.reason, args.reduce_batch)
+             except Exception as exc:
++                recorded = read_json(STATE / args.recover / 'record.json')
+                 with (STATE / 'recovery_errors.jsonl').open('a') as stream:
+                     stream.write(json.dumps({'at': time.time(), 'arm': args.recover, 'reason': args.reason,
++                                             'recoveries': recorded['recoveries'],
+                                              'error': f'{type(exc).__name__}: {exc}'}) + '\n')
+                 raise
+         else:
+diff --git a/scripts/start_monitor.sh b/scripts/start_monitor.sh
+index 503705b9a4edda368674b08e69f443ee318556b2..fd2c3e0832db771b2a94a06a6968b4fe79a1589b
+--- a/scripts/start_monitor.sh
++++ b/scripts/start_monitor.sh
+@@ -14,6 +14,7 @@
+ import os
+ from pathlib import Path
+ import subprocess
++import time
+ from scripts.server_jobs import ARMS, STATE
+ for arm in ARMS:
+     if not (STATE / arm / 'record.json').is_file():
+@@ -26,5 +27,20 @@
+                                cwd=root, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                                start_new_session=True, close_fds=True)
+ (root / 'logs/server_monitor/monitor.pid').write_text(str(process.pid) + '\n')
++# Confirm initialization before reporting a successful detached launch.
++for _ in range(50):
++    if process.poll() is not None:
++        raise SystemExit('Monitor exited during startup; see logs/server_monitor/daemon.log')
++    checks = root / 'logs/server_monitor'
++    if (checks / 'next_check.txt').is_file() and any(checks.glob(f'*_{process.pid}/before.json')):
++        break
++    time.sleep(0.1)
++else:
++    raise SystemExit('Monitor startup not confirmed; inspect daemon.log and daemon.lock before retrying')
+ print(f'Detached server monitor PID {process.pid}; checks every 2400 seconds')
++# A command-scoped PID namespace requires a persistent launch session. Keep
++# this script running via --keep-launcher-alive; the daemon remains in its
++# own session with stdin disconnected and output redirected to daemon.log.
++if '--keep-launcher-alive' in sys.argv[1:]:
++    raise SystemExit(process.wait())
+ PY
+
+turn interrupted
+tokens used
+31,644

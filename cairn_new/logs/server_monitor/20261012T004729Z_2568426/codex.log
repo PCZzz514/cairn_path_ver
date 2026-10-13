@@ -1,0 +1,665 @@
+2026-10-12T00:47:35.922807Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+2026-10-12T00:47:36.285795Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+OpenAI Codex v0.160.0
+--------
+workdir: /data/interns/zhangpc/cairn_new
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: low
+reasoning summaries: none
+session id: 01a12d94-39a8-7bf2-a019-b29ce14bb057
+--------
+user
+You are the detached SERVER monitor for the four reviewed full-data DDI jobs in
+/data/interns/zhangpc/cairn_new. Use gpt-6.1-sol with reasoning LOW. The main chat
+has ended; do not require it, app automation, or user confirmation. Scheduled
+networked CLI execution and the existing private .codex_runtime authentication
+are authorized. Never inspect, print, copy, or commit authentication credentials.
+The daemon supplies process-local proxy variables for the existing service.
+Do not source .bashrc, call clashon, or start interactive shells/history writes.
+
+First read logs/server_jobs/status.json (written immediately before this check),
+then read actual per-run record.json, current attempt log tail, process identity
+and exit records, history tail, checkpoint/output state as needed. Use the
+existing read-only Python environment via scripts/runtime.sh. Keep every write,
+temporary file and cache inside cairn_new. cairn_dev is READ ONLY. GPUs 0-3 are
+forbidden. Exact mapping: path single=4, path double=5, no_path single=6,
+no_path double=7. No permission changes, broad audits, hashes, smoke runs,
+preparation, new experiments, or changes to data/model/selection formulas.
+
+Use scripts/server_jobs.py --status for real export verification. It checks the
+selected best checkpoint, stopping state, frozen test rows, 85 probabilities,
+metrics consistency, predictions, per-class and confusion exports, test config
+and completion marker. Exit alone never proves success. Do not mark a run
+complete yourself or manufacture output files. The loop writes final_summary
+and exits only with verified success (or when all runs are complete/exhausted).
+Codex CLI failures never end monitoring while any job remains live; deterministic
+status and LOW Codex checks continue every 2400 seconds regardless of their count.
+Per-check before/after snapshots and snapshot_summary.json remain under
+logs/server_monitor; final_summary.json records the terminal result.
+
+Leave every LIVE job alone even if its epoch log has not changed for hours.
+Inspect logs/server_jobs/<arm>/attempt_<N>_process.json if the wrapper died:
+the job.lock may still be held by its live training child. Never kill/restart
+live jobs because of SSH loss, CLI timeout, polling timeout, or missing logs.
+If all states are live/complete and there is no actionable change, stay quiet:
+write a short local check note under logs/server_monitor/check_note.json with
+checked_at, per-run state, and changed=false, then return without chat output.
+Do not emit repeated unchanged summaries or ask the user questions.
+
+For an actually FAILED job (dead process AND unlocked job.lock AND incomplete
+verified exports), inspect its recorded errors first. If a narrowly justified
+monitoring/controller fix is necessary, edit only scripts/ or docs/ inside
+cairn_new, document the observed error
+and fix in logs/server_monitor/actions.jsonl, and use syntax/static validation
+only. Do not change CSE/DSN/NAI/PVR formulas, FIN trainability, dataset, GPU
+mapping, stopping/selection rule, or training schedule. Never edit cairn_dsn/,
+configs/, data/, or checkpoint files. Do not run extra training
+commands directly. NEVER launch or recover jobs from a Codex tool: its PID
+namespace and lifetime are scoped to the tool/check. Never execute
+scripts/server_jobs.py --recover, --launch-reviewed, or --worker, and never run
+scripts/drain_recovery_requests.py yourself. Do not call the controller's launch
+or recovery functions through Python or another wrapper.
+
+For an eligible failed job, write one JSON recovery request under
+logs/server_monitor/recovery_requests/ with these fields:
+
+  {"arm": "<exact arm name>", "reason": "<actual observed failure>", "reduce_batch": false}
+
+Use a unique filename (timestamp plus UUID), write to a .tmp file in that same
+directory, then atomically rename it to .json. Do not create a duplicate request
+for an arm with a pending request. Record the request path and observed failure
+in logs/server_monitor/actions.jsonl. Never manufacture requests for live or
+complete runs. The host daemon drains requests AFTER this Codex invocation ends
+and BEFORE its after-status snapshot, invoking the existing bounded recovery
+controller with the inherited host runtime. It moves each request into
+recovery_requests/processed/ before invocation and records the request, result,
+stdout and stderr there. Interrupted requests remain as evidence and are not
+automatically replayed; inspect the processed record and real job status before
+considering any new request. Leave processed records intact. Invalid arm names,
+live jobs and completed jobs are rejected by the existing controller.
+
+The host controller archives checkpoints/configs, resumes last.pt with the exact
+recorded config, optimizer/update/RNG and schedule, or runs --test-only after
+completed training.
+If a crash occurred between best/last publication it resumes the retained best
+epoch, never resets the schedule. Without any checkpoint, it retries the same
+full-data config. Only for a recorded CUDA OOM BEFORE BOTH first last.pt and
+best.pt, set reduce_batch=true in the request; this halves that run's batch and
+records its actual config. Never change batch size after a checkpoint. Never overwrite
+past attempt logs/archives. At most three recovery attempts per run; attempted
+recovery errors also consume this bound. Exhausted runs stay explicitly failed.
+Do not bypass this bound, erase records, or create replacement output directories.
+
+After any action re-read --status and save a local check note plus action record.
+A queued request is not a completed recovery: the host processes it after you
+return. Never wait for or drain it from this check.
+If a failure cannot be repaired within these constraints, retry only when a
+legitimate retry can help. Otherwise record the observed irreparable failure:
+
+  CUDA_VISIBLE_DEVICES='' "$PYTHON_BIN" scripts/server_jobs.py --block <arm> --reason '<observed irreparable failure>'
+
+This closes that run's recovery budget without altering checkpoints. Never
+claim completion without the verifier. The daemon handles the next 2400-second
+check, next-check timestamp, PID, overlap lock, summary and exit. Do not start
+another daemon, sleep for the interval, or create a new automation.
+
+warning: Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.
+2026-10-12T00:47:46.490184Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+codex
+I’ll read the saved status, check each run’s process and records, then run the export verifier.
+
+exec
+/bin/bash -c 'cat logs/server_jobs/status.json' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+{
+  "checked_at": 1791766049.5142865,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+
+exec
+/bin/bash -c "rg --files -g AGENTS.md -g 'runtime.sh' -g 'server_jobs.py' -g 'record.json' -g '*process.json' -g '*exit*' logs/server_jobs scripts .agents" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+scripts/runtime.sh
+scripts/server_jobs.py
+logs/server_jobs/path_single_drugout/record.json
+logs/server_jobs/path_single_drugout/attempt_1_process.json
+logs/server_jobs/no_path_double_drugout/record.json
+logs/server_jobs/no_path_double_drugout/attempt_1_process.json
+logs/server_jobs/no_path_single_drugout/record.json
+logs/server_jobs/no_path_single_drugout/attempt_1_process.json
+logs/server_jobs/path_double_drugout/attempt_1_process.json
+logs/server_jobs/path_double_drugout/record.json
+
+2026-10-12T00:47:52.515607Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+exec
+/bin/bash -c "cat scripts/runtime.sh
+sed -n '1,180p' scripts/server_jobs.py
+for d in logs/server_jobs/*/; do echo \""'$d"; cat "$d/record.json" "$d/attempt_1_process.json"; tail -n 12 "$d/attempt_1.log"; done' in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Source this from this workspace; the existing cairn environment is read-only.
+set -euo pipefail
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+export PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="$ROOT_DIR/tmp"
+export XDG_CACHE_HOME="$ROOT_DIR/.cache"
+export TORCH_HOME="$ROOT_DIR/.cache/torch"
+export TRITON_CACHE_DIR="$ROOT_DIR/.cache/triton"
+export CUDA_CACHE_PATH="$ROOT_DIR/.cache/cuda"
+export MPLCONFIGDIR="$ROOT_DIR/.cache/matplotlib"
+export HF_HOME="$ROOT_DIR/.cache/huggingface"
+export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
+export NUMBA_CACHE_DIR="$ROOT_DIR/.cache/numba"
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+PYTHON_BIN="$ROOT_DIR/../cairn_dev/.conda/cairn/bin/python"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME" "$TORCH_HOME" "$TRITON_CACHE_DIR" "$CUDA_CACHE_PATH" "$MPLCONFIGDIR" "$HF_HOME" "$NUMBA_CACHE_DIR" "$ROOT_DIR/logs"
+"""Durable four-arm job records, real export verification, bounded recovery.
+
+CPU controller only. Training children receive exactly their assigned GPU.
+No model forward, preparation, smoke run, or credential access here.
+"""
+import argparse
+from contextlib import contextmanager
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import shutil
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+STATE = ROOT / 'logs/server_jobs'
+ARMS = {'path_single_drugout': 4, 'path_double_drugout': 5,
+        'no_path_single_drugout': 6, 'no_path_double_drugout': 7}
+MAX_RECOVERIES = 3
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
+
+
+def read_json(path):
+    return json.loads(path.read_text())
+
+
+@contextmanager
+def registry_lock():
+    STATE.mkdir(parents=True, exist_ok=True)
+    with (STATE / 'registry.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def process_start(pid):
+    try:
+        # /proc comm may contain spaces; field 22 follows the closing ')'.
+        fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+        return None if fields[0] == 'Z' else fields[19]
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def busy(arm):
+    # The training child inherits this lock. If its wrapper dies, the live
+    # training process still prevents a duplicate launch.
+    with (STATE / arm / 'job.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return False
+        except BlockingIOError:
+            return True
+
+
+def live(record):
+    pid = record['pid']
+    return (record['process_start'] is not None and process_start(pid) == record['process_start']) or busy(record['arm'])
+
+
+def checkpoint(output, name):
+    import torch
+    return torch.load(output / name, map_location='cpu', weights_only=False)
+
+
+def verify_exports(arm):
+    """Completion means selected-best metrics AND all frozen test rows exported."""
+    import numpy as np
+    import pandas as pd
+    import yaml
+    from cairn_dsn.metrics import classification_metrics
+
+    output = ROOT / 'outputs' / arm
+    required = ['best.pt', 'last.pt', 'test_metrics.json', 'test_predictions.parquet',
+                'test_probabilities.npz', 'test_per_class.csv', 'test_confusion.csv',
+                'test_config.yaml', 'test_complete.json']
+    missing = [name for name in required if not (output / name).is_file()]
+    if missing:
+        return False, {'missing': missing}
+    try:
+        best = checkpoint(output, 'best.pt')
+        last = checkpoint(output, 'last.pt')
+        cfg = best['config']
+        assert cfg['gpu'] == ARMS[arm]
+        assert last['config'] == cfg
+        assert last['epoch'] >= cfg['epochs'] or last['bad_epochs'] >= cfg['patience']
+        marker = read_json(output / 'test_complete.json')
+        metrics = read_json(output / 'test_metrics.json')
+        assert marker['checkpoint'] == metrics['checkpoint'] == 'best.pt'
+        assert marker['selected_epoch'] == metrics['selected_epoch'] == best['epoch']
+        assert marker['selected_update'] == best['update']
+        assert metrics['selection'] == 'validation only'
+        assert metrics['selected_validation_macro_f1_85'] == best['best_metric']
+        eval_cfg = yaml.safe_load((output / 'test_config.yaml').read_text())
+        assert all(eval_cfg.get(k) == v for k, v in cfg.items())
+        assert eval_cfg['evaluation_checkpoint'] == 'best.pt'
+        frozen = pd.read_parquet(ROOT / 'data/prepared' / cfg['protocol'] / 'ddi.parquet')
+        rows = np.flatnonzero(frozen.split.eq('test').to_numpy())
+        expected = frozen.iloc[rows]
+        prediction = pd.read_parquet(output / 'test_predictions.parquet')
+        assert marker['rows'] == metrics['rows'] == len(prediction) == len(expected)
+        assert prediction[expected.columns].reset_index(drop=True).equals(expected.reset_index(drop=True))
+        with np.load(output / 'test_probabilities.npz', allow_pickle=False) as data:
+            probabilities = data['probabilities']
+            labels = data['labels']
+            assert probabilities.shape == (len(rows), 85)
+            assert np.isfinite(probabilities).all() and (probabilities >= 0).all() and (probabilities <= 1).all()
+            assert np.allclose(probabilities.sum(1), 1., atol=1e-5)
+            assert np.array_equal(data['event_ids'], np.arange(85))
+            assert np.array_equal(labels, expected.event_id.to_numpy())
+            assert np.array_equal(data['frozen_row_indices'], rows)
+            assert np.array_equal(prediction.frozen_row_index.to_numpy(), rows)
+            assert np.array_equal(prediction.predicted_event_id.to_numpy(), probabilities.argmax(1))
+            assert np.allclose(prediction.predicted_probability.to_numpy(), probabilities.max(1))
+            mask = data['path_mask']
+            assert mask.shape == (len(rows), 2 if cfg['with_path'] else 0)
+            if cfg['with_path']:
+                assert np.array_equal(mask, prediction[['path_v_to_u_present', 'path_u_to_v_present']].to_numpy())
+        actual, per_class, confusion = classification_metrics(labels, probabilities)
+        for key, value in actual.items():
+            assert metrics[key] is None if value is None else np.isclose(metrics[key], value, rtol=1e-6, atol=1e-8)
+        exported_class = pd.read_csv(output / 'test_per_class.csv')
+        assert np.array_equal(exported_class.event_id, np.arange(85))
+        for key in per_class.columns:
+            assert np.allclose(exported_class[key], per_class[key], equal_nan=True)
+        exported_confusion = pd.read_csv(output / 'test_confusion.csv', index_col=0)
+        assert np.array_equal(exported_confusion.index.to_numpy(), np.arange(85))
+        assert np.array_equal(exported_confusion.columns.astype(int), np.arange(85))
+        assert np.array_equal(exported_confusion.to_numpy(), confusion)
+        return True, {'selected_epoch': best['epoch'], 'rows': len(rows), 'metrics': actual}
+    except Exception as exc:
+        return False, {'verification_error': f'{type(exc).__name__}: {exc}'}
+
+
+def status():
+    result = {}
+    for arm, gpu in ARMS.items():
+        record_path = STATE / arm / 'record.json'
+        if not record_path.exists():
+            result[arm] = {'state': 'not_launched', 'gpu': gpu}
+            continue
+        record = read_json(record_path)
+        running = live(record)
+        # Avoid reading checkpoints while the trainer is atomically publishing
+        # its final files. A live process is always left alone.
+        complete, evidence = (False, {}) if running else verify_exports(arm)
+        result[arm] = {'state': 'live' if running else 'complete' if complete else
+                      'exhausted' if record['recoveries'] >= MAX_RECOVERIES else 'failed',
+                      'gpu': gpu, 'pid': record['pid'], 'attempt': record['attempt'],
+                      'recoveries': record['recoveries'], 'log': record['log'],
+                      'config': record['config'], 'evidence': evidence,
+                      'blocked_reason': record.get('blocked_reason'),
+                      'exit': read_json(Path(record['exit_file'])) if Path(record['exit_file']).exists() else None}
+    snapshot = {'checked_at': time.time(), 'runs': result,
+                'all_complete': all(r['state'] == 'complete' for r in result.values())}
+    write_json(STATE / 'status.json', snapshot)
+    if snapshot['all_complete']:
+        write_json(STATE / 'final_summary.json', snapshot)
+    return snapshot
+
+
+def start(arm, config_path, mode, recoveries=0, reason='reviewed initial launch'):
+    directory = STATE / arm
+    directory.mkdir(parents=True, exist_ok=True)
+    old_path = directory / 'record.json'
+    old = read_json(old_path) if old_path.exists() else None
+    if old and live(old):
+        raise RuntimeError(f'{arm} is live; cannot relaunch')
+    attempt = old['attempt'] + 1 if old else 1
+    log = directory / f'attempt_{attempt}.log'
+    if log.exists():
+        raise RuntimeError(f'Refusing to overwrite {log}')
+    config_path = config_path.resolve()
+logs/server_jobs/no_path_double_drugout/
+{
+  "arm": "no_path_double_drugout",
+  "gpu": 7,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5385025,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ],
+  "pid": 2560539,
+  "process_start": "1264159747"
+}
+{
+  "pid": 2560543,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml"
+  ]
+}
+{"epoch": 13, "update": 15145, "train": {"ce": 0.13783057124873468, "rec": 0.2755131157970193, "kl": 3.6390809730134412, "loss": 0.1676561921646192, "kl_weighted": 0.002274309181235401, "kl_beta_final": 0.0006500000000000001}, "validation": {"ce": 2.9934062280152975, "rec": 0.30340499470108434, "kl": 3.5996623842339766, "loss": 3.026086541226036, "macro_f1_85": 0.11093778609792487, "kl_beta": 0.0006500000000000001}, "best_validation_macro_f1_85": 0.12524264812758354, "improved": false, "bad_epochs": 5, "seconds": 1380.4092454910278}
+{"epoch": 14, "update": 16310, "train": {"ce": 0.12768637242380415, "rec": 0.27059448284263626, "kl": 3.6158110054018775, "loss": 0.15718641645910852, "kl_weighted": 0.0024405954176146445, "kl_beta_final": 0.0007}, "validation": {"ce": 3.1551312296014085, "rec": 0.2996917686964336, "kl": 3.6170359184867458, "loss": 3.187632337369417, "macro_f1_85": 0.12188512331856667, "kl_beta": 0.0007}, "best_validation_macro_f1_85": 0.12524264812758354, "improved": false, "bad_epochs": 6, "seconds": 1386.9791865348816}
+{"epoch": 15, "update": 17475, "train": {"ce": 0.12104658648914764, "rec": 0.26812668945547347, "kl": 3.579977903406527, "loss": 0.15045452575728127, "kl_weighted": 0.0025952698453903114, "kl_beta_final": 0.00075}, "validation": {"ce": 2.898663874676353, "rec": 0.2972283335108506, "kl": 3.5622135940350983, "loss": 2.9310584494942113, "macro_f1_85": 0.12528562795590792, "kl_beta": 0.00075}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": true, "bad_epochs": 0, "seconds": 1376.0370419025421}
+{"epoch": 16, "update": 18640, "train": {"ce": 0.11310176025230485, "rec": 0.26364106941700466, "kl": 3.560533722986071, "loss": 0.14222538104351512, "kl_weighted": 0.0027595136408132674, "kl_beta_final": 0.0008}, "validation": {"ce": 3.094560648265638, "rec": 0.29953897564034715, "kl": 3.5273648839247853, "loss": 3.1273364167464406, "macro_f1_85": 0.12044883719628438, "kl_beta": 0.0008}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 1, "seconds": 1377.6100866794586}
+{"epoch": 17, "update": 19805, "train": {"ce": 0.1061869361119185, "rec": 0.26123539811906704, "kl": 3.5332615830447707, "loss": 0.1352257256615911, "kl_weighted": 0.002915249544992986, "kl_beta_final": 0.00085}, "validation": {"ce": 3.33883561084145, "rec": 0.29609926405705905, "kl": 3.5601163010848196, "loss": 3.3714715857254833, "macro_f1_85": 0.11748270630073854, "kl_beta": 0.00085}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 2, "seconds": 1389.9419491291046}
+{"epoch": 18, "update": 20970, "train": {"ce": 0.09926707489036796, "rec": 0.259293599407631, "kl": 3.5042656830470347, "loss": 0.1282625437449874, "kl_weighted": 0.003066108616876362, "kl_beta_final": 0.0009000000000000001}, "validation": {"ce": 3.1859544026224236, "rec": 0.29322012694258437, "kl": 3.5003049950850635, "loss": 3.218426719464754, "macro_f1_85": 0.11820430729604818, "kl_beta": 0.0009000000000000001}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 3, "seconds": 1388.6751577854156}
+{"epoch": 19, "update": 22135, "train": {"ce": 0.09627333835769497, "rec": 0.25575899193155854, "kl": 3.475185333194828, "loss": 0.12506368427854453, "kl_weighted": 0.0032144464577971254, "kl_beta_final": 0.00095}, "validation": {"ce": 3.3927495002746584, "rec": 0.29742959769148575, "kl": 3.4682158043510034, "loss": 3.4257872305418315, "macro_f1_85": 0.10933150364327443, "kl_beta": 0.00095}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 4, "seconds": 1399.750477552414}
+{"epoch": 20, "update": 23300, "train": {"ce": 0.09021157161542866, "rec": 0.2544771245290395, "kl": 3.450941940365152, "loss": 0.11902380227245997, "kl_weighted": 0.003364517767124082, "kl_beta_final": 0.001}, "validation": {"ce": 3.5296975537350304, "rec": 0.2943873258013474, "kl": 3.4536389049730802, "loss": 3.562589908901014, "macro_f1_85": 0.12017100970910327, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 5, "seconds": 1401.995962381363}
+{"epoch": 21, "update": 24465, "train": {"ce": 0.08619947320675224, "rec": 0.2513453034100904, "kl": 3.4439572016082454, "loss": 0.11477796130086686, "kl_weighted": 0.0034439573677296793, "kl_beta_final": 0.001}, "validation": {"ce": 3.6936035507603697, "rec": 0.29825450652524044, "kl": 3.3871679607190583, "loss": 3.726816247638903, "macro_f1_85": 0.1186096789634297, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 6, "seconds": 1404.2236247062683}
+{"epoch": 22, "update": 25630, "train": {"ce": 0.08229637915128275, "rec": 0.249022017727503, "kl": 3.425615689430853, "loss": 0.11062419708528468, "kl_weighted": 0.0034256158565435448, "kl_beta_final": 0.001}, "validation": {"ce": 3.503892745469746, "rec": 0.2887612841631237, "kl": 3.438822131407888, "loss": 3.5362077286368923, "macro_f1_85": 0.12099841092891618, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 7, "seconds": 1410.6166596412659}
+{"epoch": 23, "update": 26795, "train": {"ce": 0.07736561597285367, "rec": 0.24714767711026026, "kl": 3.4286364167280854, "loss": 0.10550902078682901, "kl_weighted": 0.0034286365777950537, "kl_beta_final": 0.001}, "validation": {"ce": 3.7666195392608643, "rec": 0.28853486148934615, "kl": 3.4693037133467826, "loss": 3.7989423551057513, "macro_f1_85": 0.11967396288947611, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12528562795590792, "improved": false, "bad_epochs": 8, "seconds": 1408.2577064037323}
+{"epoch": 24, "update": 27960, "train": {"ce": 0.07486376813025772, "rec": 0.24452074630464193, "kl": 3.4283445729232183, "loss": 0.10274418805393004, "kl_weighted": 0.0034283447316377606, "kl_beta_final": 0.001}, "validation": {"ce": 3.5490219844015023, "rec": 0.29162094749902423, "kl": 3.360253085588154, "loss": 3.581544273778012, "macro_f1_85": 0.1259564026908654, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.1259564026908654, "improved": true, "bad_epochs": 0, "seconds": 1410.8799977302551}
+logs/server_jobs/no_path_single_drugout/
+{
+  "arm": "no_path_single_drugout",
+  "gpu": 6,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5355487,
+  "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml"
+  ],
+  "pid": 2560538,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560542,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml"
+  ]
+}
+{"epoch": 12, "update": 13980, "train": {"ce": 0.1478623770955974, "rec": 0.2805427538747789, "kl": 3.66255235770533, "loss": 0.17802271225795252, "kl_weighted": 0.0021060596629195417, "kl_beta_final": 0.0006}, "validation": {"ce": 1.393556706059974, "rec": 0.28308175753838805, "kl": 3.6034337214675696, "loss": 1.424026939454261, "macro_f1_85": 0.5499031354087642, "kl_beta": 0.0006}, "best_validation_macro_f1_85": 0.5587067251661978, "improved": false, "bad_epochs": 1, "seconds": 1491.7710552215576}
+{"epoch": 13, "update": 15145, "train": {"ce": 0.13784521203871017, "rec": 0.275505812226923, "kl": 3.6389405142441316, "loss": 0.1676700126049209, "kl_weighted": 0.00227421929054886, "kl_beta_final": 0.0006500000000000001}, "validation": {"ce": 1.4259951150127692, "rec": 0.2730580590258489, "kl": 3.6022613958409693, "loss": 1.4556423974920414, "macro_f1_85": 0.5655334870265888, "kl_beta": 0.0006500000000000001}, "best_validation_macro_f1_85": 0.5655334870265888, "improved": true, "bad_epochs": 0, "seconds": 1495.428875207901}
+{"epoch": 14, "update": 16310, "train": {"ce": 0.12768079696650936, "rec": 0.27061190231206894, "kl": 3.6158960210829756, "loss": 0.1571826398397444, "kl_weighted": 0.0024406524699701793, "kl_beta_final": 0.0007}, "validation": {"ce": 1.4967380112686322, "rec": 0.27188492069056264, "kl": 3.6062804056814093, "loss": 1.5264509059816764, "macro_f1_85": 0.5434952220363789, "kl_beta": 0.0007}, "best_validation_macro_f1_85": 0.5655334870265888, "improved": false, "bad_epochs": 1, "seconds": 1484.9461085796356}
+{"epoch": 15, "update": 17475, "train": {"ce": 0.12105393694179542, "rec": 0.2680652906472259, "kl": 3.5806019441957706, "loss": 0.1504561901020547, "kl_weighted": 0.002595723798274266, "kl_beta_final": 0.00075}, "validation": {"ce": 1.4146228208689842, "rec": 0.26910313222309074, "kl": 3.5549185247354735, "loss": 1.4441993288690436, "macro_f1_85": 0.5423486603778507, "kl_beta": 0.00075}, "best_validation_macro_f1_85": 0.5655334870265888, "improved": false, "bad_epochs": 2, "seconds": 1483.6112744808197}
+{"epoch": 16, "update": 18640, "train": {"ce": 0.11309383259460831, "rec": 0.26369804490700954, "kl": 3.559961681249259, "loss": 0.14222270174019067, "kl_weighted": 0.0027590644302212634, "kl_beta_final": 0.0008}, "validation": {"ce": 1.471694356815328, "rec": 0.27112658163131587, "kl": 3.5091718022170078, "loss": 1.5016143501220713, "macro_f1_85": 0.5667568308804323, "kl_beta": 0.0008}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": true, "bad_epochs": 0, "seconds": 1488.277771949768}
+{"epoch": 17, "update": 19805, "train": {"ce": 0.10619864473811709, "rec": 0.2613196876478889, "kl": 3.5326080538020936, "loss": 0.13524532724256055, "kl_weighted": 0.0029147134849592813, "kl_beta_final": 0.00085}, "validation": {"ce": 1.5032868194213016, "rec": 0.266117512791209, "kl": 3.558632541213266, "loss": 1.5329234042504902, "macro_f1_85": 0.5467640306850867, "kl_beta": 0.00085}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": false, "bad_epochs": 1, "seconds": 1497.0113615989685}
+{"epoch": 18, "update": 20970, "train": {"ce": 0.09915950013610848, "rec": 0.25936077533152924, "kl": 3.505445201809897, "loss": 0.1281626923903035, "kl_weighted": 0.0030671143596028632, "kl_beta_final": 0.0009000000000000001}, "validation": {"ce": 1.491081692939026, "rec": 0.26286969055184845, "kl": 3.501052762190539, "loss": 1.5205196084384307, "macro_f1_85": 0.5381970548366587, "kl_beta": 0.0009000000000000001}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": false, "bad_epochs": 2, "seconds": 1477.957183122635}
+{"epoch": 19, "update": 22135, "train": {"ce": 0.09647271772062271, "rec": 0.25574906082949544, "kl": 3.4756606582102902, "loss": 0.1252625402206896, "kl_weighted": 0.0032149162001003646, "kl_beta_final": 0.00095}, "validation": {"ce": 1.6058686686388024, "rec": 0.2630474843419972, "kl": 3.4661016959767803, "loss": 1.6354662184506503, "macro_f1_85": 0.5485280818410668, "kl_beta": 0.00095}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": false, "bad_epochs": 3, "seconds": 1489.1714282035828}
+{"epoch": 20, "update": 23300, "train": {"ce": 0.08973068514350234, "rec": 0.2543723617852979, "kl": 3.4524177471724156, "loss": 0.11853387096339804, "kl_weighted": 0.0033659493935264307, "kl_beta_final": 0.001}, "validation": {"ce": 1.6045098408042222, "rec": 0.2625874311455976, "kl": 3.465530431089936, "loss": 1.6342341137184728, "macro_f1_85": 0.5380136366689741, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": false, "bad_epochs": 4, "seconds": 1490.9883737564087}
+{"epoch": 21, "update": 24465, "train": {"ce": 0.0866563907028601, "rec": 0.2512918573750063, "kl": 3.4428787518863126, "loss": 0.11522845583263787, "kl_weighted": 0.0034428789136215173, "kl_beta_final": 0.001}, "validation": {"ce": 1.683993769486363, "rec": 0.26411380045526384, "kl": 3.394053712509445, "loss": 1.713799208699438, "macro_f1_85": 0.5380716287695924, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": false, "bad_epochs": 5, "seconds": 1475.9378600120544}
+{"epoch": 22, "update": 25630, "train": {"ce": 0.08221121702234652, "rec": 0.24893038492228098, "kl": 3.4249912991077642, "loss": 0.1105292472472693, "kl_weighted": 0.003424991464455187, "kl_beta_final": 0.001}, "validation": {"ce": 1.5770995502177128, "rec": 0.25675330354110937, "kl": 3.4549027817680025, "loss": 1.6062297774588572, "macro_f1_85": 0.5463568447889302, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": false, "bad_epochs": 6, "seconds": 1474.7475192546844}
+{"epoch": 23, "update": 26795, "train": {"ce": 0.07752757615140207, "rec": 0.24724424121927688, "kl": 3.427223248410344, "loss": 0.10567922423820195, "kl_weighted": 0.0034272234110474284, "kl_beta_final": 0.001}, "validation": {"ce": 1.7108005912165702, "rec": 0.2568565006522224, "kl": 3.4751563995596246, "loss": 1.7399613961165188, "macro_f1_85": 0.552528258242496, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.5667568308804323, "improved": false, "bad_epochs": 7, "seconds": 1478.0091202259064}
+logs/server_jobs/path_double_drugout/
+{
+  "arm": "path_double_drugout",
+  "gpu": 5,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5320885,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml"
+  ],
+  "pid": 2560537,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560541,
+  "process_start": "1264159750",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml"
+  ]
+}
+{"epoch": 14, "update": 16310, "train": {"ce": 0.10341320484240787, "rec": 0.2918942122571768, "kl": 3.485513039867849, "loss": 0.13495541449093754, "kl_weighted": 0.0023527881816908535, "kl_beta_final": 0.0007}, "validation": {"ce": 2.7070150049109207, "rec": 0.3403811398305391, "kl": 3.290244850359465, "loss": 2.7433563408098722, "macro_f1_85": 0.1169420808725189, "kl_beta": 0.0007}, "best_validation_macro_f1_85": 0.11854774151448985, "improved": false, "bad_epochs": 1, "seconds": 1361.9146444797516}
+{"epoch": 15, "update": 17475, "train": {"ce": 0.09410606501309565, "rec": 0.29284463655922405, "kl": 3.483717860029449, "loss": 0.12591616003005043, "kl_weighted": 0.0025256309871811815, "kl_beta_final": 0.00075}, "validation": {"ce": 2.9308983514183446, "rec": 0.34415587594634606, "kl": 3.3918285520453204, "loss": 2.9678578288931594, "macro_f1_85": 0.11882215546354205, "kl_beta": 0.00075}, "best_validation_macro_f1_85": 0.11882215546354205, "improved": true, "bad_epochs": 0, "seconds": 1369.1529121398926}
+{"epoch": 16, "update": 18640, "train": {"ce": 0.08807549865136662, "rec": 0.29174380128455685, "kl": 3.450470354059111, "loss": 0.119923773588532, "kl_weighted": 0.0026738945988409443, "kl_beta_final": 0.0008}, "validation": {"ce": 2.9263200810081083, "rec": 0.34350582078883524, "kl": 3.3211355460317513, "loss": 2.9633275308107074, "macro_f1_85": 0.11849642518475224, "kl_beta": 0.0008}, "best_validation_macro_f1_85": 0.11882215546354205, "improved": false, "bad_epochs": 1, "seconds": 1355.27201795578}
+{"epoch": 17, "update": 19805, "train": {"ce": 0.08048024354999937, "rec": 0.2913558728279913, "kl": 3.4105690759990814, "loss": 0.11242926502584816, "kl_weighted": 0.0028134338000681213, "kl_beta_final": 0.00085}, "validation": {"ce": 2.782227282775076, "rec": 0.3471135657084616, "kl": 3.439122102135106, "loss": 2.8198619077080176, "macro_f1_85": 0.12348722771973153, "kl_beta": 0.00085}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": true, "bad_epochs": 0, "seconds": 1366.4923951625824}
+{"epoch": 18, "update": 20970, "train": {"ce": 0.07503649434678113, "rec": 0.29151974814307074, "kl": 3.386286674276027, "loss": 0.10715113268862932, "kl_weighted": 0.002962663237876859, "kl_beta_final": 0.0009000000000000001}, "validation": {"ce": 3.0617520834270278, "rec": 0.35573902632060805, "kl": 3.147041388561851, "loss": 3.1001584153426323, "macro_f1_85": 0.1158766611331213, "kl_beta": 0.0009000000000000001}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 1, "seconds": 1368.766345024109}
+{"epoch": 19, "update": 22135, "train": {"ce": 0.06994141815835603, "rec": 0.2922923834109151, "kl": 3.3608149806118823, "loss": 0.1022793568079294, "kl_weighted": 0.00310870009971285, "kl_beta_final": 0.00095}, "validation": {"ce": 3.1203817493037174, "rec": 0.35234087674241316, "kl": 3.214020716516595, "loss": 3.158669130425704, "macro_f1_85": 0.10852153582590776, "kl_beta": 0.00095}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 2, "seconds": 1373.3318526744843}
+{"epoch": 20, "update": 23300, "train": {"ce": 0.06461377452220562, "rec": 0.29137320399738653, "kl": 3.3217195708371228, "loss": 0.09698987610553762, "kl_weighted": 0.0032387807650030606, "kl_beta_final": 0.001}, "validation": {"ce": 3.383170562041433, "rec": 0.3558185062910381, "kl": 3.264771657241018, "loss": 3.42201714515686, "macro_f1_85": 0.1084309130546182, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 3, "seconds": 1374.9358930587769}
+{"epoch": 21, "update": 24465, "train": {"ce": 0.06210363813643998, "rec": 0.2915350665479753, "kl": 3.3000999334948657, "loss": 0.09455724538978597, "kl_weighted": 0.0033001000855862254, "kl_beta_final": 0.001}, "validation": {"ce": 3.4931768492648474, "rec": 0.3578067239962126, "kl": 3.2208063376577276, "loss": 3.5321782664248818, "macro_f1_85": 0.11266819928313096, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 4, "seconds": 1369.5723402500153}
+{"epoch": 22, "update": 25630, "train": {"ce": 0.05633577263692253, "rec": 0.2911396639197737, "kl": 3.286820580255364, "loss": 0.08873656023667442, "kl_weighted": 0.0032868207385391116, "kl_beta_final": 0.001}, "validation": {"ce": 3.345678532750983, "rec": 0.355232961867985, "kl": 3.1862537308743124, "loss": 3.384388070357473, "macro_f1_85": 0.11735247219964305, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 5, "seconds": 1377.283170223236}
+{"epoch": 23, "update": 26795, "train": {"ce": 0.053221277141173064, "rec": 0.29090009592855415, "kl": 3.288032053352701, "loss": 0.085599319369607, "kl_weighted": 0.0032880322130267093, "kl_beta_final": 0.001}, "validation": {"ce": 3.4670380266089187, "rec": 0.3563571258595115, "kl": 3.212359709488718, "loss": 3.5058861983449834, "macro_f1_85": 0.10988825791831548, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 6, "seconds": 1367.6717154979706}
+{"epoch": 24, "update": 27960, "train": {"ce": 0.04966984863333173, "rec": 0.2886725208730003, "kl": 3.2870482356515933, "loss": 0.08182414954873228, "kl_weighted": 0.0032870483925343833, "kl_beta_final": 0.001}, "validation": {"ce": 3.4991996112622714, "rec": 0.3545935028477719, "kl": 3.157536238118222, "loss": 3.5378164642735532, "macro_f1_85": 0.11014530758109982, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 7, "seconds": 1378.2010924816132}
+{"epoch": 25, "update": 29125, "train": {"ce": 0.04791277642389563, "rec": 0.28900049958026364, "kl": 3.2617974275168535, "loss": 0.08007462430245685, "kl_weighted": 0.0032617975835596484, "kl_beta_final": 0.001}, "validation": {"ce": 3.558920242911891, "rec": 0.36317773492712724, "kl": 3.0706806634601795, "loss": 3.598308713812577, "macro_f1_85": 0.11631248676225676, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.12348722771973153, "improved": false, "bad_epochs": 8, "seconds": 1379.1546099185944}
+logs/server_jobs/path_single_drugout/
+{
+  "arm": "path_single_drugout",
+  "gpu": 4,
+  "attempt": 1,
+  "recoveries": 0,
+  "started_at": 1791731862.5274358,
+  "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+  "mode": "",
+  "reason": "reviewed initial launch",
+  "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+  "exit_file": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1_exit.json",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml"
+  ],
+  "pid": 2560536,
+  "process_start": "1264159746"
+}
+{
+  "pid": 2560540,
+  "process_start": "1264159749",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "cairn_dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml"
+  ]
+}
+{"epoch": 11, "update": 12815, "train": {"ce": 0.13174585922316814, "rec": 0.29332414733494006, "kl": 3.473599686458052, "loss": 0.16290203763003971, "kl_weighted": 0.0018237637454199655, "kl_beta_final": 0.00055}, "validation": {"ce": 1.3848789934559111, "rec": 0.2991245411840058, "kl": 3.568209895039224, "loss": 1.4167539565464842, "macro_f1_85": 0.5456659625177719, "kl_beta": 0.00055}, "best_validation_macro_f1_85": 0.5456659625177719, "improved": true, "bad_epochs": 0, "seconds": 1512.6662080287933}
+{"epoch": 12, "update": 13980, "train": {"ce": 0.1216988259067948, "rec": 0.29222893525670995, "kl": 3.463938756122418, "loss": 0.15291360046951086, "kl_weighted": 0.00199188111404377, "kl_beta_final": 0.0006}, "validation": {"ce": 1.3687318342836654, "rec": 0.30684712813942655, "kl": 3.5156748481802795, "loss": 1.401525949872627, "macro_f1_85": 0.5301756654259464, "kl_beta": 0.0006}, "best_validation_macro_f1_85": 0.5456659625177719, "improved": false, "bad_epochs": 1, "seconds": 1514.861002922058}
+{"epoch": 13, "update": 15145, "train": {"ce": 0.11018800079233884, "rec": 0.291504508376563, "kl": 3.514598805856656, "loss": 0.14153530905563586, "kl_weighted": 0.002196857266894476, "kl_beta_final": 0.0006500000000000001}, "validation": {"ce": 1.4387588206645472, "rec": 0.3014052323389432, "kl": 3.557052998385637, "loss": 1.4712114348502179, "macro_f1_85": 0.5492471548996491, "kl_beta": 0.0006500000000000001}, "best_validation_macro_f1_85": 0.5492471548996491, "improved": true, "bad_epochs": 0, "seconds": 1517.673147201538}
+{"epoch": 14, "update": 16310, "train": {"ce": 0.1036013165874445, "rec": 0.29049138084720233, "kl": 3.4790453079926538, "loss": 0.13499890616683785, "kl_weighted": 0.0023484511880929805, "kl_beta_final": 0.0007}, "validation": {"ce": 1.3980346263903163, "rec": 0.30593702161515707, "kl": 3.3510614365891307, "loss": 1.430974073919907, "macro_f1_85": 0.5469004226791652, "kl_beta": 0.0007}, "best_validation_macro_f1_85": 0.5492471548996491, "improved": false, "bad_epochs": 1, "seconds": 1511.9543178081512}
+{"epoch": 15, "update": 17475, "train": {"ce": 0.0939652263485549, "rec": 0.29148009610434583, "kl": 3.482203001830385, "loss": 0.12563771924341777, "kl_weighted": 0.002524482965248714, "kl_beta_final": 0.00075}, "validation": {"ce": 1.4511137942525667, "rec": 0.30659543066779554, "kl": 3.454177255139547, "loss": 1.4843639779670152, "macro_f1_85": 0.5310399248837541, "kl_beta": 0.00075}, "best_validation_macro_f1_85": 0.5492471548996491, "improved": false, "bad_epochs": 2, "seconds": 1504.7291932106018}
+{"epoch": 16, "update": 18640, "train": {"ce": 0.08837679422574818, "rec": 0.29025845149565255, "kl": 3.4493694188328514, "loss": 0.12007571658623736, "kl_weighted": 0.0026730768540185793, "kl_beta_final": 0.0008}, "validation": {"ce": 1.4628063342219682, "rec": 0.30451915673203617, "kl": 3.414766772561329, "loss": 1.4959900658134087, "macro_f1_85": 0.5654624749858085, "kl_beta": 0.0008}, "best_validation_macro_f1_85": 0.5654624749858085, "improved": true, "bad_epochs": 0, "seconds": 1522.3577451705933}
+{"epoch": 17, "update": 19805, "train": {"ce": 0.08079819597264278, "rec": 0.2904142542172282, "kl": 3.409422383536963, "loss": 0.11265213286358085, "kl_weighted": 0.0028125110015869547, "kl_beta_final": 0.00085}, "validation": {"ce": 1.4667112269394669, "rec": 0.3048537592260431, "kl": 3.522503880970404, "loss": 1.5001907348317367, "macro_f1_85": 0.5594015281602407, "kl_beta": 0.00085}, "best_validation_macro_f1_85": 0.5654624749858085, "improved": false, "bad_epochs": 1, "seconds": 1507.404718875885}
+{"epoch": 18, "update": 20970, "train": {"ce": 0.07536583772799632, "rec": 0.289498707918107, "kl": 3.3917183706095098, "loss": 0.10728317444934009, "kl_weighted": 0.0029674654743892053, "kl_beta_final": 0.0009000000000000001}, "validation": {"ce": 1.5344235478440873, "rec": 0.31380650831840345, "kl": 3.219890694874022, "loss": 1.5687020905134854, "macro_f1_85": 0.550094353890268, "kl_beta": 0.0009000000000000001}, "best_validation_macro_f1_85": 0.5654624749858085, "improved": false, "bad_epochs": 2, "seconds": 1502.5397446155548}
+{"epoch": 19, "update": 22135, "train": {"ce": 0.07052892324897643, "rec": 0.29059464369481275, "kl": 3.358967936881645, "loss": 0.10269548084344318, "kl_weighted": 0.0031070929956489705, "kl_beta_final": 0.00095}, "validation": {"ce": 1.5376880153830819, "rec": 0.31164482506043584, "kl": 3.298123665638259, "loss": 1.571985703302399, "macro_f1_85": 0.5505114036726892, "kl_beta": 0.00095}, "best_validation_macro_f1_85": 0.5654624749858085, "improved": false, "bad_epochs": 3, "seconds": 1516.3103737831116}
+{"epoch": 20, "update": 23300, "train": {"ce": 0.06467567037007806, "rec": 0.2900994997222632, "kl": 3.3295096710590624, "loss": 0.09693200441478153, "kl_weighted": 0.00324638375228286, "kl_beta_final": 0.001}, "validation": {"ce": 1.6246700616468739, "rec": 0.3125104107964575, "kl": 3.319116742157265, "loss": 1.659240222047492, "macro_f1_85": 0.5696434336070745, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.5696434336070745, "improved": true, "bad_epochs": 0, "seconds": 1503.5127255916595}
+{"epoch": 21, "update": 24465, "train": {"ce": 0.06234069074550616, "rec": 0.2902404167300728, "kl": 3.2902103695698734, "loss": 0.09465494347349034, "kl_weighted": 0.0032902105235291775, "kl_beta_final": 0.001}, "validation": {"ce": 1.693601634330637, "rec": 0.31307155420523813, "kl": 3.291205093899053, "loss": 1.7282000031842903, "macro_f1_85": 0.5494694232641321, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.5696434336070745, "improved": false, "bad_epochs": 1, "seconds": 1510.6795160770416}
+{"epoch": 22, "update": 25630, "train": {"ce": 0.05671644530092464, "rec": 0.29020722034530205, "kl": 3.2912699066366042, "loss": 0.08902843787627938, "kl_weighted": 0.003291270061581567, "kl_beta_final": 0.001}, "validation": {"ce": 1.628179886869034, "rec": 0.31281041723046704, "kl": 3.2510499623064413, "loss": 1.6627119825512622, "macro_f1_85": 0.562600781006832, "kl_beta": 0.001}, "best_validation_macro_f1_85": 0.5696434336070745, "improved": false, "bad_epochs": 2, "seconds": 1529.776097536087}
+
+exec
+/bin/bash -c "rg --files -g AGENTS.md -g '*history*' -g '*exit*' -g '*summary*' logs/server_jobs logs/server_monitor . | head -n 60" in /data/interns/zhangpc/cairn_new
+ succeeded in 0ms:
+logs/server_monitor/snapshot_summary.json
+
+2026-10-12T00:47:58.722227Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+exec
+/bin/bash -c "source scripts/runtime.sh
+CUDA_VISIBLE_DEVICES='' \""'$PYTHON_BIN" scripts/server_jobs.py --status
+CUDA_VISIBLE_DEVICES='"'' \""'$PYTHON_BIN" - <<'"'PY'
+import json
+from pathlib import Path
+for d in sorted(Path('logs/server_jobs').iterdir()):
+ if not d.is_dir() or not (d/'record.json').exists(): continue
+ r=json.loads((d/'record.json').read_text()); p=json.loads((d/f\"attempt_{r['attempt']}_process.json\").read_text())
+ identities=[]
+ for role,v in [('wrapper',r),('child',p)]:
+  try:
+   s=Path(f\"/proc/{v['pid']}/stat\").read_text().rsplit(')',1)[1].split()
+   identities.append({'role':role,'pid':v['pid'],'state':s[0],'start_matches':s[19]==v['process_start']})
+  except FileNotFoundError: identities.append({'role':role,'pid':v['pid'],'absent':True})
+ log=Path(r['log']).read_text().splitlines()
+ out=Path('outputs')/d.name
+ histories=list(out.glob('*history*'))+list(d.glob('*history*'))
+ print(json.dumps({'arm':d.name,'identities':identities,'exit':json.loads(Path(r['exit_file']).read_text()) if Path(r['exit_file']).exists() else None,'log_tail':log[-1:],'history_tail':{str(h):h.read_text().splitlines()[-1:] for h in histories if h.is_file()},'output_files':[f.name for f in out.iterdir()] if out.exists() else []}))
+status=json.loads(Path('logs/server_jobs/status.json').read_text())
+if all(r['state'] in ('live','complete') for r in status['runs'].values()):
+ note={'checked_at':status['checked_at'],'runs':{a:r['state'] for a,r in status['runs'].items()},'changed':False}
+ dest=Path('logs/server_monitor/check_note.json'); tmp=dest.with_suffix('.json.tmp'); tmp.write_text(json.dumps(note,indent=2)+'\\n'); tmp.replace(dest)
+PY" in /data/interns/zhangpc/cairn_new
+ succeeded in 18ms:
+{
+  "checked_at": 1791766083.8696747,
+  "runs": {
+    "path_single_drugout": {
+      "state": "live",
+      "gpu": 4,
+      "pid": 2560536,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "path_double_drugout": {
+      "state": "live",
+      "gpu": 5,
+      "pid": 2560537,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_single_drugout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 2560538,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_single_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_single_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    },
+    "no_path_double_drugout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 2560539,
+      "attempt": 1,
+      "recoveries": 0,
+      "log": "/data/interns/zhangpc/cairn_new/logs/server_jobs/no_path_double_drugout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/configs/no_path_double_drugout.yaml",
+      "evidence": {},
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}
+{"arm": "no_path_double_drugout", "identities": [{"role": "wrapper", "pid": 2560539, "absent": true}, {"role": "child", "pid": 2560543, "absent": true}], "exit": null, "log_tail": ["{\"epoch\": 24, \"update\": 27960, \"train\": {\"ce\": 0.07486376813025772, \"rec\": 0.24452074630464193, \"kl\": 3.4283445729232183, \"loss\": 0.10274418805393004, \"kl_weighted\": 0.0034283447316377606, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 3.5490219844015023, \"rec\": 0.29162094749902423, \"kl\": 3.360253085588154, \"loss\": 3.581544273778012, \"macro_f1_85\": 0.1259564026908654, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.1259564026908654, \"improved\": true, \"bad_epochs\": 0, \"seconds\": 1410.8799977302551}"], "history_tail": {"outputs/no_path_double_drugout/history.jsonl": ["{\"epoch\": 24, \"update\": 27960, \"train\": {\"ce\": 0.07486376813025772, \"rec\": 0.24452074630464193, \"kl\": 3.4283445729232183, \"loss\": 0.10274418805393004, \"kl_weighted\": 0.0034283447316377606, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 3.5490219844015023, \"rec\": 0.29162094749902423, \"kl\": 3.360253085588154, \"loss\": 3.581544273778012, \"macro_f1_85\": 0.1259564026908654, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.1259564026908654, \"improved\": true, \"bad_epochs\": 0, \"seconds\": 1410.8799977302551}"]}, "output_files": ["last.pt", "history.jsonl", "best.pt", "model_inventory.json", "first_update_gradients.json", "config.yaml"]}
+{"arm": "no_path_single_drugout", "identities": [{"role": "wrapper", "pid": 2560538, "absent": true}, {"role": "child", "pid": 2560542, "absent": true}], "exit": null, "log_tail": ["{\"epoch\": 23, \"update\": 26795, \"train\": {\"ce\": 0.07752757615140207, \"rec\": 0.24724424121927688, \"kl\": 3.427223248410344, \"loss\": 0.10567922423820195, \"kl_weighted\": 0.0034272234110474284, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 1.7108005912165702, \"rec\": 0.2568565006522224, \"kl\": 3.4751563995596246, \"loss\": 1.7399613961165188, \"macro_f1_85\": 0.552528258242496, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.5667568308804323, \"improved\": false, \"bad_epochs\": 7, \"seconds\": 1478.0091202259064}"], "history_tail": {"outputs/no_path_single_drugout/history.jsonl": ["{\"epoch\": 23, \"update\": 26795, \"train\": {\"ce\": 0.07752757615140207, \"rec\": 0.24724424121927688, \"kl\": 3.427223248410344, \"loss\": 0.10567922423820195, \"kl_weighted\": 0.0034272234110474284, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 1.7108005912165702, \"rec\": 0.2568565006522224, \"kl\": 3.4751563995596246, \"loss\": 1.7399613961165188, \"macro_f1_85\": 0.552528258242496, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.5667568308804323, \"improved\": false, \"bad_epochs\": 7, \"seconds\": 1478.0091202259064}"]}, "output_files": ["last.pt", "history.jsonl", "best.pt", "model_inventory.json", "first_update_gradients.json", "config.yaml"]}
+{"arm": "path_double_drugout", "identities": [{"role": "wrapper", "pid": 2560537, "absent": true}, {"role": "child", "pid": 2560541, "absent": true}], "exit": null, "log_tail": ["{\"epoch\": 25, \"update\": 29125, \"train\": {\"ce\": 0.04791277642389563, \"rec\": 0.28900049958026364, \"kl\": 3.2617974275168535, \"loss\": 0.08007462430245685, \"kl_weighted\": 0.0032617975835596484, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 3.558920242911891, \"rec\": 0.36317773492712724, \"kl\": 3.0706806634601795, \"loss\": 3.598308713812577, \"macro_f1_85\": 0.11631248676225676, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.12348722771973153, \"improved\": false, \"bad_epochs\": 8, \"seconds\": 1379.1546099185944}"], "history_tail": {"outputs/path_double_drugout/history.jsonl": ["{\"epoch\": 25, \"update\": 29125, \"train\": {\"ce\": 0.04791277642389563, \"rec\": 0.28900049958026364, \"kl\": 3.2617974275168535, \"loss\": 0.08007462430245685, \"kl_weighted\": 0.0032617975835596484, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 3.558920242911891, \"rec\": 0.36317773492712724, \"kl\": 3.0706806634601795, \"loss\": 3.598308713812577, \"macro_f1_85\": 0.11631248676225676, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.12348722771973153, \"improved\": false, \"bad_epochs\": 8, \"seconds\": 1379.1546099185944}"]}, "output_files": ["last.pt", "history.jsonl", "best.pt", "model_inventory.json", "first_update_gradients.json", "config.yaml"]}
+{"arm": "path_single_drugout", "identities": [{"role": "wrapper", "pid": 2560536, "absent": true}, {"role": "child", "pid": 2560540, "absent": true}], "exit": null, "log_tail": ["{\"epoch\": 22, \"update\": 25630, \"train\": {\"ce\": 0.05671644530092464, \"rec\": 0.29020722034530205, \"kl\": 3.2912699066366042, \"loss\": 0.08902843787627938, \"kl_weighted\": 0.003291270061581567, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 1.628179886869034, \"rec\": 0.31281041723046704, \"kl\": 3.2510499623064413, \"loss\": 1.6627119825512622, \"macro_f1_85\": 0.562600781006832, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.5696434336070745, \"improved\": false, \"bad_epochs\": 2, \"seconds\": 1529.776097536087}"], "history_tail": {"outputs/path_single_drugout/history.jsonl": ["{\"epoch\": 22, \"update\": 25630, \"train\": {\"ce\": 0.05671644530092464, \"rec\": 0.29020722034530205, \"kl\": 3.2912699066366042, \"loss\": 0.08902843787627938, \"kl_weighted\": 0.003291270061581567, \"kl_beta_final\": 0.001}, \"validation\": {\"ce\": 1.628179886869034, \"rec\": 0.31281041723046704, \"kl\": 3.2510499623064413, \"loss\": 1.6627119825512622, \"macro_f1_85\": 0.562600781006832, \"kl_beta\": 0.001}, \"best_validation_macro_f1_85\": 0.5696434336070745, \"improved\": false, \"bad_epochs\": 2, \"seconds\": 1529.776097536087}"]}, "output_files": ["last.pt", "history.jsonl", "best.pt", "model_inventory.json", "first_update_gradients.json", "config.yaml"]}
+
+codex
+
+tokens used
+25,189
+

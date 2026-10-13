@@ -1,0 +1,288 @@
+{
+ "stage": "monitor_handoff_confirmed",
+ "approved": false,
+ "gpu_mapping": {
+  "path_single_drugout": 4,
+  "path_double_drugout": 5,
+  "no_path_single_drugout": 6,
+  "no_path_double_drugout": 7
+ },
+ "original_train_pids": [
+  2560540,
+  2560541,
+  2560542,
+  2560543
+ ],
+ "original_monitor_pid": 2568426,
+ "plan": "logs/accelerated_four/plan.md",
+ "implementation": {
+  "author": "claude-opus-5-5 (default effort)",
+  "package": "accelerated_four/dsn",
+  "note": "trainer/model/data copied; snapshot, evidence, controller and monitor in progress",
+  "stage": "monitor_handoff_confirmed",
+  "updated_at": "2026-10-12T12:14:27+0800",
+  "snapshot_running": null,
+  "snapshots": {
+   "path_single_drugout": {
+    "cutoff_epoch": 29,
+    "cutoff_update": 33785,
+    "best_epoch": 20,
+    "best_metric": 0.5696434336070745,
+    "bad_epochs": 9,
+    "training_done": false,
+    "passed": true
+   },
+   "path_double_drugout": {
+    "cutoff_epoch": 33,
+    "cutoff_update": 38445,
+    "best_epoch": 28,
+    "best_metric": 0.12370885015909452,
+    "bad_epochs": 5,
+    "training_done": false,
+    "passed": true
+   },
+   "no_path_single_drugout": {
+    "cutoff_epoch": 30,
+    "cutoff_update": 34950,
+    "best_epoch": 16,
+    "best_metric": 0.5667568308804323,
+    "bad_epochs": 14,
+    "training_done": false,
+    "passed": true
+   },
+   "no_path_double_drugout": {
+    "cutoff_epoch": 32,
+    "cutoff_update": 37280,
+    "best_epoch": 24,
+    "best_metric": 0.1259564026908654,
+    "bad_epochs": 8,
+    "training_done": false,
+    "passed": true
+   }
+  },
+  "evidence": {
+   "summary": "/data/interns/zhangpc/cairn_new/accelerated_four/evidence/summary.md",
+   "json": "/data/interns/zhangpc/cairn_new/accelerated_four/evidence/summary.json",
+   "all_passed": true,
+   "failed": {
+    "path_single_drugout": [],
+    "path_double_drugout": [],
+    "no_path_single_drugout": [],
+    "no_path_double_drugout": []
+   }
+  },
+  "review_packet": "accelerated_four/review/REVIEW.md",
+  "diffs": [
+   "accelerated_four/review/implementation.diff",
+   "accelerated_four/review/new_files.diff"
+  ],
+  "evidence_summary": "accelerated_four/evidence/summary.md",
+  "evidence_all_passed": true,
+  "snapshots_dir": "accelerated_four/outputs/<arm>/snapshot",
+  "handoff": "logs/accelerated_four/claude_handoff.md",
+  "launched": true,
+  "approval_written_by_claude": false,
+  "launch_command": "bash accelerated_four/launch_four.sh --launch-reviewed",
+  "monitor_command": "bash accelerated_four/monitor/start_monitor.sh",
+  "approved": true,
+  "review": {
+   "approval": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/review_approval.json",
+   "checkpoint_verification": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/codex_checkpoint_verification.json",
+   "reviewer": "Server Codex gpt-6.1-sol MEDIUM"
+  },
+  "launch": {
+   "path_single_drugout": {
+    "pid": 2968281,
+    "process_start": "1268801954",
+    "mode": "--resume",
+    "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_single_drugout/attempt_1.log",
+    "gpu": 4,
+    "started_at": 1791778284.6108572
+   },
+   "path_double_drugout": {
+    "pid": 2968292,
+    "process_start": "1268801982",
+    "mode": "--resume",
+    "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_double_drugout/attempt_1.log",
+    "gpu": 5,
+    "started_at": 1791778284.892554
+   },
+   "no_path_single_drugout": {
+    "pid": 2968296,
+    "process_start": "1268802008",
+    "mode": "--resume",
+    "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_single_drugout/attempt_1.log",
+    "gpu": 6,
+    "started_at": 1791778285.1477442
+   },
+   "no_path_double_drugout": {
+    "pid": 2968307,
+    "process_start": "1268802032",
+    "mode": "--resume",
+    "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_double_drugout/attempt_1.log",
+    "gpu": 7,
+    "started_at": 1791778285.3939164
+   }
+  },
+  "launch_check": {
+   "json": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/launch.json",
+   "all_progress_confirmed": true,
+   "pids": {
+    "path_single_drugout": 2968281,
+    "path_double_drugout": 2968292,
+    "no_path_single_drugout": 2968296,
+    "no_path_double_drugout": 2968307
+   },
+   "trainer_pids": {
+    "path_single_drugout": 2968282,
+    "path_double_drugout": 2968293,
+    "no_path_single_drugout": 2968297,
+    "no_path_double_drugout": 2968308
+   }
+  },
+  "monitor": {
+   "pid": 2968961,
+   "state_dir": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/monitor",
+   "next_check": "2026-10-12T04:52:01Z",
+   "interval_seconds": 2400,
+   "model": "gpt-6.1-sol low"
+  },
+  "handoff_confirmed": {
+   "checked_at": "2026-10-12T12:14:27+0800",
+   "runs": {
+    "path_single_drugout": {
+     "state_at_handoff": "live",
+     "gpu": 4,
+     "job_pid": 2968281,
+     "trainer_pid": 2968282,
+     "job_ppid_at_launch": 1,
+     "resume_checkpoint_epoch": 29,
+     "start_epoch": 30,
+     "best_snapshot_epoch": 20,
+     "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_single_drugout",
+     "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_single_drugout/attempt_1.log",
+     "first_step_update": 33786,
+     "confirmed_periodic_update": 34000,
+     "mode": "--resume",
+     "recoveries": 0,
+     "completion_evidence": {}
+    },
+    "path_double_drugout": {
+     "state_at_handoff": "live",
+     "gpu": 5,
+     "job_pid": 2968292,
+     "trainer_pid": 2968293,
+     "job_ppid_at_launch": 1,
+     "resume_checkpoint_epoch": 33,
+     "start_epoch": 34,
+     "best_snapshot_epoch": 28,
+     "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_double_drugout",
+     "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/path_double_drugout/attempt_1.log",
+     "first_step_update": 38446,
+     "confirmed_periodic_update": 38700,
+     "mode": "--resume",
+     "recoveries": 0,
+     "completion_evidence": {}
+    },
+    "no_path_single_drugout": {
+     "state_at_handoff": "complete",
+     "gpu": 6,
+     "job_pid": 2968296,
+     "trainer_pid": 2968297,
+     "job_ppid_at_launch": 1,
+     "resume_checkpoint_epoch": 30,
+     "start_epoch": 31,
+     "best_snapshot_epoch": 16,
+     "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_single_drugout",
+     "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_single_drugout/attempt_1.log",
+     "first_step_update": 34951,
+     "confirmed_periodic_update": 35200,
+     "mode": "--resume",
+     "recoveries": 0,
+     "completion_evidence": {
+      "selected_epoch": 16,
+      "last_epoch": 31,
+      "bad_epochs": 15,
+      "rows": 16978,
+      "metrics": {
+       "rows": 16978,
+       "accuracy": 0.7157497938508658,
+       "macro_f1_85": 0.5049692356187174,
+       "macro_precision_85": 0.534522344825512,
+       "macro_recall_85": 0.5449319343100237,
+       "weighted_f1": 0.7053535172684428,
+       "micro_f1": 0.7157497938508658,
+       "mcc": 0.662707574879349,
+       "kappa": 0.6615287230903442,
+       "classes_present": 72,
+       "macro_roc_auc_supported_classes": 0.9563113223564943,
+       "roc_auc_classes": 72,
+       "macro_ap_supported_classes": 0.6995263372118659,
+       "ap_classes": 72
+      }
+     }
+    },
+    "no_path_double_drugout": {
+     "state_at_handoff": "live",
+     "gpu": 7,
+     "job_pid": 2968307,
+     "trainer_pid": 2968308,
+     "job_ppid_at_launch": 1,
+     "resume_checkpoint_epoch": 32,
+     "start_epoch": 33,
+     "best_snapshot_epoch": 24,
+     "output": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/no_path_double_drugout",
+     "log": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/jobs/no_path_double_drugout/attempt_1.log",
+     "first_step_update": 37281,
+     "confirmed_periodic_update": 37400,
+     "mode": "--resume",
+     "recoveries": 0,
+     "completion_evidence": {}
+    }
+   },
+   "original_jobs": {
+    "path_single_drugout": {
+     "pid": 2560540,
+     "alive_same_process": true,
+     "exit": null
+    },
+    "path_double_drugout": {
+     "pid": 2560541,
+     "alive_same_process": true,
+     "exit": null
+    },
+    "no_path_single_drugout": {
+     "pid": 2560542,
+     "alive_same_process": false,
+     "exit": {
+      "exit_code": 0,
+      "finished_at": 1791778400.3799424
+     }
+    },
+    "no_path_double_drugout": {
+     "pid": 2560543,
+     "alive_same_process": true,
+     "exit": null
+    }
+   },
+   "original_monitor_pid": 2568426,
+   "monitor": {
+    "pid": 2968961,
+    "ppid": 1,
+    "first_low_check_succeeded": true,
+    "last_check": "2026-10-12T04:12:01Z",
+    "next_check": "2026-10-12T04:52:01Z",
+    "model": "gpt-6.1-sol",
+    "reasoning": "low",
+    "interval_seconds": 2400,
+    "state_dir": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/monitor",
+    "state": "monitoring"
+   },
+   "final_exports": "no_path_single verified complete; remaining three monitored",
+   "original_source_config_stat_unchanged": true,
+   "final_report": "/data/interns/zhangpc/cairn_new/logs/accelerated_four/codex_final.txt"
+  },
+  "all_four_real_progress_confirmed": true,
+  "monitoring_handed_to": "separate detached server Codex gpt-6.1-sol LOW every2400s"
+ }
+}

@@ -1,0 +1,61 @@
+{"phase": "background", "directed_pairs": 6035852, "atoms": 8977002, "composite_signatures": 13511, "endpoints": 1661, "seconds": 53.908162355422974}
+{
+  "pairs": 2000,
+  "wall_seconds": 39.976966857910156,
+  "setup_seconds": 53.908162355422974,
+  "workers": 32,
+  "k": 10,
+  "max_length": 4,
+  "candidate_budget": 1000,
+  "graph_budget": {
+    "max_nodes": 130,
+    "max_edges": 695
+  },
+  "pair_seconds": {
+    "mean": 0.6117062468463556,
+    "p50": 0.24468123726546764,
+    "p99": 7.711696284282949,
+    "max": 14.830580420792103,
+    "sum": 1223.412493692711
+  },
+  "status_counts": {
+    "connected_paths": 1991,
+    "one_end_absent": 9
+  },
+  "path_mask_true": 1991,
+  "old_cache_path_mask_true": 1991,
+  "budget_truncated": 1,
+  "connected_with_fewer_than_k": 3,
+  "budget_truncated_with_fewer_than_k": 1,
+  "graph_budget_limited": 0,
+  "selected_paths_distribution": {
+    "4": 1,
+    "5": 1,
+    "6": 1,
+    "7": 1,
+    "8": 1,
+    "9": 1,
+    "10": 1994
+  },
+  "shortest_distance_counts": {
+    "-1": 9,
+    "2": 1673,
+    "3": 271,
+    "4": 47
+  },
+  "max_nodes": 22,
+  "max_edges": 212,
+  "mean_nodes": 12.4615,
+  "mean_edges": 94.9685,
+  "search_view_edges_p99": 402546.14999999997,
+  "background": {
+    "non_ddi_triples": 4488504,
+    "directed_node_pairs": 6035852,
+    "atomic_directed_relations": 8977002,
+    "relations_with_inverse": 210,
+    "composite_signatures": 13511,
+    "nodes_in_graph": 96766,
+    "components": 310
+  },
+  "estimated_full_wall_seconds": 3759.933675403595
+}

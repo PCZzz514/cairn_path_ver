@@ -1,0 +1,4 @@
+{"path_single_drugout": {"cutoff_epoch": 29, "cutoff_update": 33785, "best_epoch": 20, "best_update": 23300, "best_metric": 0.5696434336070745, "bad_epochs": 9, "training_done": false, "passed": true}}
+{"path_double_drugout": {"cutoff_epoch": 33, "cutoff_update": 38445, "best_epoch": 28, "best_update": 32620, "best_metric": 0.12370885015909452, "bad_epochs": 5, "training_done": false, "passed": true}}
+{"no_path_single_drugout": {"cutoff_epoch": 30, "cutoff_update": 34950, "best_epoch": 16, "best_update": 18640, "best_metric": 0.5667568308804323, "bad_epochs": 14, "training_done": false, "passed": true}}
+{"no_path_double_drugout": {"cutoff_epoch": 32, "cutoff_update": 37280, "best_epoch": 24, "best_update": 27960, "best_metric": 0.1259564026908654, "bad_epochs": 8, "training_done": false, "passed": true}}

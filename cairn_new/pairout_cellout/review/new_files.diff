@@ -1,0 +1,4 @@
+--- /dev/null	2026-05-18 15:44:45.167941316 +0800
++++ pairout_cellout/__init__.py	2026-10-12 18:42:56.162858017 +0800
+@@ -0,0 +1 @@
++"""PairOut/CellOut full-path DSN-DDI + EmerGNN + RareDDIE (isolated namespace)."""

@@ -1,0 +1,76 @@
+{
+  "checked_at": 1791803204.8018918,
+  "runs": {
+    "pairout": {
+      "state": "live",
+      "gpu": 6,
+      "pid": 3253530,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/pairout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 3253533,
+        "process_start": "1271289524",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "pairout_cellout.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/pairout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": null,
+      "history_best_validation_macro_f1_85": null,
+      "history_bad_epochs": null,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 1,
+        "update": 300,
+        "epoch_rows": 38400,
+        "epoch_seconds": 28.781009435653687
+      },
+      "blocked_reason": null,
+      "exit": null
+    },
+    "cellout": {
+      "state": "live",
+      "gpu": 7,
+      "pid": 3253531,
+      "attempt": 1,
+      "recoveries": 0,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/pairout_cellout/jobs/cellout/attempt_1.log",
+      "config": "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/cellout.yaml",
+      "evidence": {},
+      "train_process": {
+        "pid": 3253534,
+        "process_start": "1271289524",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "pairout_cellout.dsn.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/pairout_cellout/configs/cellout.yaml",
+          "--fresh"
+        ]
+      },
+      "history_last_epoch": null,
+      "history_best_validation_macro_f1_85": null,
+      "history_bad_epochs": null,
+      "last_log_event": {
+        "phase": "train_progress",
+        "epoch": 1,
+        "update": 400,
+        "epoch_rows": 51200,
+        "epoch_seconds": 36.64045834541321
+      },
+      "blocked_reason": null,
+      "exit": null
+    }
+  },
+  "all_complete": false
+}

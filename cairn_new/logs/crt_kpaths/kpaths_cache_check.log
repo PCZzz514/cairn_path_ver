@@ -1,0 +1,6 @@
+{
+  "pairs": 188105,
+  "path_mask_equals_connected_depth4_reachability": true,
+  "mismatches": 0,
+  "fallback_mask_true": 0
+}

@@ -1,0 +1,288 @@
+{
+  "checked_at": "2026-10-12T21:33:02+0800",
+  "arms": {
+    "pairout": {
+      "pid": 3338011,
+      "wrapper_ps": "3338011       1 3338011 3338011       00:21 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python /data/interns/zhangpc/cairn_new/dsn_pairout_cellout/jobs.py --worker /data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/pairout/attempt_1.json",
+      "wrapper_ppid_is_1": true,
+      "trainer": {
+        "pid": 3338014,
+        "process_start": "1272169685",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "dsn_pairout_cellout.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/dsn_pairout_cellout/configs/pairout.yaml",
+          "--fresh"
+        ]
+      },
+      "trainer_ps": "3338014 3338011 3338011 3338011       00:21 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python -m dsn_pairout_cellout.train --config /data/interns/zhangpc/cairn_new/dsn_pairout_cellout/configs/pairout.yaml --fresh",
+      "trainer_alive_same_process": true,
+      "live": true,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/pairout/attempt_1.log",
+      "start": {
+        "phase": "start",
+        "mode": "fresh",
+        "start_epoch": 1,
+        "update": 0,
+        "best_metric": -1.0,
+        "bad_epochs": 0,
+        "epochs": 150,
+        "patience": 15,
+        "will_train": true,
+        "planned_updates": 177600,
+        "kl_warmup_updates": 35520,
+        "train_batches": 1184,
+        "train_rows": 151508,
+        "validation_rows": 18939,
+        "batch_size": 128,
+        "seed": 42,
+        "protocol": "pairout",
+        "with_path": false,
+        "output": "/data/interns/zhangpc/cairn_new/dsn_pairout_cellout/outputs/pairout",
+        "cuda_visible_devices": "6",
+        "device_uuid": "9a4c3035-f289-b3d1-b6df-5fc36a30b066",
+        "pid": 3338014,
+        "started_at": 1791811970.0204306
+      },
+      "first_step": {
+        "phase": "train_progress",
+        "epoch": 1,
+        "update": 1,
+        "epoch_rows": 128,
+        "epoch_seconds": 1.2332279682159424,
+        "beta": 2.8153153153153155e-08,
+        "running_ce": 4.3964738845825195,
+        "running_loss": 4.501038551330566
+      },
+      "progress_100": {
+        "phase": "train_progress",
+        "epoch": 1,
+        "update": 100,
+        "epoch_rows": 12800,
+        "epoch_seconds": 9.607857465744019,
+        "beta": 2.8153153153153154e-06,
+        "running_ce": 2.9752144765853883,
+        "running_loss": 3.046515645980835
+      },
+      "first_update": {
+        "labels": 128,
+        "loss_terms": {
+          "ce": 4.3964738845825195,
+          "rec": 1.045648217201233,
+          "kl": 0.03244265913963318,
+          "beta": 2.8153153153153155e-08,
+          "loss": 4.501038551330566
+        },
+        "logits_finite": true,
+        "batch_keys": [
+          "cross_edges",
+          "drug_a",
+          "drug_b",
+          "graph_a",
+          "graph_b",
+          "label",
+          "row_index"
+        ],
+        "output_keys": [
+          "kl",
+          "logits",
+          "path_mask",
+          "rec"
+        ],
+        "cross_edges_present": true,
+        "path_graph_present": false,
+        "cross_edges": 80937,
+        "path_mask_shape": [
+          128,
+          0
+        ],
+        "gradient_norms": {
+          "dsn_inter_attention": 0.2007303237915039,
+          "inter_projection": 0.4407791495323181,
+          "cse": 1.1790385246276855,
+          "fin_entities": 0.08976158499717712,
+          "fin_relations": 0.24941718578338623,
+          "nai": 1.3454031944274902,
+          "pvr": 2.586761474609375,
+          "classifier": 2.216646909713745
+        },
+        "all_gradients_finite": true,
+        "trainable_without_gradient": [
+          "cse.blocks.1.norm2.weight",
+          "cse.blocks.1.norm2.bias"
+        ]
+      },
+      "first_update_ok": true,
+      "inventory_ok": true,
+      "schedule_ok": true,
+      "parameters": 13206361,
+      "inventory_groups": {
+        "dsn_inter_attention": 33152,
+        "inter_projection": 49408,
+        "cse": 340356,
+        "fin_entities": 12386048,
+        "fin_relations": 13440,
+        "nai": 98432,
+        "pvr": 230400,
+        "classifier": 55125
+      },
+      "path_module": "NONE",
+      "initial_rng_recorded": true,
+      "test_export": null,
+      "exit": null,
+      "progress_confirmed": true
+    },
+    "cellout": {
+      "pid": 3338012,
+      "wrapper_ps": "3338012       1 3338012 3338012       00:21 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python /data/interns/zhangpc/cairn_new/dsn_pairout_cellout/jobs.py --worker /data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/cellout/attempt_1.json",
+      "wrapper_ppid_is_1": true,
+      "trainer": {
+        "pid": 3338015,
+        "process_start": "1272169685",
+        "command": [
+          "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+          "-m",
+          "dsn_pairout_cellout.train",
+          "--config",
+          "/data/interns/zhangpc/cairn_new/dsn_pairout_cellout/configs/cellout.yaml",
+          "--fresh"
+        ]
+      },
+      "trainer_ps": "3338015 3338012 3338012 3338012       00:21 /data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python -m dsn_pairout_cellout.train --config /data/interns/zhangpc/cairn_new/dsn_pairout_cellout/configs/cellout.yaml --fresh",
+      "trainer_alive_same_process": true,
+      "live": true,
+      "mode": "--fresh",
+      "log": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/cellout/attempt_1.log",
+      "start": {
+        "phase": "start",
+        "mode": "fresh",
+        "start_epoch": 1,
+        "update": 0,
+        "best_metric": -1.0,
+        "bad_epochs": 0,
+        "epochs": 150,
+        "patience": 15,
+        "will_train": true,
+        "planned_updates": 177600,
+        "kl_warmup_updates": 35520,
+        "train_batches": 1184,
+        "train_rows": 151508,
+        "validation_rows": 18939,
+        "batch_size": 128,
+        "seed": 42,
+        "protocol": "cellout",
+        "with_path": false,
+        "output": "/data/interns/zhangpc/cairn_new/dsn_pairout_cellout/outputs/cellout",
+        "cuda_visible_devices": "7",
+        "device_uuid": "33ef51ee-980e-6d67-10c7-defd79ee32fc",
+        "pid": 3338015,
+        "started_at": 1791811970.052688
+      },
+      "first_step": {
+        "phase": "train_progress",
+        "epoch": 1,
+        "update": 1,
+        "epoch_rows": 128,
+        "epoch_seconds": 1.1999735832214355,
+        "beta": 2.8153153153153155e-08,
+        "running_ce": 4.3964738845825195,
+        "running_loss": 4.501038551330566
+      },
+      "progress_100": {
+        "phase": "train_progress",
+        "epoch": 1,
+        "update": 100,
+        "epoch_rows": 12800,
+        "epoch_seconds": 9.852650165557861,
+        "beta": 2.8153153153153154e-06,
+        "running_ce": 2.975214464664459,
+        "running_loss": 3.046515634059906
+      },
+      "first_update": {
+        "labels": 128,
+        "loss_terms": {
+          "ce": 4.3964738845825195,
+          "rec": 1.045648217201233,
+          "kl": 0.03244265541434288,
+          "beta": 2.8153153153153155e-08,
+          "loss": 4.501038551330566
+        },
+        "logits_finite": true,
+        "batch_keys": [
+          "cross_edges",
+          "drug_a",
+          "drug_b",
+          "graph_a",
+          "graph_b",
+          "label",
+          "row_index"
+        ],
+        "output_keys": [
+          "kl",
+          "logits",
+          "path_mask",
+          "rec"
+        ],
+        "cross_edges_present": true,
+        "path_graph_present": false,
+        "cross_edges": 80937,
+        "path_mask_shape": [
+          128,
+          0
+        ],
+        "gradient_norms": {
+          "dsn_inter_attention": 0.2007303237915039,
+          "inter_projection": 0.4407791495323181,
+          "cse": 1.1790385246276855,
+          "fin_entities": 0.08976158499717712,
+          "fin_relations": 0.24941718578338623,
+          "nai": 1.3454031944274902,
+          "pvr": 2.586761474609375,
+          "classifier": 2.216646909713745
+        },
+        "all_gradients_finite": true,
+        "trainable_without_gradient": [
+          "cse.blocks.1.norm2.weight",
+          "cse.blocks.1.norm2.bias"
+        ]
+      },
+      "first_update_ok": true,
+      "inventory_ok": true,
+      "schedule_ok": true,
+      "parameters": 13206361,
+      "inventory_groups": {
+        "dsn_inter_attention": 33152,
+        "inter_projection": 49408,
+        "cse": 340356,
+        "fin_entities": 12386048,
+        "fin_relations": 13440,
+        "nai": 98432,
+        "pvr": 230400,
+        "classifier": 55125
+      },
+      "path_module": "NONE",
+      "initial_rng_recorded": true,
+      "test_export": null,
+      "exit": null,
+      "progress_confirmed": true
+    }
+  },
+  "gpu_compute_apps": [
+    "GPU-e4213589-76ee-4100-1163-a64920f3c322, 2560540, 3080 MiB",
+    "GPU-3da157c5-2202-6eab-2bbe-8b6fd39738ba, 2560541, 3080 MiB",
+    "GPU-9a4c3035-f289-b3d1-b6df-5fc36a30b066, 3321255, 1366 MiB",
+    "GPU-9a4c3035-f289-b3d1-b6df-5fc36a30b066, 3338014, 1672 MiB",
+    "GPU-33ef51ee-980e-6d67-10c7-defd79ee32fc, 3321256, 1366 MiB",
+    "GPU-33ef51ee-980e-6d67-10c7-defd79ee32fc, 3338015, 1672 MiB"
+  ],
+  "loadavg": [
+    7.12353515625,
+    6.67041015625,
+    6.22412109375
+  ],
+  "note": "GPU6/GPU7 shared with the live pure RareDDIE controls (never signalled); CPU/GPU contention expected, epoch times are not a promise. Same frozen DDI split, independent fresh seed42 replicates, NOT true cell-cold DDI generalization.",
+  "all_progress_confirmed": true
+}

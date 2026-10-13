@@ -1,0 +1,243 @@
+{
+ "implementation": {
+  "author": "claude-opus-5-5 default effort",
+  "launched": false,
+  "plan": "logs/dsn_pairout_cellout/plan.md",
+  "handoff": "logs/dsn_pairout_cellout/implementation_handoff.md",
+  "review_diffs": [
+   "dsn_pairout_cellout/review/implementation.diff",
+   "dsn_pairout_cellout/review/new_files.diff"
+  ],
+  "evidence": "dsn_pairout_cellout/evidence/cohort_copy_evidence.json",
+  "evidence_passed": true,
+  "model_data_byte_identical_to_accelerated_four": true,
+  "prior_gpu3_evidence": "benchmarks/gpu3_speed/evidence/gpu3_evidence.json",
+  "prior_approvals": [
+   "logs/gpu3_speed/review_approval.json",
+   "logs/accelerated_four/review_approval.json"
+  ],
+  "model": {
+   "class": "DSNRareDDI",
+   "with_path": false,
+   "dsn_inter_attention": true,
+   "inter_projection": true,
+   "path_module": "NONE",
+   "collator_path_arrays_loaded": false,
+   "classifier_route": "deterministic PVR mu -> LayerNorm128->256 GELU dropout.2 ->85",
+   "parameters": 13206361,
+   "groups": {
+    "dsn_inter_attention": 33152,
+    "inter_projection": 49408,
+    "cse": 340356,
+    "fin_entities": 12386048,
+    "fin_relations": 13440,
+    "nai": 98432,
+    "pvr": 230400,
+    "classifier": 55125
+   }
+  },
+  "arms": {
+   "pairout": 6,
+   "cellout": 7
+  },
+  "gpu_sharing": "GPU6/GPU7 shared with LIVE pure RareDDIE controls (rareddie_pairout_cellout); never signalled; contention expected",
+  "configuration": {
+   "epochs": 150,
+   "patience": 15,
+   "seed": 42,
+   "batch_size": 128,
+   "train_batches": 1184,
+   "planned_updates": 177600,
+   "kl_warmup_updates": 35520,
+   "learning_rate": 0.0001,
+   "weight_decay": 0.0001,
+   "cpu_threads": 2,
+   "num_workers": 2,
+   "persistent_workers": false,
+   "selection": "strict fixed85 validation MacroF1; test only best.pt after stop"
+  },
+  "paths": {
+   "outputs": "dsn_pairout_cellout/outputs/<arm>",
+   "jobs_state": "logs/dsn_pairout_cellout/jobs",
+   "monitor": "logs/dsn_pairout_cellout/monitor",
+   "approval_gate": "logs/dsn_pairout_cellout/review_approval.json"
+  },
+  "ddi_split_note": "same frozen PairOut DDI split (CellOut DDI frame is identical); independent fresh seed42 same-DDI-split replicates, NOT true cell-cold DDI generalization",
+  "launch_gate_dry_run_refusals": [
+   "missing Codex review approval"
+  ],
+  "timing_note": "no promise: accelerated_four no-path DSN ~1470 s/epoch; CPU (nproc 2) and GPUs shared",
+  "next": "Codex review -> logs/dsn_pairout_cellout/review_approval.json -> bash dsn_pairout_cellout/launch.sh --launch-reviewed -> bash dsn_pairout_cellout/monitor/start_monitor.sh",
+  "stage": "launched_progress_confirmed",
+  "updated_at": "2026-10-12T21:33:02+0800",
+  "launch": {
+   "pairout": {
+    "pid": 3338011,
+    "process_start": "1272169681",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/pairout/attempt_1.log",
+    "gpu": 6,
+    "started_at": 1791811961.877354
+   },
+   "cellout": {
+    "pid": 3338012,
+    "process_start": "1272169681",
+    "mode": "--fresh",
+    "log": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/cellout/attempt_1.log",
+    "gpu": 7,
+    "started_at": 1791811961.882856
+   }
+  },
+  "coexisting_gpu_apps_before_launch": {
+   "pairout": [
+    "GPU-9a4c3035-f289-b3d1-b6df-5fc36a30b066, 3321255, 1366 MiB"
+   ],
+   "cellout": [
+    "GPU-33ef51ee-980e-6d67-10c7-defd79ee32fc, 3321256, 1366 MiB"
+   ]
+  },
+  "launch_check": {
+   "json": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/launch.json",
+   "all_progress_confirmed": true,
+   "pids": {
+    "pairout": 3338011,
+    "cellout": 3338012
+   },
+   "trainer_pids": {
+    "pairout": 3338014,
+    "cellout": 3338015
+   }
+  }
+ },
+ "stage": "monitor_complete",
+ "review": {
+  "approval": "logs/dsn_pairout_cellout/review_approval.json",
+  "approved": true,
+  "independent_checks": "passed",
+  "stage": "codex_review_approved",
+  "updated_at": "2026-10-12T21:32:41+0800"
+ },
+ "monitor": {
+  "pid": 3338772,
+  "last_check": "20261012T161403Z_3338772",
+  "last_codex_exit": null,
+  "last_successful_check": "20261012T153403Z_3338772",
+  "next_check": null,
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "outcome": "complete",
+  "runs": {
+   "pairout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 51,
+    "history_best_validation_macro_f1_85": 0.9134179436575569,
+    "history_bad_epochs": 15
+   },
+   "cellout": {
+    "state": "complete",
+    "attempt": 1,
+    "recoveries": 0,
+    "history_last_epoch": 94,
+    "history_best_validation_macro_f1_85": 0.9211805653994958,
+    "history_bad_epochs": 15
+   }
+  },
+  "stage": "monitor_complete",
+  "updated_at": "2026-10-13T00:14:20+0800"
+ },
+ "monitor_start": {
+  "pid": 3338772,
+  "ps": "3338772       1 3338772 3338772       00:15 bash /data/interns/zhangpc/cairn_new/dsn_pairout_cellout/monitor/monitor_loop.sh",
+  "ppid_is_1": true,
+  "state_dir": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/monitor",
+  "first_check": "20261012T133403Z_3338772",
+  "first_check_codex_exit": 0,
+  "first_check_after_json": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/monitor/checks/20261012T133403Z_3338772/after.json",
+  "next_check": "2026-10-12T14:14:03Z",
+  "interval_seconds": 2400,
+  "model": "gpt-6.1-sol low",
+  "stage": "monitor_first_check_succeeded",
+  "updated_at": "2026-10-12T21:34:18+0800"
+ },
+ "handoff": {
+  "confirmed_at": "2026-10-12T21:35:27+0800",
+  "handoff_complete": true,
+  "medium_task_complete": true,
+  "model": "DSNRareDDI with_path=false; DSN GAT/projection retained; path module NONE, no path arrays",
+  "arms": {
+   "pairout": {
+    "gpu": 6,
+    "wrapper_pid": 3338011,
+    "trainer_pid": 3338014,
+    "state": "live",
+    "last_log_event": {
+     "phase": "train_progress",
+     "epoch": 2,
+     "update": 1700,
+     "epoch_rows": 66048,
+     "epoch_seconds": 44.557952880859375
+    },
+    "completed_epoch": 1,
+    "outputs": "dsn_pairout_cellout/outputs/pairout",
+    "log": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/pairout/attempt_1.log",
+    "first_update_ok": true,
+    "inventory_ok": true,
+    "progress_100_confirmed": true,
+    "wrapper_ppid_is_1": true
+   },
+   "cellout": {
+    "gpu": 7,
+    "wrapper_pid": 3338012,
+    "trainer_pid": 3338015,
+    "state": "live",
+    "last_log_event": {
+     "phase": "train_progress",
+     "epoch": 2,
+     "update": 1800,
+     "epoch_rows": 78848,
+     "epoch_seconds": 51.75584864616394
+    },
+    "completed_epoch": 1,
+    "outputs": "dsn_pairout_cellout/outputs/cellout",
+    "log": "/data/interns/zhangpc/cairn_new/logs/dsn_pairout_cellout/jobs/cellout/attempt_1.log",
+    "first_update_ok": true,
+    "inventory_ok": true,
+    "progress_100_confirmed": true,
+    "wrapper_ppid_is_1": true
+   }
+  },
+  "schedule": {
+   "max_epochs": 150,
+   "patience": 15,
+   "train_batches": 1184,
+   "planned_updates": 177600,
+   "kl_warmup_updates": 35520,
+   "selection": "strict fixed85 validation MacroF1; test selected best only after stop"
+  },
+  "monitor": {
+   "pid": 3338772,
+   "ppid": 1,
+   "model": "gpt-6.1-sol LOW",
+   "interval_seconds": 2400,
+   "first_check_success": true,
+   "check": "20261012T133403Z_3338772",
+   "next_check_utc": "2026-10-12T14:14:03Z",
+   "ps": "3338772       1 3338772 3338772 bash /data/interns/zhangpc/cairn_new/dsn_pairout_cellout/monitor/monitor_loop.sh"
+  },
+  "existing_preserved_pids_alive": [
+   2560540,
+   2560541,
+   3321255,
+   3321256,
+   3322177
+  ],
+  "ddi_split_note": "Independent fresh seed42 replicates on same identical frozen PairOut/CellOut DDI split; NOT true cell-cold DDI generalization",
+  "contention_note": "GPU6/7 shared with live pureRareDDIE jobs; CPU/GPU contention expected, no timing promise",
+  "approval": "logs/dsn_pairout_cellout/review_approval.json",
+  "status": "logs/dsn_pairout_cellout/status.json",
+  "stage": "medium_task_complete_low_monitor_handoff_confirmed",
+  "updated_at": "2026-10-12T21:35:27+0800"
+ }
+}

@@ -1,0 +1,19 @@
+{
+  "arm": "single_drugout",
+  "variant": "path",
+  "checkpoint": "/data/interns/zhangpc/cairn_new/accelerated_four/outputs/path_single_drugout/best.pt",
+  "selected_epoch": 32,
+  "prepared": "/data/interns/zhangpc/cairn_new/data/prepared",
+  "metrics": {
+    "ce": 1.9496207743503167,
+    "rec": 0.3058306659589973,
+    "kl": 3.2157587048065097,
+    "loss": 1.9834196099631052,
+    "macro_f1_85": 0.5842708175488728,
+    "kl_beta": 0.001
+  },
+  "accuracy": 0.7461149867693048,
+  "stored_best_val_f1": 0.5842708175488728,
+  "inference_gpu": "6",
+  "classification": "deterministic mu; frozen validation rows; own validation-selected best"
+}

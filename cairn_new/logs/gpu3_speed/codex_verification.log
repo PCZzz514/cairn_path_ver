@@ -1,0 +1,53 @@
+=== evidence start 2026-10-12T11:31:20+08:00 host=su0 CUDA_VISIBLE_DEVICES=3 GPU3_UUID=GPU-f9b84e89-f742-29a6-2257-ec4a4b242fe5
+{
+ "all_numerical_checks_passed": true,
+ "failed_checks": [],
+ "timing": {
+  "breakdown.transfer": {
+   "old_median_seconds": 0.0032864511013031006,
+   "new_median_seconds": 0.0008862856775522232,
+   "old_over_new": 3.708117128079677
+  },
+  "breakdown.forward": {
+   "old_median_seconds": 0.6458344561979175,
+   "new_median_seconds": 0.03791669104248285,
+   "old_over_new": 17.032985696834874
+  },
+  "breakdown.backward": {
+   "old_median_seconds": 0.47937628999352455,
+   "new_median_seconds": 0.03695846814662218,
+   "old_over_new": 12.97067530211847
+  },
+  "breakdown.optimizer": {
+   "old_median_seconds": 0.0051125213503837585,
+   "new_median_seconds": 0.002831784076988697,
+   "old_over_new": 1.80540648982686
+  },
+  "breakdown.fullstep": {
+   "old_median_seconds": 1.1342285135760903,
+   "new_median_seconds": 0.07863108348101377,
+   "old_over_new": 14.424683768346657
+  },
+  "fullstep.fullstep": {
+   "old_median_seconds": 1.1456242334097624,
+   "new_median_seconds": 0.07837099488824606,
+   "old_over_new": 14.61796210502849
+  },
+  "eval.transfer": {
+   "old_median_seconds": 0.0032499944791197777,
+   "new_median_seconds": 0.0016838042065501213,
+   "old_over_new": 1.9301498751915822
+  },
+  "eval.forward": {
+   "old_median_seconds": 0.5823710835538805,
+   "new_median_seconds": 0.08094241004437208,
+   "old_over_new": 7.194881931914661
+  },
+  "eval.fullstep": {
+   "old_median_seconds": 0.5857671163976192,
+   "new_median_seconds": 0.08282868284732103,
+   "old_over_new": 7.072032250921699
+  }
+ }
+}
+=== evidence exit=0 2026-10-12T11:34:47+08:00

@@ -1,0 +1,9 @@
+Launched on host GPU3: runner **2941955**, verified **PPID 1**; trainer **2941968**. Log progressed through **800 updates**.
+
+- **Measured step speedup: 14.62×** — 1.1456 s → 0.07837 s, using real batch128 data, 5 warmup and 30 measured steps. Forward: 17.03×; backward: 12.97×.
+- Numerical review passed. Worst full-model forward difference: **9.54×10⁻⁶ absolute**; parameter gradients: **6.43×10⁻⁵ absolute**, **2.27×10⁻⁴ relative above the absolute floor**. Near-zero bias roundoff is disclosed in the [exact review](/data/interns/zhangpc/cairn_new/logs/gpu3_speed/review_approval.json).
+- Run preserves **epochs100 / KL warmup23300**, with a separate **five-epoch cap**, no early stopping and no test evaluation.
+
+[Live log](/data/interns/zhangpc/cairn_new/logs/gpu3_speed/benchmark.log) · [Verification evidence](/data/interns/zhangpc/cairn_new/benchmarks/gpu3_speed/evidence/gpu3_evidence.md)
+
+The detached runner will write `logs/gpu3_speed/five_epoch_summary.{json,md}` after actual completion. Epoch metrics remain pending. Original trainers, monitor, sources and outputs were preserved.

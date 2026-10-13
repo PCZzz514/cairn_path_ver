@@ -1,0 +1,15 @@
+step: step3
+protocol: single_drugout
+gpu: 7
+parent_output: crt_kpaths/outputs/step2_kpaths_single_drugout
+output: crt_kpaths/outputs/step3_single_drugout
+lr_from: crt_kpaths/outputs/step1_single_drugout/lr_selection.json
+extract_batch_size: 128
+cpu_threads: 2
+head:
+  seeds: [42, 43, 44]
+  epochs: 10
+  batch_size: 512
+  momentum: 0.9
+  weight_decay: 0.0005
+  num_samples_cls: 4

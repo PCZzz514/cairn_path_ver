@@ -1,0 +1,12 @@
+{
+  "pid": 3321255,
+  "process_start": "1272027114",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "rareddie_pairout_cellout.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/rareddie_pairout_cellout/configs/pairout.yaml",
+    "--fresh"
+  ]
+}

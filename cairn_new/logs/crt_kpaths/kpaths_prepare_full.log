@@ -1,0 +1,141 @@
+{"phase": "background", "directed_pairs": 6035852, "atoms": 8977002, "composite_signatures": 13511, "endpoints": 1661, "seconds": 64.35323095321655}
+{"phase": "progress", "pairs": 5000, "of": 188105, "seconds": 7.846009969711304}
+{"phase": "progress", "pairs": 10000, "of": 188105, "seconds": 13.534436464309692}
+{"phase": "progress", "pairs": 15000, "of": 188105, "seconds": 18.526511669158936}
+{"phase": "progress", "pairs": 20000, "of": 188105, "seconds": 24.194122552871704}
+{"phase": "progress", "pairs": 25000, "of": 188105, "seconds": 35.4159517288208}
+{"phase": "progress", "pairs": 30000, "of": 188105, "seconds": 38.9036660194397}
+{"phase": "progress", "pairs": 35000, "of": 188105, "seconds": 47.05833959579468}
+{"phase": "progress", "pairs": 40000, "of": 188105, "seconds": 52.47013282775879}
+{"phase": "progress", "pairs": 45000, "of": 188105, "seconds": 56.29261350631714}
+{"phase": "progress", "pairs": 50000, "of": 188105, "seconds": 61.59397339820862}
+{"phase": "progress", "pairs": 55000, "of": 188105, "seconds": 69.87780213356018}
+{"phase": "progress", "pairs": 60000, "of": 188105, "seconds": 70.25154614448547}
+{"phase": "progress", "pairs": 65000, "of": 188105, "seconds": 75.58235740661621}
+{"phase": "progress", "pairs": 70000, "of": 188105, "seconds": 82.19706559181213}
+{"phase": "progress", "pairs": 75000, "of": 188105, "seconds": 84.32437753677368}
+{"phase": "progress", "pairs": 80000, "of": 188105, "seconds": 91.6202826499939}
+{"phase": "progress", "pairs": 85000, "of": 188105, "seconds": 95.13984227180481}
+{"phase": "progress", "pairs": 90000, "of": 188105, "seconds": 101.12833428382874}
+{"phase": "progress", "pairs": 95000, "of": 188105, "seconds": 101.49325680732727}
+{"phase": "progress", "pairs": 100000, "of": 188105, "seconds": 106.8609414100647}
+{"phase": "progress", "pairs": 105000, "of": 188105, "seconds": 112.680499792099}
+{"phase": "progress", "pairs": 110000, "of": 188105, "seconds": 121.23420739173889}
+{"phase": "progress", "pairs": 115000, "of": 188105, "seconds": 122.76486396789551}
+{"phase": "progress", "pairs": 120000, "of": 188105, "seconds": 129.02426934242249}
+{"phase": "progress", "pairs": 125000, "of": 188105, "seconds": 131.47278904914856}
+{"phase": "progress", "pairs": 130000, "of": 188105, "seconds": 137.85521745681763}
+{"phase": "progress", "pairs": 135000, "of": 188105, "seconds": 141.62312388420105}
+{"phase": "progress", "pairs": 140000, "of": 188105, "seconds": 147.57799458503723}
+{"phase": "progress", "pairs": 145000, "of": 188105, "seconds": 154.90833735466003}
+{"phase": "progress", "pairs": 150000, "of": 188105, "seconds": 155.16044902801514}
+{"phase": "progress", "pairs": 155000, "of": 188105, "seconds": 158.8663091659546}
+{"phase": "progress", "pairs": 160000, "of": 188105, "seconds": 164.1073760986328}
+{"phase": "progress", "pairs": 165000, "of": 188105, "seconds": 171.55821681022644}
+{"phase": "progress", "pairs": 170000, "of": 188105, "seconds": 178.748676776886}
+{"phase": "progress", "pairs": 175000, "of": 188105, "seconds": 183.77703976631165}
+{"phase": "progress", "pairs": 180000, "of": 188105, "seconds": 186.4971685409546}
+{"phase": "progress", "pairs": 185000, "of": 188105, "seconds": 191.5110912322998}
+{
+  "pairs": 188105,
+  "wall_seconds": 192.04684591293335,
+  "setup_seconds": 64.35323095321655,
+  "workers": 32,
+  "k": 10,
+  "max_length": 4,
+  "candidate_budget": 1000,
+  "graph_budget": {
+    "max_nodes": 130,
+    "max_edges": 695
+  },
+  "pair_seconds": {
+    "mean": 0.026684437796296454,
+    "p50": 0.013855114579200745,
+    "p99": 0.21474539503455126,
+    "max": 7.128640091046691,
+    "sum": 5019.476171672344
+  },
+  "status_counts": {
+    "connected_paths": 187409,
+    "one_end_absent": 681,
+    "overlength_empty": 14,
+    "both_absent": 1
+  },
+  "path_mask_true": 187409,
+  "old_cache_path_mask_true": 187409,
+  "budget_truncated": 39,
+  "connected_with_fewer_than_k": 170,
+  "budget_truncated_with_fewer_than_k": 39,
+  "graph_budget_limited": 0,
+  "selected_paths_distribution": {
+    "0": 15,
+    "1": 24,
+    "2": 36,
+    "3": 38,
+    "4": 40,
+    "5": 57,
+    "6": 71,
+    "7": 57,
+    "8": 75,
+    "9": 62,
+    "10": 187630
+  },
+  "shortest_distance_counts": {
+    "-1": 682,
+    "2": 160561,
+    "3": 22613,
+    "4": 4235,
+    "5": 11,
+    "6": 3
+  },
+  "max_nodes": 28,
+  "max_edges": 212,
+  "mean_nodes": 12.379522075436592,
+  "mean_edges": 94.28950851917811,
+  "background": {
+    "non_ddi_triples": 4488504,
+    "directed_node_pairs": 6035852,
+    "atomic_directed_relations": 8977002,
+    "relations_with_inverse": 210,
+    "composite_signatures": 13511,
+    "nodes_in_graph": 96766,
+    "components": 310
+  },
+  "protocols": {
+    "single_drugout": {
+      "train": {
+        "rows": 149048,
+        "path_mask_true": 148419,
+        "connected_paths": 148419
+      },
+      "val": {
+        "rows": 20785,
+        "path_mask_true": 20742,
+        "connected_paths": 20742
+      },
+      "test": {
+        "rows": 16978,
+        "path_mask_true": 16954,
+        "connected_paths": 16954
+      }
+    },
+    "double_drugout": {
+      "train": {
+        "rows": 149048,
+        "path_mask_true": 148419,
+        "connected_paths": 148419
+      },
+      "val": {
+        "rows": 760,
+        "path_mask_true": 760,
+        "connected_paths": 760
+      },
+      "test": {
+        "rows": 534,
+        "path_mask_true": 534,
+        "connected_paths": 534
+      }
+    }
+  },
+  "complete": true
+}

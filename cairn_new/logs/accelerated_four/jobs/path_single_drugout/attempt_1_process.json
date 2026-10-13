@@ -1,0 +1,12 @@
+{
+  "pid": 2968282,
+  "process_start": "1268801959",
+  "command": [
+    "/data/interns/zhangpc/cairn_dev/.conda/cairn/bin/python",
+    "-m",
+    "accelerated_four.dsn.train",
+    "--config",
+    "/data/interns/zhangpc/cairn_new/accelerated_four/configs/path_single_drugout.yaml",
+    "--resume"
+  ]
+}
